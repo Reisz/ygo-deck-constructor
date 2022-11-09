@@ -1,0 +1,15 @@
+[package]
+name = "data-processor"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bincode.workspace = true
+data.path = "../data"
+indicatif = { workspace = true, features = ["rayon"] }
+rayon.workspace = true
+reqwest = { workspace = true, features = ["blocking", "json"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+xz2.workspace = true
