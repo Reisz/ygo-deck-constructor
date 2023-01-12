@@ -1,19 +1,21 @@
+use std::collections::HashMap;
+
 use bincode::Options;
-use data::Card;
+use data::card::{Card, Id};
 use gloo_net::http::Request;
 use lzma_rs::xz_decompress;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 struct CardListProps {
-    cards: Vec<Card>,
+    cards: HashMap<Id, Card>,
 }
 
 #[function_component(CardList)]
 fn card_list(CardListProps { cards }: &CardListProps) -> Html {
     cards
         .iter()
-        .map(|card| {
+        .map(|(_, card)| {
             html! {
                 <>
                     <h3>{&card.name}</h3>
@@ -28,7 +30,7 @@ fn card_list(CardListProps { cards }: &CardListProps) -> Html {
 
 #[function_component(App)]
 fn app() -> Html {
-    let cards = use_state(Vec::new);
+    let cards = use_state(HashMap::new);
     {
         let cards = cards.clone();
         use_effect_with_deps(

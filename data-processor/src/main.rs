@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
@@ -6,11 +7,12 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use data::card::{Card, Id};
 use indicatif::{
     DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator, ProgressStyle,
 };
 use rayon::prelude::*;
-use serde::{ser::SerializeSeq, Serializer};
+use serde::{ser::SerializeMap, Serializer};
 use xz2::write::XzEncoder;
 
 use crate::reqwest_indicatif::ProgressReader;
@@ -21,12 +23,14 @@ mod ygoprodeck;
 const CARD_INFO_LOCAL: &str = "target/card_info.json";
 const OUTPUT_FILE: &str = "dist/cards.bin.xz";
 
-fn project(card: ygoprodeck::Card) -> data::Card {
-    data::Card {
-        id: card.id.to_string(),
-        name: card.name,
-        desc: card.desc,
-    }
+fn project(card: ygoprodeck::Card) -> (Id, Card) {
+    (
+        Id::new(card.id),
+        Card {
+            name: card.name,
+            desc: card.desc,
+        },
+    )
 }
 
 fn main() -> Result<()> {
@@ -47,18 +51,17 @@ fn main() -> Result<()> {
         .into_par_iter()
         .progress_with_style(style.clone())
         .map(project)
-        .collect::<Vec<_>>();
+        .collect::<HashMap<_, _>>();
 
     println!("[3/3] Saving...");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
 
     let mut serializer = bincode::Serializer::new(XzEncoder::new(file, 9), data::bincode_options());
-    let mut seq = serializer.serialize_seq(Some(cards.len()))?;
+    let mut map = serializer.serialize_map(Some(cards.len()))?;
     cards
         .iter()
         .progress_with_style(style)
-        .map(|v| seq.serialize_element(v).map_err(|e| anyhow!(e)))
-        .collect::<Result<Vec<()>>>()?;
+        .try_for_each(|(k, v)| map.serialize_entry(k, v).map_err(|e| anyhow!(e)))?;
 
     println!(
         "\nSaved {} cards in {}.",
