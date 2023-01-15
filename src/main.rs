@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 
 use bincode::Options;
-use data::card::{Card, Id};
+use data::card::CardData;
 use gloo_net::http::Request;
 use lzma_rs::xz_decompress;
 use yew::prelude::*;
 
 #[derive(Properties, PartialEq)]
 struct CardListProps {
-    cards: HashMap<Id, Card>,
+    cards: CardData,
 }
 
 #[function_component(CardList)]

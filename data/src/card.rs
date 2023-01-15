@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
@@ -20,3 +22,5 @@ pub struct Card {
     pub name: String,
     pub desc: String,
 }
+
+pub type CardData = HashMap<Id, Card>;

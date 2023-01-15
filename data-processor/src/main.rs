@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     fs::{self, File},
     io::{BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
@@ -7,7 +6,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use data::card::{Card, Id};
+use data::card::{Card, CardData, Id};
 use indicatif::{
     DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator, ProgressStyle,
 };
@@ -51,7 +50,7 @@ fn main() -> Result<()> {
         .into_par_iter()
         .progress_with_style(style.clone())
         .map(project)
-        .collect::<HashMap<_, _>>();
+        .collect::<CardData>();
 
     println!("[3/3] Saving...");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
