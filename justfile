@@ -3,3 +3,6 @@ lint:
 
 test:
     cargo test --workspace
+
+run:
+    trunk serve --open
