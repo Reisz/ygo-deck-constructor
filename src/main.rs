@@ -1,63 +1,77 @@
-use std::collections::HashMap;
-
 use bincode::Options;
-use data::card::CardData;
+use data::card::{Card, CardData};
 use gloo_net::http::Request;
+use leptos::{
+    component, create_local_resource, mount_to_body, view, For, ForProps, IntoView, Scope,
+    Suspense, SuspenseProps,
+};
 use lzma_rs::xz_decompress;
-use yew::prelude::*;
 
-#[derive(Properties, PartialEq)]
-struct CardListProps {
-    cards: CardData,
+async fn load_cards(_: ()) -> &'static CardData {
+    let request = Request::get("/cards.bin.xz");
+    let response = request.send().await.unwrap();
+    let bytes = response.binary().await.unwrap();
+
+    let mut decompressed = Vec::new();
+    xz_decompress(&mut bytes.as_slice(), &mut decompressed).unwrap();
+    Box::leak(Box::new(
+        data::bincode_options().deserialize(&decompressed).unwrap(),
+    ))
 }
 
-#[function_component(CardList)]
-fn card_list(CardListProps { cards }: &CardListProps) -> Html {
-    cards
-        .iter()
-        .map(|(_, card)| {
-            html! {
-                <>
-                    <h3>{&card.name}</h3>
-                    {card.desc.lines().map(|l| html!{
-                        <p>{l}</p>
-                    }).collect::<Html>()}
-                </>
+#[component]
+fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
+    view! {
+        cx,
+        <h3>{&card.name}</h3>
+        <For
+            each = move || card.desc.lines().enumerate()
+            key = |(i, _)| *i
+            view = move |(_, line)| {
+                view! {
+                    cx,
+                    <p>{line}</p>
+                }
             }
-        })
-        .collect()
+        />
+    }
 }
 
-#[function_component(App)]
-fn app() -> Html {
-    let cards = use_state(HashMap::new);
-    {
-        let cards = cards.clone();
-        use_effect_with_deps(
-            move |_| {
-                wasm_bindgen_futures::spawn_local(async move {
-                    let request = Request::get("/cards.bin.xz");
-                    let response = request.send().await.unwrap();
-                    let bytes = response.binary().await.unwrap();
-
-                    let mut decompressed = Vec::new();
-                    xz_decompress(&mut bytes.as_slice(), &mut decompressed).unwrap();
-                    cards.set(data::bincode_options().deserialize(&decompressed).unwrap());
-                });
-                || ()
-            },
-            (),
-        );
+#[component]
+fn CardList(cx: Scope, cards: &'static CardData) -> impl IntoView {
+    view! {
+        cx,
+        <For
+            each = move || cards
+            key = |(card_id, _)| *card_id
+            view = move |(_, card)| {
+                view! {
+                    cx,
+                    <Card card = card />
+                }
+            }
+        />
     }
+}
 
-    html! {
-        <>
-            <h1>{ "Card List" }</h1>
-            <CardList cards={(*cards).clone()} />
-        </>
+#[component]
+fn App(cx: Scope) -> impl IntoView {
+    let cards = create_local_resource(cx, || (), load_cards);
+
+    view! {
+        cx,
+        <Suspense fallback = move || "Loading...">
+            {move || {
+                cards.read().map(|cards| view!{cx,
+                    <h1>{ "Card List" }</h1>
+                    <CardList cards = cards />
+                })
+            }}
+        </Suspense>
+
     }
 }
 
 fn main() {
-    yew::Renderer::<App>::new().render();
+    mount_to_body(|cx| view! { cx, <App /> });
 }

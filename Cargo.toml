@@ -9,11 +9,11 @@ edition.workspace = true
 bincode.workspace = true
 data.path = "data"
 gloo-net.workspace = true
+leptos.workspace = true
 lzma-rs.workspace = true
 nom.workspace = true
 thiserror.workspace = true
 wasm-bindgen-futures.workspace = true
-yew.workspace = true
 
 [dev-dependencies]
 itertools = "0.10"
@@ -32,6 +32,7 @@ clap = "4.1"
 console = "0.15"
 gloo-net = "0.2"
 indicatif = "0.17"
+leptos = { version = "0.1", features = ["stable"] }
 lzma-rs = "0.3"
 nom = "7.1"
 rayon = "1.5"
@@ -41,4 +42,3 @@ serde_json = "1.0"
 thiserror = "1.0"
 wasm-bindgen-futures = "0.4"
 xz2 = "0.1"
-yew = { version = "0.20", features = ["csr"] }
