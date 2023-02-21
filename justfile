@@ -6,3 +6,6 @@ test:
 
 run:
     trunk serve --open
+
+clean:
+    trunk clean --cargo
