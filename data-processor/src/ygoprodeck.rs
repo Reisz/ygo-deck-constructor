@@ -27,8 +27,7 @@ pub struct Card {
     pub atk: Option<u16>,
     pub def: Option<u16>,
     pub level: Option<u8>,
-    // NOTE: Not using enum for race due to irregularities
-    pub race: Option<String>,
+    pub race: Option<Race>,
     pub attribute: Option<Attribute>,
 
     // Spell/Trap Cards
@@ -111,6 +110,58 @@ pub enum CardType {
     #[serde(rename = "Skill Card")]
     SkillCard,
     Token,
+}
+
+#[derive(Debug, Deserialize)]
+pub enum Race {
+    // Monster Cards
+    Aqua,
+    Beast,
+    #[serde(rename = "Beast-Warrior")]
+    BeastWarrior,
+    #[serde(rename = "Creator-God")]
+    CreatorGod,
+    Cyberse,
+    Dinosaur,
+    #[serde(rename = "Divine-Beast")]
+    DivineBeast,
+    Dragon,
+    Fairy,
+    Fiend,
+    Fish,
+    Insect,
+    Machine,
+    Plant,
+    Psychic,
+    Pyro,
+    Reptile,
+    Rock,
+    #[serde(rename = "Sea Serpent")]
+    SeaSerpent,
+    Spellcaster,
+    Thunder,
+    Warrior,
+    #[serde(rename = "Winged Beast")]
+    WingedBeast,
+    Wyrm,
+    Zombie,
+
+    // Spell Cards
+    Normal,
+    Field,
+    Equip,
+    Continuous,
+    #[serde(rename = "Quick-Play")]
+    QuickPlay,
+    Ritual,
+
+    // Trap Cards
+    // Duplicate: Normal
+    // Duplicate: Continuous,
+    Counter,
+
+    #[serde(other)]
+    Other,
 }
 
 #[derive(Debug, Deserialize)]
