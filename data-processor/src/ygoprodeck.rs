@@ -1,4 +1,4 @@
-//! YGOPRODeck API v7 wrapper (See [documentation](https://ygoprodeck.com/api-guide/)).
+//! `YGOPRODeck` API v7 wrapper (See [documentation](https://ygoprodeck.com/api-guide/)).
 
 use std::io::Read;
 

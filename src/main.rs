@@ -27,7 +27,7 @@ fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
         <For
             each = move || card.desc.lines().enumerate()
             key = |(i, _)| *i
-            view = move |(_, line)| {
+            view = move |cx, (_, line)| {
                 view! {
                     cx,
                     <p>{line}</p>
@@ -44,7 +44,7 @@ fn CardList(cx: Scope, cards: &'static CardData) -> impl IntoView {
         <For
             each = move || cards
             key = |(card_id, _)| *card_id
-            view = move |(_, card)| {
+            view = move |cx, (_, card)| {
                 view! {
                     cx,
                     <Card card = card />
@@ -62,7 +62,7 @@ fn App(cx: Scope) -> impl IntoView {
         cx,
         <Suspense fallback = move || "Loading...">
             {move || {
-                cards.read().map(|cards| view!{cx,
+                cards.read(cx).map(|cards| view!{cx,
                     <h1>{ "Card List" }</h1>
                     <CardList cards = cards />
                 })
