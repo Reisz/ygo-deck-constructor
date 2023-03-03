@@ -24,6 +24,13 @@ mod ygoprodeck;
 const CARD_INFO_LOCAL: &str = "target/card_info.json";
 const OUTPUT_FILE: &str = "dist/cards.bin.xz";
 
+fn filter(card: &ygoprodeck::Card) -> bool {
+    !matches!(
+        card.card_type,
+        ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
+    )
+}
+
 fn project(card: ygoprodeck::Card) -> (Id, Card) {
     (
         Id::new(card.id),
@@ -93,6 +100,7 @@ fn main() -> Result<()> {
     let cards = cards
         .into_par_iter()
         .progress_with_style(style.clone())
+        .filter(filter)
         .map(project)
         .collect::<CardData>();
 
