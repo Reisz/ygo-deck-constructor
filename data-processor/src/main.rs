@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use data::card::{Card, CardData, Id};
+use data::card::CardData;
 use indicatif::{
     DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator, ProgressStyle,
 };
@@ -18,6 +18,7 @@ use xz2::write::XzEncoder;
 use crate::{cli::Args, reqwest_indicatif::ProgressReader};
 
 mod cli;
+mod project;
 mod reqwest_indicatif;
 mod ygoprodeck;
 
@@ -28,16 +29,6 @@ fn filter(card: &ygoprodeck::Card) -> bool {
     !matches!(
         card.card_type,
         ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
-    )
-}
-
-fn project(card: ygoprodeck::Card) -> (Id, Card) {
-    (
-        Id::new(card.id),
-        Card {
-            name: card.name,
-            desc: card.desc,
-        },
     )
 }
 
@@ -101,7 +92,7 @@ fn main() -> Result<()> {
         .into_par_iter()
         .progress_with_style(style.clone())
         .filter(filter)
-        .map(project)
+        .map(project::project)
         .collect::<CardData>();
 
     step("Saving");
