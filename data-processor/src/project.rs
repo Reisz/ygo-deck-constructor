@@ -1,6 +1,6 @@
 use data::card::{
-    Card, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
-    MonsterType, SpellType, TrapType,
+    Attribute, Card, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
+    MonsterType, Race, SpellType, TrapType,
 };
 
 use crate::ygoprodeck::{self, BanStatus};
@@ -28,8 +28,8 @@ impl From<&ygoprodeck::Card> for CardType {
             };
             ($effect:expr, is_tuner: $tuner:expr) => {
                 CardType::Monster {
-                    race: (),
-                    attribute: (),
+                    race: Race::from(value),
+                    attribute: Attribute::from(value),
                     stats: MonsterStats::from(value),
                     effect: $effect,
                     is_tuner: $tuner,
@@ -75,6 +75,57 @@ impl From<&ygoprodeck::Card> for CardType {
             }
             Src::UnionEffectMonster => monster! { MonsterEffect::Union},
             Src::SkillCard | Src::Token => panic!("Unexpected card type: {:?}", value.card_type),
+        }
+    }
+}
+
+impl From<&ygoprodeck::Card> for Race {
+    fn from(value: &ygoprodeck::Card) -> Self {
+        type Src = ygoprodeck::Race;
+
+        match value.race.as_ref().expect("race") {
+            Src::Aqua => Race::Aqua,
+            Src::Beast => Race::Beast,
+            Src::BeastWarrior => Race::BeastWarrior,
+            Src::CreatorGod => Race::CreatorGod,
+            Src::Cyberse => Race::Cyberse,
+            Src::Dinosaur => Race::Dinosaur,
+            Src::DivineBeast => Race::DivineBeast,
+            Src::Dragon => Race::Dragon,
+            Src::Fairy => Race::Fairy,
+            Src::Fiend => Race::Fiend,
+            Src::Fish => Race::Fish,
+            Src::Insect => Race::Insect,
+            Src::Machine => Race::Machine,
+            Src::Plant => Race::Plant,
+            Src::Psychic => Race::Psychic,
+            Src::Pyro => Race::Pyro,
+            Src::Reptile => Race::Reptile,
+            Src::Rock => Race::Rock,
+            Src::SeaSerpent => Race::SeaSerpent,
+            Src::Spellcaster => Race::Spellcaster,
+            Src::Thunder => Race::Thunder,
+            Src::Warrior => Race::Warrior,
+            Src::WingedBeast => Race::WingedBeast,
+            Src::Wyrm => Race::Wyrm,
+            Src::Zombie => Race::Zombie,
+            race => panic!("Unexpected race: {race:?}"),
+        }
+    }
+}
+
+impl From<&ygoprodeck::Card> for Attribute {
+    fn from(value: &ygoprodeck::Card) -> Self {
+        type Src = ygoprodeck::Attribute;
+
+        match value.attribute.as_ref().expect("attribute") {
+            Src::Dark => Attribute::Dark,
+            Src::Earth => Attribute::Earth,
+            Src::Fire => Attribute::Fire,
+            Src::Light => Attribute::Light,
+            Src::Water => Attribute::Water,
+            Src::Wind => Attribute::Wind,
+            Src::Divine => Attribute::Divine,
         }
     }
 }

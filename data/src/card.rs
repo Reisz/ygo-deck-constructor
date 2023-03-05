@@ -29,8 +29,8 @@ pub struct Card {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub enum CardType {
     Monster {
-        race: (),      // TODO
-        attribute: (), // TODO
+        race: Race,
+        attribute: Attribute,
         // See https://yugipedia.com/wiki/Monster_Card#Classifications
         stats: MonsterStats,
         effect: MonsterEffect,
@@ -38,6 +38,46 @@ pub enum CardType {
     },
     Spell(SpellType),
     Trap(TrapType),
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Race {
+    Aqua,
+    Beast,
+    BeastWarrior,
+    CreatorGod,
+    Cyberse,
+    Dinosaur,
+    DivineBeast,
+    Dragon,
+    Fairy,
+    Fiend,
+    Fish,
+    Insect,
+    Machine,
+    Plant,
+    Psychic,
+    Pyro,
+    Reptile,
+    Rock,
+    SeaSerpent,
+    Spellcaster,
+    Thunder,
+    Warrior,
+    WingedBeast,
+    Wyrm,
+    Zombie,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Attribute {
+    Dark,
+    Earth,
+    Fire,
+    Light,
+    Water,
+    Wind,
+    Divine,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
