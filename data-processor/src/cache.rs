@@ -28,13 +28,14 @@ pub fn get_behavior() -> Result<CacheBehavior> {
     })
 }
 
-fn should_download() -> Result<Option<String>> {
+fn get_online_version() -> Result<String> {
     step("Checking online database version");
+    ygoprodeck::get_version(reqwest::blocking::get(ygoprodeck::VERSION_URL)?)
+}
 
-    let online_version = ygoprodeck::get_version(reqwest::blocking::get(ygoprodeck::VERSION_URL)?)?;
-
+fn should_download() -> Result<Option<String>> {
     if !Path::new(CARD_INFO_LOCAL).exists() {
-        return Ok(Some(online_version));
+        return Ok(Some(get_online_version()?));
     }
 
     let cache_date = fs::metadata(CARD_INFO_LOCAL)?.modified()?;
@@ -42,6 +43,7 @@ fn should_download() -> Result<Option<String>> {
         // Reset interval
         File::open(CARD_INFO_LOCAL)?.set_modified(SystemTime::now())?;
 
+        let online_version = get_online_version()?;
         let local_version = {
             let mut tmp = String::new();
             BufReader::new(File::open(CARD_INFO_LOCAL)?).read_line(&mut tmp)?;
