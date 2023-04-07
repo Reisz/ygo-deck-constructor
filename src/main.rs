@@ -25,7 +25,7 @@ fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
         cx,
         <h3>{&card.name}</h3>
         <For
-            each = move || card.desc.lines().enumerate()
+            each = move || card.description.lines().enumerate()
             key = |(i, _)| *i
             view = move |cx, (_, line)| {
                 view! {

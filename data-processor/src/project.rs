@@ -12,7 +12,7 @@ impl From<ygoprodeck::Card> for Card {
 
         Self {
             name: value.name,
-            desc: value.desc,
+            description: value.desc,
             card_type,
             limit,
             archetype: value.archetype,

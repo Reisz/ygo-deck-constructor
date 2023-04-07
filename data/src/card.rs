@@ -20,7 +20,7 @@ impl Id {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Card {
     pub name: String,
-    pub desc: String,
+    pub description: String,
     pub card_type: CardType,
     pub limit: CardLimit,
     pub archetype: Option<String>,
