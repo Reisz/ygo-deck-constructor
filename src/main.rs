@@ -48,7 +48,7 @@ fn CardList(cx: Scope, cards: &'static CardData) -> impl IntoView {
     view! {
         cx,
         <For
-            each = move || cards
+            each = move || cards.iter().take(50) // TODO: Limit for debug performance
             key = |(card_id, _)| *card_id
             view = move |cx, (_, card)| view! {cx, <Card card = card />}
         />
