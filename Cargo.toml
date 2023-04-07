@@ -7,6 +7,7 @@ edition.workspace = true
 
 [dependencies]
 bincode.workspace = true
+console_error_panic_hook = "0.1.7"
 data.path = "data"
 gloo-net.workspace = true
 leptos.workspace = true
