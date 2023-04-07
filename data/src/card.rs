@@ -40,7 +40,7 @@ pub enum CardType {
     Trap(TrapType),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Race {
     Aqua,
     Beast,
@@ -69,7 +69,7 @@ pub enum Race {
     Zombie,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum Attribute {
     Dark,
     Earth,
@@ -96,7 +96,7 @@ pub enum MonsterStats {
     },
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum MonsterType {
     Fusion,
     Ritual,
@@ -104,7 +104,7 @@ pub enum MonsterType {
     Xyz,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum MonsterEffect {
     Normal,
     Effect,
@@ -119,7 +119,7 @@ pub enum MonsterEffect {
 pub struct LinkMarkers([bool; 8]);
 
 #[repr(usize)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LinkMarker {
     TopLeft,
     Top,
@@ -137,7 +137,7 @@ impl LinkMarkers {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum SpellType {
     Normal,
     Field,
@@ -147,14 +147,14 @@ pub enum SpellType {
     Ritual,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum TrapType {
     Normal,
     Continuous,
     Counter,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 pub enum CardLimit {
     Unlimited,
     SemiLimited,
