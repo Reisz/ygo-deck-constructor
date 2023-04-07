@@ -162,4 +162,16 @@ pub enum CardLimit {
     Banned,
 }
 
+impl CardLimit {
+    #[must_use]
+    pub fn count(self) -> u8 {
+        match self {
+            Self::Unlimited => 3,
+            Self::SemiLimited => 2,
+            Self::Limited => 1,
+            Self::Banned => 0,
+        }
+    }
+}
+
 pub type CardData = HashMap<Id, Card>;

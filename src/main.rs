@@ -21,19 +21,17 @@ async fn load_cards(_: ()) -> &'static CardData {
 
 #[component]
 fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
-    view! {
-        cx,
-        <h3>{&card.name}</h3>
-        <For
-            each = move || card.description.lines().enumerate()
-            key = |(i, _)| *i
-            view = move |cx, (_, line)| {
-                view! {
-                    cx,
-                    <p>{line}</p>
-                }
-            }
-        />
+    view! {cx,
+        <div class="card">
+            <div class="name">{&card.name}</div>
+            <div class="usage">
+                <button>"-"</button>
+                <span class="current">"0"</span>
+                <span>"/"</span>
+                <span class="limit">{card.limit.count()}</span>
+                <button>"+"</button>
+            </div>
+        </div>
     }
 }
 
@@ -44,12 +42,7 @@ fn CardList(cx: Scope, cards: &'static CardData) -> impl IntoView {
         <For
             each = move || cards
             key = |(card_id, _)| *card_id
-            view = move |cx, (_, card)| {
-                view! {
-                    cx,
-                    <Card card = card />
-                }
-            }
+            view = move |cx, (_, card)| view! {cx, <Card card = card />}
         />
     }
 }
@@ -62,13 +55,9 @@ fn App(cx: Scope) -> impl IntoView {
         cx,
         <Suspense fallback = move || "Loading...">
             {move || {
-                cards.read(cx).map(|cards| view!{cx,
-                    <h1>{ "Card List" }</h1>
-                    <CardList cards = cards />
-                })
+                cards.read(cx).map(|cards| view!{cx, <CardList cards = cards />})
             }}
         </Suspense>
-
     }
 }
 
