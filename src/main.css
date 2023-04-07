@@ -45,6 +45,20 @@ h6 {
 	overflow-wrap: break-word;
 }
 
+/* Card List */
+.card-list {
+	display: flex;
+	flex-wrap: wrap;
+
+	height: calc(100% - 2rem);
+	margin: 1rem;
+
+	overflow: auto;
+
+	border: 1px solid black;
+	border-radius: 2rem;
+}
+
 /* Card */
 .card {
 	display: grid;
