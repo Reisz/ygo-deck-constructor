@@ -72,6 +72,42 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
 }
 
 #[component]
+fn Deck(cx: Scope, cards: &'static CardData) -> impl IntoView {
+    let (main, _set_main) = create_signal(cx, Vec::new());
+    let (extra, _set_extra) = create_signal(cx, Vec::new());
+    let (side, _set_side) = create_signal(cx, Vec::new());
+
+    macro_rules! deck_view {
+        ($title:expr, $data:expr) => {
+            view! { cx,
+                <h2>$title</h2>
+                <div class="card-list">
+                    <For
+                        each = $data
+                        key = |card_id| *card_id
+                        view = move |cx, card_id| view! {cx, <Card card = &cards[card_id] />}
+                    />
+                </div>
+            }
+        };
+    }
+
+    (
+        deck_view!("Main", main),
+        deck_view!("Extra", extra),
+        deck_view!("Side", side),
+    )
+}
+
+#[component]
+fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
+    view! {cx,
+        <CardSearch cards = cards />
+        <Deck cards = cards />
+    }
+}
+
+#[component]
 fn App(cx: Scope) -> impl IntoView {
     let cards = create_local_resource(cx, || (), load_cards);
 
@@ -79,7 +115,7 @@ fn App(cx: Scope) -> impl IntoView {
         cx,
         <Suspense fallback = move || "Loading...">
             {move || {
-                cards.read(cx).map(|cards| view!{cx, <CardSearch cards = cards />})
+                cards.read(cx).map(|cards| view!{cx, <DeckBuilder cards = cards />})
             }}
         </Suspense>
     }
