@@ -2,8 +2,8 @@ use bincode::Options;
 use data::card::{Card, CardData};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_signal, mount_to_body, view, For, ForProps, IntoView,
-    Scope, SignalUpdate, Suspense, SuspenseProps,
+    component, create_local_resource, mount_to_body, view, For, ForProps, IntoView, Scope,
+    Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -21,24 +21,13 @@ async fn load_cards(_: ()) -> &'static CardData {
 
 #[component]
 fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
-    let (count, set_count) = create_signal(cx, 0);
-
     view! {cx,
-        <div class="card">
+        <div
+            class="card"
+            draggable="true"
+            on:dragstart=|_| {}
+        >
             <div class="name">{&card.name}</div>
-            <div class="usage">
-                <button
-                    disabled=move || count() == 0
-                    on:click=move |_| set_count.update(|count| *count -= 1)
-                >"-"</button>
-                <span class="current">{count}</span>
-                <span>" / "</span>
-                <span class="limit">{card.limit.count()}</span>
-                <button
-                    disabled=move || count() == card.limit.count()
-                    on:click=move |_| set_count.update(|count| *count += 1)
-                >"+"</button>
-            </div>
         </div>
     }
 }
