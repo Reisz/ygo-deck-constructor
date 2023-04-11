@@ -1,9 +1,9 @@
 use bincode::Options;
-use data::card::{Card, CardData};
+use data::card::{Card, CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_node_ref, create_signal, html::Input, mount_to_body,
-    view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
+    component, create_local_resource, create_node_ref, create_signal, html::Input, log,
+    mount_to_body, view, For, ForProps, IntoView, Scope, SignalUpdate, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -74,32 +74,36 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
 }
 
 #[component]
-fn Deck(cx: Scope, cards: &'static CardData) -> impl IntoView {
-    let (main, _set_main) = create_signal(cx, Vec::new());
-    let (extra, _set_extra) = create_signal(cx, Vec::new());
-    let (side, _set_side) = create_signal(cx, Vec::new());
+fn DeckPart(cx: Scope, cards: &'static CardData, name: &'static str) -> impl IntoView {
+    let (content, set_content) = create_signal(cx, Vec::new());
 
-    macro_rules! deck_view {
-        ($title:expr, $data:expr) => {
-            view! { cx,
-                <h2>$title</h2>
-                <div class="card-list">
-                    <For
-                        each = $data
-                        key = |card_id| *card_id
-                        view = move |cx, card_id| view! {cx, <Card card = &cards[card_id] />}
-                    />
-                </div>
+    view! { cx,
+        <h2>{name}</h2>
+        <div
+            class = "card-list"
+            on:dragenter = move |ev| {ev.prevent_default();}
+            on:dragover = move |ev| {ev.prevent_default();}
+            on:drop = move |_| {
+                set_content.update(|content| {content.push(Id::new(6983839)); log!("{:?}", content);});
             }
-        };
+        >
+            <For
+                each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
+                key = |(idx, _)| *idx
+                view = move |cx, (_, card_id)| view! {cx, <Card card = &cards[&card_id] />}
+            />
+        </div>
     }
+}
 
+#[component]
+fn Deck(cx: Scope, cards: &'static CardData) -> impl IntoView {
     view! {
         cx,
         <div class="deck-view">
-            {deck_view!("Main", main)}
-            {deck_view!("Extra", extra)}
-            {deck_view!("Side", side)}
+            <DeckPart cards=cards name="Main" />
+            <DeckPart cards=cards name="Side" />
+            <DeckPart cards=cards name="Extra" />
         </div>
     }
 }
