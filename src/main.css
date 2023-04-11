@@ -72,6 +72,9 @@ h6 {
 	display: flex;
 	flex-wrap: wrap;
 
+	padding: 1rem;
+	gap: 1rem;
+
 	overflow: auto;
 
 	border: 1px solid black;
@@ -83,8 +86,7 @@ h6 {
 	display: grid;
 	gap: 0.2rem;
 
-	padding: 2rem;
-	margin: 2rem;
+	padding: 1rem;
 
 	border: 1px solid black;
 	border-radius: 2rem;
