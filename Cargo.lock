@@ -2598,4 +2598,5 @@ dependencies = [
  "nom",
  "thiserror",
  "wasm-bindgen-futures",
+ "web-sys",
 ]

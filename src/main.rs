@@ -2,8 +2,8 @@ use bincode::Options;
 use data::card::{Card, CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_node_ref, create_signal, html::Input, log,
-    mount_to_body, view, For, ForProps, IntoView, Scope, SignalUpdate, Suspense, SuspenseProps,
+    component, create_local_resource, create_node_ref, create_signal, html::Input, mount_to_body,
+    view, For, ForProps, IntoView, Scope, SignalUpdate, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -20,12 +20,14 @@ async fn load_cards(_: ()) -> &'static CardData {
 }
 
 #[component]
-fn Card(cx: Scope, card: &'static Card) -> impl IntoView {
+fn Card(cx: Scope, id: Id, card: &'static Card) -> impl IntoView {
     view! {cx,
         <div
-            class="card"
-            draggable="true"
-            on:dragstart=|_| {}
+            class = "card"
+            draggable = "true"
+            on:dragstart = move |ev| {
+                ev.data_transfer().unwrap().set_data("text/plain", &id.get().to_string()).unwrap();
+            }
         >
             <div class="name">{&card.name}</div>
         </div>
@@ -65,8 +67,8 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
             <div class="card-list">
                 <For
                     each = card_iter
-                    key = |(card_id, _)| *card_id
-                    view = move |cx, (_, card)| view! {cx, <Card card = card />}
+                    key = |(id, _)| *id
+                    view = move |cx, (id, card)| view! {cx, <Card id = *id card = card />}
                 />
             </div>
         </div>
@@ -83,14 +85,15 @@ fn DeckPart(cx: Scope, cards: &'static CardData, name: &'static str) -> impl Int
             class = "card-list"
             on:dragenter = move |ev| {ev.prevent_default();}
             on:dragover = move |ev| {ev.prevent_default();}
-            on:drop = move |_| {
-                set_content.update(|content| {content.push(Id::new(6983839)); log!("{:?}", content);});
+            on:drop = move |ev| {
+                let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
+                set_content.update(|content| content.push(id));
             }
         >
             <For
                 each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
-                view = move |cx, (_, card_id)| view! {cx, <Card card = &cards[&card_id] />}
+                view = move |cx, (_, id)| view! {cx, <Card id = id card = &cards[&id] />}
             />
         </div>
     }
