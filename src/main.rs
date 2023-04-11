@@ -53,20 +53,22 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
     let input_ref = create_node_ref::<Input>(cx);
     view! {
         cx,
-        <input
-            type = "text"
-            node_ref = input_ref
-            on:input = move |_| {
-                let input = input_ref.get().unwrap();
-                set_filter(input.value());
-            }
-        />
-        <div class="card-list">
-            <For
-                each = card_iter
-                key = |(card_id, _)| *card_id
-                view = move |cx, (_, card)| view! {cx, <Card card = card />}
+        <div class="card-search">
+            <input
+                type = "text"
+                node_ref = input_ref
+                on:input = move |_| {
+                    let input = input_ref.get().unwrap();
+                    set_filter(input.value());
+                }
             />
+            <div class="card-list">
+                <For
+                    each = card_iter
+                    key = |(card_id, _)| *card_id
+                    view = move |cx, (_, card)| view! {cx, <Card card = card />}
+                />
+            </div>
         </div>
     }
 }
@@ -92,18 +94,23 @@ fn Deck(cx: Scope, cards: &'static CardData) -> impl IntoView {
         };
     }
 
-    (
-        deck_view!("Main", main),
-        deck_view!("Extra", extra),
-        deck_view!("Side", side),
-    )
+    view! {
+        cx,
+        <div class="deck-view">
+            {deck_view!("Main", main)}
+            {deck_view!("Extra", extra)}
+            {deck_view!("Side", side)}
+        </div>
+    }
 }
 
 #[component]
 fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
     view! {cx,
-        <CardSearch cards = cards />
-        <Deck cards = cards />
+        <div class="deck-builder">
+            <CardSearch cards = cards />
+            <Deck cards = cards />
+        </div>
     }
 }
 
