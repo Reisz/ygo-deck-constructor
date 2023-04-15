@@ -4,7 +4,7 @@ use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, create_rw_signal, create_signal,
     html::Input, mount_to_body, provide_context, use_context, view, For, ForProps, IntoView,
-    RwSignal, Scope, SignalGet, SignalUpdate, Suspense, SuspenseProps,
+    RwSignal, Scope, SignalGet, SignalUpdate, Suspense, SuspenseProps, WriteSignal,
 };
 use lzma_rs::xz_decompress;
 
@@ -89,11 +89,17 @@ struct DrawerData {
 
 #[component]
 fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
+    let close = move || {
+        use_context::<WriteSignal<Vec<DrawerData>>>(cx)
+            .unwrap()
+            .update(|drawers| drawers.retain(|drawer| drawer.id != data.id));
+    };
+
     view! {
         cx,
         <div class="drawer">
             <h2>{data.name}</h2>
-            <button>"X"</button>
+            <button on:click = move |_| close() >"X"</button>
             <div
                 class="card-list"
                 on:dragenter = move |ev| {ev.prevent_default();}
@@ -117,6 +123,8 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
 fn Drawers(cx: Scope) -> impl IntoView {
     let (next_drawer_id, set_next_drawer_id) = create_signal(cx, 0);
     let (drawers, set_drawers) = create_signal(cx, Vec::new());
+
+    provide_context(cx, set_drawers);
 
     let new_drawer = move || {
         set_drawers.update(|drawers| {
