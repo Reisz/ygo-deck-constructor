@@ -2,8 +2,9 @@ use bincode::Options;
 use data::card::{Card, CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_node_ref, create_signal, html::Input, mount_to_body,
-    view, For, ForProps, IntoView, Scope, SignalUpdate, Suspense, SuspenseProps,
+    component, create_local_resource, create_node_ref, create_rw_signal, create_signal,
+    html::Input, mount_to_body, view, For, ForProps, IntoView, RwSignal, Scope, SignalUpdate,
+    Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -76,6 +77,50 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
 }
 
 #[component]
+fn Drawer(
+    cx: Scope,
+    cards: &'static CardData,
+    name: RwSignal<String>,
+    content: RwSignal<Vec<Id>>,
+) -> impl IntoView {
+    view! {
+        cx,
+        <h2>{name}</h2>
+        <div class="card-list">
+            <For
+                each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
+                key = |(idx, _)| *idx
+                view = move |cx, (_, id)| view! {cx, <Card id = id card = &cards[&id] />}
+            />
+        </div>
+    }
+}
+
+#[component]
+fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
+    let (drawers, set_drawers) = create_signal(cx, Vec::new());
+
+    set_drawers.update(|drawers| {
+        drawers.push((
+            create_rw_signal(cx, "Test Drawer".to_owned()),
+            create_rw_signal(cx, vec![Id::new(6983839)]),
+        ))
+    });
+
+    view! {
+        cx,
+        <div class="drawers">
+            <For
+                each = {move || drawers().iter().copied().enumerate().collect::<Vec<_>>()}
+                key = |(idx, _)| *idx
+                view = move |cx, (_, (name, content))| view! {cx, <Drawer cards = cards name = name content = content />}
+            />
+            <button>"+"</button>
+        </div>
+    }
+}
+
+#[component]
 fn DeckPart(cx: Scope, cards: &'static CardData, name: &'static str) -> impl IntoView {
     let (content, set_content) = create_signal(cx, Vec::new());
 
@@ -116,6 +161,7 @@ fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
     view! {cx,
         <div class="deck-builder">
             <CardSearch cards = cards />
+            <Drawers cards = cards />
             <Deck cards = cards />
         </div>
     }
