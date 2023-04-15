@@ -91,21 +91,24 @@ struct DrawerData {
 fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
     view! {
         cx,
-        <h2>{data.name}</h2>
-        <div
-            class="card-list"
-            on:dragenter = move |ev| {ev.prevent_default();}
-            on:dragover = move |ev| {ev.prevent_default();}
-            on:drop = move |ev| {
-                let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
-                data.content.update(|content| content.push(id));
-            }
-        >
-            <For
-                each = {move || data.content.get().iter().copied().enumerate().collect::<Vec<_>>()}
-                key = |(idx, _)| *idx
-                view = move |cx, (_, id)| view! {cx, <Card id = id />}
-            />
+        <div class="drawer">
+            <h2>{data.name}</h2>
+            <button>"X"</button>
+            <div
+                class="card-list"
+                on:dragenter = move |ev| {ev.prevent_default();}
+                on:dragover = move |ev| {ev.prevent_default();}
+                on:drop = move |ev| {
+                    let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
+                    data.content.update(|content| content.push(id));
+                }
+            >
+                <For
+                    each = {move || data.content.get().iter().copied().enumerate().collect::<Vec<_>>()}
+                    key = |(idx, _)| *idx
+                    view = move |cx, (_, id)| view! {cx, <Card id = id />}
+                />
+            </div>
         </div>
     }
 }

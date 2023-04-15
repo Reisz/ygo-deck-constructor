@@ -73,6 +73,20 @@ h6 {
 	overflow: auto;
 }
 
+.drawer {
+	display: grid;
+	grid-template-columns: 1fr min-content;
+	grid-template-areas:
+		". ."
+		"content content";
+
+	gap: 0.5rem;
+}
+
+.drawer .card-list {
+	grid-area: content;
+}
+
 .deck-view {
 	display: grid;
 	grid-template-rows: repeat(3, min-content 1fr);
