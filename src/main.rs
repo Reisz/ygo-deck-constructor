@@ -100,12 +100,14 @@ fn Drawer(
 fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
     let (drawers, set_drawers) = create_signal(cx, Vec::new());
 
-    set_drawers.update(|drawers| {
-        drawers.push((
-            create_rw_signal(cx, "Test Drawer".to_owned()),
-            create_rw_signal(cx, vec![Id::new(6983839)]),
-        ))
-    });
+    let new_drawer = move || {
+        set_drawers.update(|drawers| {
+            drawers.push((
+                create_rw_signal(cx, "Test Drawer".to_owned()),
+                create_rw_signal(cx, vec![Id::new(6983839)]),
+            ))
+        });
+    };
 
     view! {
         cx,
@@ -115,7 +117,7 @@ fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
                 key = |(idx, _)| *idx
                 view = move |cx, (_, (name, content))| view! {cx, <Drawer cards = cards name = name content = content />}
             />
-            <button>"+"</button>
+            <button on:click = move |_| new_drawer() >"+"</button>
         </div>
     }
 }
