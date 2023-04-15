@@ -104,9 +104,10 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
             .collect::<Vec<_>>()
     };
 
+    // TODO: propagate input updates back to name signal
     view! { cx,
         <div class="drawer">
-            <h2>{data.name}</h2>
+            <input type="text" value=data.name/>
             <button on:click=move |_| close()>"X"</button>
             <div
                 class="card-list"
@@ -146,7 +147,7 @@ fn Drawers(cx: Scope) -> impl IntoView {
         set_drawers.update(|drawers| {
             drawers.push(DrawerData {
                 id: next_drawer_id(),
-                name: create_rw_signal(cx, "Test Drawer".to_owned()),
+                name: create_rw_signal(cx, "New Drawer".to_owned()),
                 content: create_rw_signal(cx, Vec::new()),
             });
         });
