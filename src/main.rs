@@ -23,11 +23,11 @@ async fn load_cards(_: ()) -> &'static CardData {
 fn Card(cx: Scope, id: Id) -> impl IntoView {
     let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
 
-    view! {cx,
+    view! { cx,
         <div
-            class = "card"
-            draggable = "true"
-            on:dragstart = move |ev| {
+            class="card"
+            draggable="true"
+            on:dragstart=move |ev| {
                 ev.data_transfer().unwrap().set_data("text/plain", &id.get().to_string()).unwrap();
             }
         >
@@ -57,22 +57,23 @@ fn CardSearch(cx: Scope) -> impl IntoView {
     };
 
     let input_ref = create_node_ref::<html::Input>(cx);
-    view! {
-        cx,
+    view! { cx,
         <div class="card-search">
             <input
-                type = "text"
-                node_ref = input_ref
-                on:input = move |_| {
+                type="text"
+                node_ref=input_ref
+                on:input=move |_| {
                     let input = input_ref.get().unwrap();
                     set_filter(input.value());
                 }
             />
             <div class="card-list">
                 <For
-                    each = card_iter
-                    key = |(id, _)| *id
-                    view = move |cx, (id, _)| view! {cx, <Card id = *id />}
+                    each=card_iter
+                    key=|(id, _)| *id
+                    view=move |cx, (id, _)| {
+                        view! { cx, <Card id=*id/> }
+                    }
                 />
             </div>
         </div>
@@ -94,24 +95,40 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
             .update(|drawers| drawers.retain(|drawer| drawer.id != data.id));
     };
 
-    view! {
-        cx,
+    let iter = move || {
+        data.content
+            .get()
+            .iter()
+            .copied()
+            .enumerate()
+            .collect::<Vec<_>>()
+    };
+
+    view! { cx,
         <div class="drawer">
             <h2>{data.name}</h2>
-            <button on:click = move |_| close() >"X"</button>
+            <button on:click=move |_| close()>"X"</button>
             <div
                 class="card-list"
-                on:dragenter = move |ev| {ev.prevent_default();}
-                on:dragover = move |ev| {ev.prevent_default();}
-                on:drop = move |ev| {
-                    let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
+                on:dragenter=move |ev| {
+                    ev.prevent_default();
+                }
+                on:dragover=move |ev| {
+                    ev.prevent_default();
+                }
+                on:drop=move |ev| {
+                    let id = Id::new(
+                        ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
+                    );
                     data.content.update(|content| content.push(id));
                 }
             >
                 <For
-                    each = {move || data.content.get().iter().copied().enumerate().collect::<Vec<_>>()}
-                    key = |(idx, _)| *idx
-                    view = move |cx, (_, id)| view! {cx, <Card id = id />}
+                    each=iter
+                    key=|(idx, _)| *idx
+                    view=move |cx, (_, id)| {
+                        view! { cx, <Card id=id/> }
+                    }
                 />
             </div>
         </div>
@@ -136,15 +153,16 @@ fn Drawers(cx: Scope) -> impl IntoView {
         set_next_drawer_id.update(|id| *id += 1);
     };
 
-    view! {
-        cx,
+    view! { cx,
         <div class="drawers">
             <For
-                each = drawers
-                key = |data| data.id
-                view = move |cx, data| view! {cx, <Drawer data = data />}
+                each=drawers
+                key=|data| data.id
+                view=move |cx, data| {
+                    view! { cx, <Drawer data=data/> }
+                }
             />
-            <button on:click = move |_| new_drawer() >"+"</button>
+            <button on:click=move |_| new_drawer()>"+"</button>
         </div>
     }
 }
@@ -152,22 +170,31 @@ fn Drawers(cx: Scope) -> impl IntoView {
 #[component]
 fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
     let (content, set_content) = create_signal(cx, Vec::new());
+    let iter = move || content().iter().copied().enumerate().collect::<Vec<_>>();
 
     view! { cx,
         <h2>{name}</h2>
         <div
-            class = "card-list"
-            on:dragenter = move |ev| {ev.prevent_default();}
-            on:dragover = move |ev| {ev.prevent_default();}
-            on:drop = move |ev| {
-                let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
+            class="card-list"
+            on:dragenter=move |ev| {
+                ev.prevent_default();
+            }
+            on:dragover=move |ev| {
+                ev.prevent_default();
+            }
+            on:drop=move |ev| {
+                let id = Id::new(
+                    ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
+                );
                 set_content.update(|content| content.push(id));
             }
         >
             <For
-                each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
-                key = |(idx, _)| *idx
-                view = move |cx, (_, id)| view! {cx, <Card id = id />}
+                each=iter
+                key=|(idx, _)| *idx
+                view=move |cx, (_, id)| {
+                    view! { cx, <Card id=id/> }
+                }
             />
         </div>
     }
@@ -175,12 +202,11 @@ fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
 
 #[component]
 fn Deck(cx: Scope) -> impl IntoView {
-    view! {
-        cx,
+    view! { cx,
         <div class="deck-view">
-            <DeckPart name="Main" />
-            <DeckPart name="Side" />
-            <DeckPart name="Extra" />
+            <DeckPart name="Main"/>
+            <DeckPart name="Side"/>
+            <DeckPart name="Extra"/>
         </div>
     }
 }
@@ -189,7 +215,7 @@ fn Deck(cx: Scope) -> impl IntoView {
 fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
     provide_context(cx, cards);
 
-    view! {cx,
+    view! { cx,
         <div class="deck-builder">
             <CardSearch/>
             <Drawers/>
@@ -202,11 +228,14 @@ fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
 fn App(cx: Scope) -> impl IntoView {
     let cards = create_local_resource(cx, || (), load_cards);
 
-    view! {
-        cx,
-        <Suspense fallback = move || "Loading...">
+    view! { cx,
+        <Suspense fallback=move || "Loading...">
             {move || {
-                cards.read(cx).map(|cards| view!{cx, <DeckBuilder cards = cards />})
+                cards
+                    .read(cx)
+                    .map(|cards| {
+                        view! { cx, <DeckBuilder cards=cards/> }
+                    })
             }}
         </Suspense>
     }
@@ -214,5 +243,5 @@ fn App(cx: Scope) -> impl IntoView {
 
 fn main() {
     console_error_panic_hook::set_once();
-    mount_to_body(|cx| view! { cx, <App /> });
+    mount_to_body(|cx| view! { cx, <App/> });
 }
