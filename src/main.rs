@@ -4,7 +4,7 @@ use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, create_rw_signal, create_signal,
     html::Input, mount_to_body, provide_context, use_context, view, For, ForProps, IntoView,
-    RwSignal, Scope, SignalUpdate, Suspense, SuspenseProps,
+    RwSignal, Scope, SignalGet, SignalUpdate, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -80,22 +80,29 @@ fn CardSearch(cx: Scope) -> impl IntoView {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+struct DrawerData {
+    id: usize,
+    name: RwSignal<String>,
+    content: RwSignal<Vec<Id>>,
+}
+
 #[component]
-fn Drawer(cx: Scope, name: RwSignal<String>, content: RwSignal<Vec<Id>>) -> impl IntoView {
+fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
     view! {
         cx,
-        <h2>{name}</h2>
+        <h2>{data.name}</h2>
         <div
             class="card-list"
             on:dragenter = move |ev| {ev.prevent_default();}
             on:dragover = move |ev| {ev.prevent_default();}
             on:drop = move |ev| {
                 let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
-                content.update(|content| content.push(id));
+                data.content.update(|content| content.push(id));
             }
         >
             <For
-                each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
+                each = {move || data.content.get().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
                 view = move |cx, (_, id)| view! {cx, <Card id = id />}
             />
@@ -105,24 +112,27 @@ fn Drawer(cx: Scope, name: RwSignal<String>, content: RwSignal<Vec<Id>>) -> impl
 
 #[component]
 fn Drawers(cx: Scope) -> impl IntoView {
+    let (next_drawer_id, set_next_drawer_id) = create_signal(cx, 0);
     let (drawers, set_drawers) = create_signal(cx, Vec::new());
 
     let new_drawer = move || {
         set_drawers.update(|drawers| {
-            drawers.push((
-                create_rw_signal(cx, "Test Drawer".to_owned()),
-                create_rw_signal(cx, Vec::new()),
-            ))
+            drawers.push(DrawerData {
+                id: next_drawer_id(),
+                name: create_rw_signal(cx, "Test Drawer".to_owned()),
+                content: create_rw_signal(cx, Vec::new()),
+            });
         });
+        set_next_drawer_id.update(|id| *id += 1);
     };
 
     view! {
         cx,
         <div class="drawers">
             <For
-                each = {move || drawers().iter().copied().enumerate().collect::<Vec<_>>()}
-                key = |(idx, _)| *idx
-                view = move |cx, (_, (name, content))| view! {cx, <Drawer name = name content = content />}
+                each = drawers
+                key = |data| data.id
+                view = move |cx, data| view! {cx, <Drawer data = data />}
             />
             <button on:click = move |_| new_drawer() >"+"</button>
         </div>
