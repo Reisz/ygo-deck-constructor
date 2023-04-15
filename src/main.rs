@@ -2,9 +2,8 @@ use bincode::Options;
 use data::card::{CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_node_ref, create_rw_signal, create_signal,
-    html::Input, mount_to_body, provide_context, use_context, view, For, ForProps, IntoView,
-    RwSignal, Scope, SignalGet, SignalUpdate, Suspense, SuspenseProps, WriteSignal,
+    component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
+    provide_context, use_context, view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -57,7 +56,7 @@ fn CardSearch(cx: Scope) -> impl IntoView {
             .take(50) // TODO: implement paging
     };
 
-    let input_ref = create_node_ref::<Input>(cx);
+    let input_ref = create_node_ref::<html::Input>(cx);
     view! {
         cx,
         <div class="card-search">
