@@ -86,7 +86,15 @@ fn Drawer(
     view! {
         cx,
         <h2>{name}</h2>
-        <div class="card-list">
+        <div
+            class="card-list"
+            on:dragenter = move |ev| {ev.prevent_default();}
+            on:dragover = move |ev| {ev.prevent_default();}
+            on:drop = move |ev| {
+                let id = Id::new(ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap());
+                content.update(|content| content.push(id));
+            }
+        >
             <For
                 each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
@@ -104,7 +112,7 @@ fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
         set_drawers.update(|drawers| {
             drawers.push((
                 create_rw_signal(cx, "Test Drawer".to_owned()),
-                create_rw_signal(cx, vec![Id::new(6983839)]),
+                create_rw_signal(cx, Vec::new()),
             ))
         });
     };
