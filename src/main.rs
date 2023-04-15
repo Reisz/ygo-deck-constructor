@@ -1,10 +1,10 @@
 use bincode::Options;
-use data::card::{Card, CardData, Id};
+use data::card::{CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, create_rw_signal, create_signal,
-    html::Input, mount_to_body, view, For, ForProps, IntoView, RwSignal, Scope, SignalUpdate,
-    Suspense, SuspenseProps,
+    html::Input, mount_to_body, provide_context, use_context, view, For, ForProps, IntoView,
+    RwSignal, Scope, SignalUpdate, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
 
@@ -21,7 +21,9 @@ async fn load_cards(_: ()) -> &'static CardData {
 }
 
 #[component]
-fn Card(cx: Scope, id: Id, card: &'static Card) -> impl IntoView {
+fn Card(cx: Scope, id: Id) -> impl IntoView {
+    let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
+
     view! {cx,
         <div
             class = "card"
@@ -36,7 +38,9 @@ fn Card(cx: Scope, id: Id, card: &'static Card) -> impl IntoView {
 }
 
 #[component]
-fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
+fn CardSearch(cx: Scope) -> impl IntoView {
+    let cards = use_context::<&'static CardData>(cx).unwrap();
+
     let (filter, set_filter) = create_signal(cx, String::new());
 
     let card_iter = move || {
@@ -69,7 +73,7 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
                 <For
                     each = card_iter
                     key = |(id, _)| *id
-                    view = move |cx, (id, card)| view! {cx, <Card id = *id card = card />}
+                    view = move |cx, (id, _)| view! {cx, <Card id = *id />}
                 />
             </div>
         </div>
@@ -77,12 +81,7 @@ fn CardSearch(cx: Scope, cards: &'static CardData) -> impl IntoView {
 }
 
 #[component]
-fn Drawer(
-    cx: Scope,
-    cards: &'static CardData,
-    name: RwSignal<String>,
-    content: RwSignal<Vec<Id>>,
-) -> impl IntoView {
+fn Drawer(cx: Scope, name: RwSignal<String>, content: RwSignal<Vec<Id>>) -> impl IntoView {
     view! {
         cx,
         <h2>{name}</h2>
@@ -98,14 +97,14 @@ fn Drawer(
             <For
                 each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
-                view = move |cx, (_, id)| view! {cx, <Card id = id card = &cards[&id] />}
+                view = move |cx, (_, id)| view! {cx, <Card id = id />}
             />
         </div>
     }
 }
 
 #[component]
-fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
+fn Drawers(cx: Scope) -> impl IntoView {
     let (drawers, set_drawers) = create_signal(cx, Vec::new());
 
     let new_drawer = move || {
@@ -123,7 +122,7 @@ fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
             <For
                 each = {move || drawers().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
-                view = move |cx, (_, (name, content))| view! {cx, <Drawer cards = cards name = name content = content />}
+                view = move |cx, (_, (name, content))| view! {cx, <Drawer name = name content = content />}
             />
             <button on:click = move |_| new_drawer() >"+"</button>
         </div>
@@ -131,7 +130,7 @@ fn Drawers(cx: Scope, cards: &'static CardData) -> impl IntoView {
 }
 
 #[component]
-fn DeckPart(cx: Scope, cards: &'static CardData, name: &'static str) -> impl IntoView {
+fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
     let (content, set_content) = create_signal(cx, Vec::new());
 
     view! { cx,
@@ -148,31 +147,33 @@ fn DeckPart(cx: Scope, cards: &'static CardData, name: &'static str) -> impl Int
             <For
                 each = {move || content().iter().copied().enumerate().collect::<Vec<_>>()}
                 key = |(idx, _)| *idx
-                view = move |cx, (_, id)| view! {cx, <Card id = id card = &cards[&id] />}
+                view = move |cx, (_, id)| view! {cx, <Card id = id />}
             />
         </div>
     }
 }
 
 #[component]
-fn Deck(cx: Scope, cards: &'static CardData) -> impl IntoView {
+fn Deck(cx: Scope) -> impl IntoView {
     view! {
         cx,
         <div class="deck-view">
-            <DeckPart cards=cards name="Main" />
-            <DeckPart cards=cards name="Side" />
-            <DeckPart cards=cards name="Extra" />
+            <DeckPart name="Main" />
+            <DeckPart name="Side" />
+            <DeckPart name="Extra" />
         </div>
     }
 }
 
 #[component]
 fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
+    provide_context(cx, cards);
+
     view! {cx,
         <div class="deck-builder">
-            <CardSearch cards = cards />
-            <Drawers cards = cards />
-            <Deck cards = cards />
+            <CardSearch/>
+            <Drawers/>
+            <Deck/>
         </div>
     }
 }
