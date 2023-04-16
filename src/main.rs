@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use bincode::Options;
 use data::card::{CardData, Id};
 use gloo_net::http::Request;
@@ -80,6 +82,14 @@ fn CardSearch(cx: Scope) -> impl IntoView {
     }
 }
 
+fn deck_order(data: &'static CardData, lhs: Id, rhs: Id) -> Ordering {
+    let lhs = &data[&lhs];
+    let rhs = &data[&rhs];
+
+    // TODO: order by card type first
+    lhs.name.cmp(&rhs.name)
+}
+
 #[derive(Debug, Clone, Copy)]
 struct DrawerData {
     id: usize,
@@ -95,13 +105,13 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
             .update(|drawers| drawers.retain(|drawer| drawer.id != data.id));
     };
 
-    let iter = move || {
-        data.content
-            .get()
-            .iter()
-            .copied()
-            .enumerate()
-            .collect::<Vec<_>>()
+    let push = move |id| {
+        let cards = use_context::<&'static CardData>(cx).unwrap();
+        data.content.update(|content| {
+            if let Err(pos) = content.binary_search_by(|probe| deck_order(cards, *probe, id)) {
+                content.insert(pos, id);
+            }
+        })
     };
 
     // TODO: propagate input updates back to name signal
@@ -121,13 +131,13 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
                     let id = Id::new(
                         ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
                     );
-                    data.content.update(|content| content.push(id));
+                    push(id);
                 }
             >
                 <For
-                    each=iter
-                    key=|(idx, _)| *idx
-                    view=move |cx, (_, id)| {
+                    each=data.content
+                    key=|id| *id
+                    view=move |cx, id| {
                         view! { cx, <Card id=id/> }
                     }
                 />
