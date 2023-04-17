@@ -1,0 +1,38 @@
+name: Deployment
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1.0.6
+        with:
+          target: wasm32-unknown-unknown
+          toolchain: nightly
+          profile: minimal
+      
+      - name: Install trunk
+        uses: jetli/trunk-action@v0.4.0
+        
+      - name: Build
+        run: |
+          trunk build --release --public-url=ygo-deck-constructor
+          
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v1.0.8
+        with:
+          path: dist/
+
+      - name: Deploy GitHub Pages site
+        uses: actions/deploy-pages@v2.0.0
