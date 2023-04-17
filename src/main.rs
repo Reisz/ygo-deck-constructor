@@ -10,7 +10,7 @@ use leptos::{
 use lzma_rs::xz_decompress;
 
 async fn load_cards(_: ()) -> &'static CardData {
-    let request = Request::get("/cards.bin.xz");
+    let request = Request::get("cards.bin.xz");
     let response = request.send().await.unwrap();
     let bytes = response.binary().await.unwrap();
 
