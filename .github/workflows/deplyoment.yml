@@ -2,11 +2,15 @@ name: Deployment
 
 on:
   push:
-    branches:
-      - main
+    branches: [$default-branch]
 
 env:
   CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 jobs:
   deploy:
