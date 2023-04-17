@@ -180,8 +180,18 @@ fn Drawers(cx: Scope) -> impl IntoView {
 
 #[component]
 fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
+    let (next_idx, set_next_idx) = create_signal(cx, 0usize);
     let (content, set_content) = create_signal(cx, Vec::new());
-    let iter = move || content().iter().copied().enumerate().collect::<Vec<_>>();
+
+    let push = move |id| {
+        let cards = use_context::<&'static CardData>(cx).unwrap();
+        set_content.update(|content| {
+            let (Ok(pos) | Err(pos)) =
+                content.binary_search_by(|(_, probe)| deck_order(cards, *probe, id));
+            content.insert(pos, (next_idx(), id));
+            set_next_idx.update(|idx| *idx += 1);
+        })
+    };
 
     view! { cx,
         <h2>{name}</h2>
@@ -197,11 +207,11 @@ fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
                 let id = Id::new(
                     ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
                 );
-                set_content.update(|content| content.push(id));
+                push(id);
             }
         >
             <For
-                each=iter
+                each=content
                 key=|(idx, _)| *idx
                 view=move |cx, (_, id)| {
                     view! { cx, <Card id=id/> }
