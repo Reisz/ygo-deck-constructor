@@ -20,6 +20,7 @@ jobs:
         with:
           target: wasm32-unknown-unknown
           toolchain: nightly
+          default: true
           profile: minimal
       
       - name: Install trunk
