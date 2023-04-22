@@ -1,7 +1,7 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, fmt::Display};
 
 use bincode::Options;
-use data::card::{CardData, Id};
+use data::card::{AllowedDeck, CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
@@ -178,13 +178,41 @@ fn Drawers(cx: Scope) -> impl IntoView {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum DeckPartType {
+    Main,
+    Extra,
+    Side,
+}
+
+impl DeckPartType {
+    fn matches(self, part: AllowedDeck) -> bool {
+        match self {
+            Self::Main => matches!(part, AllowedDeck::Main),
+            Self::Extra => matches!(part, AllowedDeck::Extra),
+            Self::Side => true,
+        }
+    }
+}
+
+impl Display for DeckPartType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            Self::Main => "Main",
+            Self::Extra => "Extra",
+            Self::Side => "Side",
+        };
+        write!(f, "{}", name)
+    }
+}
+
 #[component]
-fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
+fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
     let (next_idx, set_next_idx) = create_signal(cx, 0usize);
     let (content, set_content) = create_signal(cx, Vec::new());
 
+    let cards = use_context::<&'static CardData>(cx).unwrap();
     let push = move |id| {
-        let cards = use_context::<&'static CardData>(cx).unwrap();
         set_content.update(|content| {
             let (Ok(pos) | Err(pos)) =
                 content.binary_search_by(|(_, probe)| deck_order(cards, *probe, id));
@@ -194,7 +222,7 @@ fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
     };
 
     view! { cx,
-        <h2>{name}</h2>
+        <h2>{part_type.to_string()}</h2>
         <div
             class="card-list"
             on:dragenter=move |ev| {
@@ -207,7 +235,9 @@ fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
                 let id = Id::new(
                     ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
                 );
-                push(id);
+                if part_type.matches(cards[&id].card_type.allowed_deck()) {
+                    push(id);
+                }
             }
         >
             <For
@@ -225,9 +255,9 @@ fn DeckPart(cx: Scope, name: &'static str) -> impl IntoView {
 fn Deck(cx: Scope) -> impl IntoView {
     view! { cx,
         <div class="deck-view">
-            <DeckPart name="Main"/>
-            <DeckPart name="Side"/>
-            <DeckPart name="Extra"/>
+            <DeckPart part_type=DeckPartType::Main/>
+            <DeckPart part_type=DeckPartType::Extra/>
+            <DeckPart part_type=DeckPartType::Side/>
         </div>
     }
 }
