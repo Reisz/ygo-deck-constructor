@@ -207,6 +207,14 @@ impl DeckPartType {
             Self::Side => true,
         }
     }
+
+    fn max(self) -> u8 {
+        match self {
+            Self::Main => 60,
+            Self::Extra => 15,
+            Self::Side => 15,
+        }
+    }
 }
 
 impl Display for DeckPartType {
@@ -252,6 +260,11 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
 
     view! { cx,
         <h2>{part_type.to_string()}</h2>
+        <div class="part-size">
+            <span class="current">{move || content().len()}</span>
+            <span class="divider">" / "</span>
+            <span class="max">{part_type.max()}</span>
+        </div>
         <div
             class="card-list"
             on:dragenter=drag_over
