@@ -8,6 +8,7 @@ use leptos::{
     provide_context, use_context, view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
+use web_sys::DragEvent;
 
 async fn load_cards(_: ()) -> &'static CardData {
     let request = Request::get("cards.bin.xz");
@@ -221,16 +222,27 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
         })
     };
 
+    let drag_over = |ev: DragEvent| {
+        let id = Id::new(
+            ev.data_transfer()
+                .unwrap()
+                .get_data("text/plain")
+                .unwrap()
+                .parse()
+                .unwrap(),
+        );
+        if part_type.matches(cards[&id].card_type.allowed_deck()) {
+            ev.data_transfer().unwrap().set_drop_effect("copy");
+        }
+        ev.prevent_default();
+    };
+
     view! { cx,
         <h2>{part_type.to_string()}</h2>
         <div
             class="card-list"
-            on:dragenter=move |ev| {
-                ev.prevent_default();
-            }
-            on:dragover=move |ev| {
-                ev.prevent_default();
-            }
+            on:dragenter=drag_over
+            on:dragover=drag_over
             on:drop=move |ev| {
                 let id = Id::new(
                     ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
