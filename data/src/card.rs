@@ -26,12 +26,6 @@ pub struct Card {
     pub archetype: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum AllowedDeck {
-    Main,
-    Extra,
-}
-
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub enum CardType {
     Monster {
@@ -44,23 +38,6 @@ pub enum CardType {
     },
     Spell(SpellType),
     Trap(TrapType),
-}
-
-impl CardType {
-    pub fn allowed_deck(&self) -> AllowedDeck {
-        match self {
-            Self::Spell(_)
-            | Self::Trap(_)
-            | Self::Monster {
-                stats:
-                    MonsterStats::Normal {
-                        monster_type: None, ..
-                    },
-                ..
-            } => AllowedDeck::Main,
-            _ => AllowedDeck::Extra,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]

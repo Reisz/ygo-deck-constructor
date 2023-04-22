@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Display};
 
 use bincode::Options;
-use data::card::{AllowedDeck, CardData, Id};
+use data::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
@@ -23,7 +23,7 @@ async fn load_cards(_: ()) -> &'static CardData {
 }
 
 #[component]
-fn Card(cx: Scope, id: Id) -> impl IntoView {
+fn CardView(cx: Scope, id: Id) -> impl IntoView {
     let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
 
     view! { cx,
@@ -75,7 +75,7 @@ fn CardSearch(cx: Scope) -> impl IntoView {
                     each=card_iter
                     key=|(id, _)| *id
                     view=move |cx, (id, _)| {
-                        view! { cx, <Card id=*id/> }
+                        view! { cx, <CardView id=*id/> }
                     }
                 />
             </div>
@@ -139,7 +139,7 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
                     each=data.content
                     key=|id| *id
                     view=move |cx, id| {
-                        view! { cx, <Card id=id/> }
+                        view! { cx, <CardView id=id/> }
                     }
                 />
             </div>
@@ -187,10 +187,23 @@ enum DeckPartType {
 }
 
 impl DeckPartType {
-    fn matches(self, part: AllowedDeck) -> bool {
+    fn can_contain(self, card: &Card) -> bool {
+        let is_extra = matches!(
+            card.card_type,
+            CardType::Monster {
+                stats: MonsterStats::Normal {
+                    monster_type: Some(
+                        MonsterType::Fusion | MonsterType::Synchro | MonsterType::Xyz
+                    ),
+                    ..
+                } | MonsterStats::Link { .. },
+                ..
+            }
+        );
+
         match self {
-            Self::Main => matches!(part, AllowedDeck::Main),
-            Self::Extra => matches!(part, AllowedDeck::Extra),
+            Self::Main => !is_extra,
+            Self::Extra => is_extra,
             Self::Side => true,
         }
     }
@@ -222,7 +235,7 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
         })
     };
 
-    let drag_over = |ev: DragEvent| {
+    let drag_over = move |ev: DragEvent| {
         let id = Id::new(
             ev.data_transfer()
                 .unwrap()
@@ -231,7 +244,7 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
                 .parse()
                 .unwrap(),
         );
-        if part_type.matches(cards[&id].card_type.allowed_deck()) {
+        if part_type.can_contain(&cards[&id]) {
             ev.data_transfer().unwrap().set_drop_effect("copy");
         }
         ev.prevent_default();
@@ -247,7 +260,7 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
                 let id = Id::new(
                     ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
                 );
-                if part_type.matches(cards[&id].card_type.allowed_deck()) {
+                if part_type.can_contain(&cards[&id]) {
                     push(id);
                 }
             }
@@ -256,7 +269,7 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
                 each=content
                 key=|(idx, _)| *idx
                 view=move |cx, (_, id)| {
-                    view! { cx, <Card id=id/> }
+                    view! { cx, <CardView id=id/> }
                 }
             />
         </div>
