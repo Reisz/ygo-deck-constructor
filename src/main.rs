@@ -8,7 +8,7 @@ use leptos::{
     provide_context, use_context, view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
-use web_sys::DragEvent;
+use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, start_drag, DropEffect};
 
 async fn load_cards(_: ()) -> &'static CardData {
     let request = Request::get("cards.bin.xz");
@@ -27,13 +27,7 @@ fn CardView(cx: Scope, id: Id) -> impl IntoView {
     let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
 
     view! { cx,
-        <div
-            class="card"
-            draggable="true"
-            on:dragstart=move |ev| {
-                ev.data_transfer().unwrap().set_data("text/plain", &id.get().to_string()).unwrap();
-            }
-        >
+        <div class="card" draggable="true" on:dragstart=move |ev| start_drag(&ev, id, card)>
             <div class="name">{&card.name}</div>
         </div>
     }
@@ -112,7 +106,16 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
             if let Err(pos) = content.binary_search_by(|probe| deck_order(cards, *probe, id)) {
                 content.insert(pos, id);
             }
-        })
+        });
+    };
+
+    let drag_over = move |ev| {
+        if let Some(id) = get_dragged_card(&ev) {
+            if !data.content.get().contains(&id) {
+                set_drop_effect(&ev, DropEffect::Copy);
+                ev.prevent_default();
+            }
+        }
     };
 
     // TODO: propagate input updates back to name signal
@@ -122,17 +125,12 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
             <button on:click=move |_| close()>"X"</button>
             <div
                 class="card-list"
-                on:dragenter=move |ev| {
-                    ev.prevent_default();
-                }
-                on:dragover=move |ev| {
-                    ev.prevent_default();
-                }
+                on:dragenter=drag_over
+                on:dragover=drag_over
                 on:drop=move |ev| {
-                    let id = Id::new(
-                        ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
-                    );
-                    push(id);
+                    if let Some(id) = get_dragged_card(&ev) {
+                        push(id);
+                    }
                 }
             >
                 <For
@@ -211,8 +209,7 @@ impl DeckPartType {
     fn max(self) -> u8 {
         match self {
             Self::Main => 60,
-            Self::Extra => 15,
-            Self::Side => 15,
+            Self::Extra | Self::Side => 15,
         }
     }
 }
@@ -224,7 +221,7 @@ impl Display for DeckPartType {
             Self::Extra => "Extra",
             Self::Side => "Side",
         };
-        write!(f, "{}", name)
+        write!(f, "{name}")
     }
 }
 
@@ -240,22 +237,16 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
                 content.binary_search_by(|(_, probe)| deck_order(cards, *probe, id));
             content.insert(pos, (next_idx(), id));
             set_next_idx.update(|idx| *idx += 1);
-        })
+        });
     };
 
-    let drag_over = move |ev: DragEvent| {
-        let id = Id::new(
-            ev.data_transfer()
-                .unwrap()
-                .get_data("text/plain")
-                .unwrap()
-                .parse()
-                .unwrap(),
-        );
-        if part_type.can_contain(&cards[&id]) {
-            ev.data_transfer().unwrap().set_drop_effect("copy");
+    let drag_over = move |ev| {
+        if let Some(id) = get_dragged_card(&ev) {
+            if part_type.can_contain(&cards[&id]) {
+                set_drop_effect(&ev, DropEffect::Copy);
+                ev.prevent_default();
+            }
         }
-        ev.prevent_default();
     };
 
     view! { cx,
@@ -270,11 +261,10 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
             on:dragenter=drag_over
             on:dragover=drag_over
             on:drop=move |ev| {
-                let id = Id::new(
-                    ev.data_transfer().unwrap().get_data("text/plain").unwrap().parse().unwrap(),
-                );
-                if part_type.can_contain(&cards[&id]) {
-                    push(id);
+                if let Some(id) = get_dragged_card(&ev) {
+                    if part_type.can_contain(&cards[&id]) {
+                        push(id);
+                    }
                 }
             }
         >
