@@ -1,6 +1,6 @@
 name: Integration
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 env:
   CARGO_TERM_COLOR: always
@@ -10,12 +10,15 @@ jobs:
     name: Run Checks
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: extractions/setup-just@v1
+    - name: Checkout sources
+      uses: actions/checkout@v3
+    - name: Install just
+      uses: extractions/setup-just@v1
     - name: Install rust toolchain
       uses: actions-rs/toolchain@v1
       with:
         toolchain: nightly
+        default: true
         profile: minimal
         components: clippy, rustfmt
     - name: Run linter
