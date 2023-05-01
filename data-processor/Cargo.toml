@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 anyhow = "1.0.70"
 bincode.workspace = true
-clap = { version = "4.2.5", features = ["derive"] }
 console = "0.15.5"
 data.path = "../data"
 indicatif = { version = "0.17.3", features = ["rayon"] }
