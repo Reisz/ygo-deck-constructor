@@ -250,6 +250,7 @@ impl From<&ygoprodeck::Card> for CardLimit {
     }
 }
 
+#[must_use]
 pub fn project(card: ygoprodeck::Card) -> (Id, Card) {
     (Id::new(card.id), card.into())
 }

@@ -1,5 +1,5 @@
 lint:
-    cargo clippy --workspace -- -W clippy::pedantic -A clippy::module-name-repetitions -D warnings
+    cargo clippy --workspace -- -W clippy::pedantic -A clippy::missing-errors-doc -A clippy::module-name-repetitions -D warnings
 
 test:
     cargo test --workspace

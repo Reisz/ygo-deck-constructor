@@ -1,5 +1,3 @@
-#![feature(file_set_times)]
-
 use std::{
     fs::{self, File},
     io::{self, BufRead, BufReader, BufWriter, Read, Write},
@@ -7,8 +5,13 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use cache::CacheBehavior;
 use data::card::CardData;
+use data_processor::{
+    cache::{self, CacheBehavior},
+    project::project,
+    reqwest_indicatif::ProgressReader,
+    step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
+};
 use indicatif::{
     DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator, ProgressStyle,
 };
@@ -16,25 +19,11 @@ use rayon::prelude::*;
 use serde::{ser::SerializeMap, Serializer};
 use xz2::write::XzEncoder;
 
-use crate::reqwest_indicatif::ProgressReader;
-
-mod cache;
-mod project;
-mod reqwest_indicatif;
-mod ygoprodeck;
-
-const CARD_INFO_LOCAL: &str = "target/card_info.json";
-const OUTPUT_FILE: &str = "dist/cards.bin.xz";
-
 fn filter(card: &ygoprodeck::Card) -> bool {
     !matches!(
         card.card_type,
         ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
     )
-}
-
-fn step(text: &str) {
-    println!("{} {text}...", console::style(">").bold().blue());
 }
 
 fn get_card_info_download() -> Result<impl Read> {
@@ -73,7 +62,7 @@ fn main() -> Result<()> {
         .into_par_iter()
         .progress_with_style(style.clone())
         .filter(filter)
-        .map(project::project)
+        .map(project)
         .collect::<CardData>();
 
     step("Saving");
