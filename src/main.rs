@@ -1,7 +1,7 @@
 use std::{cmp::Ordering, fmt::Display};
 
 use bincode::Options;
-use data::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
+use common::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
@@ -18,7 +18,9 @@ async fn load_cards(_: ()) -> &'static CardData {
     let mut decompressed = Vec::new();
     xz_decompress(&mut bytes.as_slice(), &mut decompressed).unwrap();
     Box::leak(Box::new(
-        data::bincode_options().deserialize(&decompressed).unwrap(),
+        common::bincode_options()
+            .deserialize(&decompressed)
+            .unwrap(),
     ))
 }
 

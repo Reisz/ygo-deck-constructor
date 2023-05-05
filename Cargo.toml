@@ -7,8 +7,8 @@ edition.workspace = true
 
 [dependencies]
 bincode.workspace = true
+common.path = "common"
 console_error_panic_hook = "0.1.7"
-data.path = "data"
 gloo-net = "0.2.6"
 leptos = "0.2.5"
 lzma-rs = "0.3.0"
@@ -22,7 +22,7 @@ web-sys = { version = "0.3.61", features = ["DataTransfer", "DragEvent"] }
 itertools = "0.10.5"
 
 [workspace]
-members = ["data", "data-processor"]
+members = ["common", "data-processor"]
 
 [workspace.package]
 version = "0.1.0"

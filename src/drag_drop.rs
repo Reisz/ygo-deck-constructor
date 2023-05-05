@@ -1,4 +1,4 @@
-use data::card::{Card, Id};
+use common::card::{Card, Id};
 use wasm_bindgen::intern;
 use web_sys::{DataTransfer, DragEvent};
 

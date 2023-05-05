@@ -1,4 +1,4 @@
-use data::card::{
+use common::card::{
     Attribute, Card, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
     MonsterType, Race, SpellType, TrapType,
 };

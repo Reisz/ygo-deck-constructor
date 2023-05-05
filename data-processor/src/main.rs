@@ -5,7 +5,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
-use data::card::CardData;
+use common::card::CardData;
 use data_processor::{
     cache::{self, CacheBehavior},
     project::project,
@@ -68,7 +68,8 @@ fn main() -> Result<()> {
     step("Saving");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
 
-    let mut serializer = bincode::Serializer::new(XzEncoder::new(file, 9), data::bincode_options());
+    let mut serializer =
+        bincode::Serializer::new(XzEncoder::new(file, 9), common::bincode_options());
     let mut map = serializer.serialize_map(Some(cards.len()))?;
     cards
         .iter()

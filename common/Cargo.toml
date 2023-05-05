@@ -1,5 +1,5 @@
 [package]
-name = "data"
+name = "common"
 version.workspace = true
 edition.workspace = true
 
