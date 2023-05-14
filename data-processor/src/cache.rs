@@ -34,7 +34,7 @@ fn get_online_version() -> Result<String> {
 }
 
 fn should_download() -> Result<Option<String>> {
-    if !Path::new(CARD_INFO_LOCAL).exists() {
+    if !Path::new(CARD_INFO_LOCAL).try_exists()? {
         return Ok(Some(get_online_version()?));
     }
 
@@ -60,6 +60,10 @@ fn should_download() -> Result<Option<String>> {
 }
 
 fn should_process() -> Result<bool> {
+    if !Path::new(OUTPUT_FILE).try_exists()? {
+        return Ok(true);
+    }
+
     let output_date = fs::metadata(OUTPUT_FILE)?.modified()?;
     let executable_date = fs::metadata(std::env::current_exe()?)?.modified()?;
 
