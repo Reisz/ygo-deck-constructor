@@ -8,13 +8,13 @@ use anyhow::{anyhow, Result};
 use common::card::CardData;
 use data_processor::{
     cache::{self, CacheBehavior},
+    default_progress_style,
+    image::{self, save_missing_ids},
     project::project,
     reqwest_indicatif::ProgressReader,
     step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
-use indicatif::{
-    DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator, ProgressStyle,
-};
+use indicatif::{DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator};
 use rayon::prelude::*;
 use serde::{ser::SerializeMap, Serializer};
 use xz2::write::XzEncoder;
@@ -46,8 +46,7 @@ fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>>
 }
 
 fn main() -> Result<()> {
-    let style =
-        ProgressStyle::with_template("{bar} {human_pos}/{human_len} ({eta} remaining)").unwrap();
+    let style = default_progress_style();
 
     let cache = cache::get_behavior()?;
     if matches!(cache, CacheBehavior::Nothing) {
@@ -64,6 +63,19 @@ fn main() -> Result<()> {
         .filter(filter)
         .map(project)
         .collect::<CardData>();
+
+    step("Checking images");
+    let images = image::available_ids()?;
+    let missing_images = cards
+        .par_iter()
+        .filter(|(id, _)| !images.contains(id))
+        .map(|(&id, _)| id)
+        .collect::<Vec<_>>();
+
+    if !missing_images.is_empty() {
+        eprintln!("! Missing images for {} cards", missing_images.len());
+        save_missing_ids(&missing_images)?;
+    }
 
     step("Saving");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);

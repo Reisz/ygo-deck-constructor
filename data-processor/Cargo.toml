@@ -2,15 +2,24 @@
 name = "data-processor"
 version.workspace = true
 edition.workspace = true
+default-run = "data-processor"
 
 [dependencies]
 anyhow = "1.0.70"
 bincode.workspace = true
 common.path = "../common"
 console = "0.15.5"
+ctrlc = "3.2.5"
+governor = "0.5.1"
 indicatif = { version = "0.17.3", features = ["rayon"] }
 rayon = "1.7.0"
 reqwest = { version = "0.11.17", features = ["blocking", "json"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = "1.0.96"
 xz2 = "0.1.7"
+zip = { version = "0.6.4", default-features = false }
+
+[dependencies.image]
+version = "0.24.6"
+features = ["jpeg", "webp-encoder"]
+default-features = false

@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 pub const VERSION_URL: &str = "https://db.ygoprodeck.com/api/v7/checkDBVer.php";
 pub const URL: &str = "https://db.ygoprodeck.com/api/v7/cardinfo.php?format=tcg";
+pub const ARTWORK_URL: &str = "https://images.ygoprodeck.com/images/cards_cropped/";
 
 #[derive(Debug, Deserialize)]
 struct VersionInfo {
