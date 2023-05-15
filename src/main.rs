@@ -31,6 +31,7 @@ fn CardView(cx: Scope, id: Id) -> impl IntoView {
     view! { cx,
         <div class="card" draggable="true" on:dragstart=move |ev| start_drag(&ev, id, card)>
             <img src=format!("images/{}.webp", id.get())/>
+            <div class="tooltip">{&card.name}</div>
         </div>
     }
 }
