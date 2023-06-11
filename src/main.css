@@ -2,21 +2,21 @@
 *,
 *::before,
 *::after {
-	box-sizing: border-box;
+    box-sizing: border-box;
 }
 
 * {
-	margin: 0;
+    margin: 0;
 }
 
 html,
 body {
-	height: 100%;
+    height: 100%;
 }
 
 body {
-	line-height: 1.5;
-	-webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
 }
 
 img,
@@ -24,15 +24,15 @@ picture,
 video,
 canvas,
 svg {
-	display: block;
-	max-width: 100%;
+    display: block;
+    max-width: 100%;
 }
 
 input,
 button,
 textarea,
 select {
-	font: inherit;
+    font: inherit;
 }
 
 p,
@@ -42,109 +42,109 @@ h3,
 h4,
 h5,
 h6 {
-	overflow-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .deck-builder {
-	display: grid;
-	grid-auto-flow: column;
-	grid-auto-columns: 1fr;
-	grid-template-rows: 100%;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    grid-template-rows: 100%;
 
-	padding: 1rem;
-	gap: 1rem;
+    padding: 1rem;
+    gap: 1rem;
 
-	height: 100%;
+    height: 100%;
 }
 
 .card-search {
-	display: grid;
-	grid-template-rows: min-content 1fr;
+    display: grid;
+    grid-template-rows: min-content 1fr;
 
-	gap: 1rem;
+    gap: 1rem;
 }
 
 .drawers {
-	display: grid;
-	align-content: start;
+    display: grid;
+    align-content: start;
 
-	gap: 0.5rem;
+    gap: 0.5rem;
 
-	overflow: auto;
+    overflow: auto;
 }
 
 .drawer {
-	display: grid;
-	grid-template-columns: 1fr min-content;
-	grid-template-areas:
-		". ."
-		"content content";
+    display: grid;
+    grid-template-columns: 1fr min-content;
+    grid-template-areas:
+        ". ."
+        "content content";
 
-	gap: 0.5rem;
+    gap: 0.5rem;
 }
 
 .drawer .card-list {
-	grid-area: content;
+    grid-area: content;
 }
 
 .deck-view {
-	display: grid;
-	grid-template-columns: 1fr auto;
-	grid-template-rows: repeat(3, min-content 1fr);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: repeat(3, min-content 1fr);
 
-	gap: 0.5rem;
+    gap: 0.5rem;
 }
 
 .deck-view .card-list {
-	grid-column: 1/3;
+    grid-column: 1/3;
 }
 
 /* Card List */
 .card-list {
-	display: flex;
-	flex-wrap: wrap;
-	align-content: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
 
-	padding: 1rem;
-	gap: 1rem;
+    padding: 1rem;
+    gap: 1rem;
 
-	overflow: auto;
+    overflow: auto;
 
-	border: 1px solid black;
-	border-radius: 2rem;
+    border: 1px solid black;
+    border-radius: 2rem;
 }
 
 /* Card */
 .card {
-	position: relative;
+    position: relative;
 
-	display: grid;
+    display: grid;
 
-	border: 1px solid black;
-	border-radius: 0.5rem;
-	padding: 0.5rem;
+    border: 1px solid black;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
 
-	background-color: lightgrey;
+    background-color: lightgrey;
 }
 
 .card .usage {
-	display: flex;
-	gap: 0.1rem;
+    display: flex;
+    gap: 0.1rem;
 }
 
 .card .tooltip {
-	visibility: hidden;
+    visibility: hidden;
 
-	position: absolute;
-	z-index: 9;
-	left: calc(100% + 0.5rem);
+    position: absolute;
+    z-index: 9;
+    left: calc(100% + 0.5rem);
 
-	background: darkgray;
+    background: darkgray;
 
-	border-radius: 0.5rem;
-	padding: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
 }
 
 .card:hover .tooltip {
-	visibility: visible;
+    visibility: visible;
 }
