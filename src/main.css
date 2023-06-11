@@ -45,6 +45,48 @@ h6 {
     overflow-wrap: break-word;
 }
 
+/* Colors */
+.monster {
+    --primary-color: #bdaf7e;
+}
+
+.monster.effect {
+    --primary-color: #ac6c46;
+}
+
+.monster.ritual {
+    --primary-color: #206ab3;
+}
+
+.monster.fusion {
+    --primary-color: #5d3c80;
+}
+
+.monster.synchro {
+    --primary-color: #acacae;
+}
+
+.monster.xyz {
+    --primary-color: #1e2628;
+}
+
+.monster.link {
+    --primary-color: #217ba0;
+}
+
+.monster.pendulum {
+    --secondary-color: #208f86;
+}
+
+.spell {
+    --primary-color: #208f86;
+}
+
+.trap {
+    --primary-color: #a43278;
+}
+
+/* User Interface */
 .deck-builder {
     display: grid;
     grid-auto-flow: column;
@@ -124,7 +166,12 @@ h6 {
     border-radius: 0.5rem;
     padding: 0.5rem;
 
-    background-color: lightgrey;
+    --secondary-color: var(--primary-color);
+    background-image: linear-gradient(var(--primary-color) 45%, var(--secondary-color) 55%);
+}
+
+.card img {
+    border: 1px solid black;
 }
 
 .card .usage {

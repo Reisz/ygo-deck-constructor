@@ -1,6 +1,9 @@
+mod card_view;
+
 use std::{cmp::Ordering, fmt::Display};
 
 use bincode::Options;
+use card_view::{CardView, CardViewProps};
 use common::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
 use gloo_net::http::Request;
 use leptos::{
@@ -8,7 +11,7 @@ use leptos::{
     provide_context, use_context, view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
 };
 use lzma_rs::xz_decompress;
-use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, start_drag, DropEffect};
+use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, DropEffect};
 
 async fn load_cards(_: ()) -> &'static CardData {
     let request = Request::get("cards.bin.xz");
@@ -22,18 +25,6 @@ async fn load_cards(_: ()) -> &'static CardData {
             .deserialize(&decompressed)
             .unwrap(),
     ))
-}
-
-#[component]
-fn CardView(cx: Scope, id: Id) -> impl IntoView {
-    let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
-
-    view! { cx,
-        <div class="card" draggable="true" on:dragstart=move |ev| start_drag(&ev, id, card)>
-            <img src=format!("images/{}.webp", id.get())/>
-            <div class="tooltip">{&card.name}</div>
-        </div>
-    }
 }
 
 #[component]
