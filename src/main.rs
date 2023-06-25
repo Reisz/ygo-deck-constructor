@@ -1,6 +1,6 @@
 mod card_view;
 
-use std::{cmp::Ordering, fmt::Display};
+use std::{cmp::Ordering, fmt::Display, rc::Rc};
 
 use bincode::Options;
 use card_view::{CardView, CardViewProps};
@@ -103,6 +103,12 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
         });
     };
 
+    let delete = move |delete_id| {
+        data.content
+            .update(|content| content.retain(|id| *id != delete_id));
+    };
+    let delete: Rc<dyn Fn(Id)> = Rc::new(delete);
+
     let drag_over = move |ev| {
         if let Some(id) = get_dragged_card(&ev) {
             if !data.content.get().contains(&id) {
@@ -131,7 +137,8 @@ fn Drawer(cx: Scope, data: DrawerData) -> impl IntoView {
                     each=data.content
                     key=|id| *id
                     view=move |cx, id| {
-                        view! { cx, <CardView id=id/> }
+                        let delete = delete.clone();
+                        view! { cx, <CardView id=id on_delete=delete/> }
                     }
                 />
             </div>
@@ -234,6 +241,21 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
         });
     };
 
+    let delete = move |delete_id| {
+        set_content.update(|content| {
+            let mut has_deleted = false;
+            content.retain(|(_, id)| {
+                if *id == delete_id && !has_deleted {
+                    has_deleted = true;
+                    false
+                } else {
+                    true
+                }
+            });
+        });
+    };
+    let delete = Rc::new(delete);
+
     let drag_over = move |ev| {
         if let Some(id) = get_dragged_card(&ev) {
             if part_type.can_contain(&cards[&id]) {
@@ -266,7 +288,8 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
                 each=content
                 key=|(idx, _)| *idx
                 view=move |cx, (_, id)| {
-                    view! { cx, <CardView id=id/> }
+                    let delete = delete.clone();
+                    view! { cx, <CardView id=id on_delete=delete/> }
                 }
             />
         </div>
