@@ -3,12 +3,12 @@ mod card_view;
 use std::{cmp::Ordering, fmt::Display, rc::Rc};
 
 use bincode::Options;
-use card_view::{CardView, CardViewProps};
+use card_view::CardView;
 use common::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
-    provide_context, use_context, view, For, ForProps, IntoView, Scope, Suspense, SuspenseProps,
+    provide_context, use_context, view, For, IntoView, Scope, Suspense,
 };
 use lzma_rs::xz_decompress;
 use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, DropEffect};

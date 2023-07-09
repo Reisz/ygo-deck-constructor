@@ -9,17 +9,17 @@ edition.workspace = true
 bincode.workspace = true
 common.path = "common"
 console_error_panic_hook = "0.1.7"
-gloo-net = "0.2.6"
-leptos = "0.2.5"
+gloo-net = "0.3.0"
+leptos = { version = "0.4.2", features = ["csr", "nightly"] }
 lzma-rs = "0.3.0"
 nom = "7.1.3"
-thiserror = "1.0.40"
-wasm-bindgen = "0.2.84"
-wasm-bindgen-futures = "0.4.34"
-web-sys = { version = "0.3.61", features = ["DataTransfer", "DragEvent"] }
+thiserror = "1.0.43"
+wasm-bindgen = "0.2.87"
+wasm-bindgen-futures = "0.4.37"
+web-sys = { version = "0.3.64", features = ["DataTransfer", "DragEvent"] }
 
 [dev-dependencies]
-itertools = "0.10.5"
+itertools = "0.11.0"
 
 [workspace]
 members = ["common", "data-processor"]
@@ -30,4 +30,4 @@ edition = "2021"
 
 [workspace.dependencies]
 bincode = "1.3.3"
-serde = "1.0.160"
+serde = "1.0.167"
