@@ -9,37 +9,24 @@ use std::{
 use common::card::Id;
 use thiserror::Error;
 
-/// The three parts of a Yu-Gi-Oh deck.
-#[derive(Debug, Clone, Copy)]
-pub enum Part {
-    Main,
-    Extra,
-    Side,
+use crate::deck::PartType;
+
+/// Section name in the YDK format.
+#[must_use]
+pub fn ydk_name(part: PartType) -> &'static str {
+    match part {
+        PartType::Main => "main",
+        PartType::Extra => "extra",
+        PartType::Side => "side",
+    }
 }
 
-impl Part {
-    /// Iterate over all elements.
-    pub fn iter() -> impl Iterator<Item = Self> {
-        [Self::Main, Self::Extra, Self::Side].into_iter()
-    }
-
-    /// Section name in the YDK format.
-    #[must_use]
-    pub fn ydk_name(self) -> &'static str {
-        match self {
-            Self::Main => "main",
-            Self::Extra => "extra",
-            Self::Side => "side",
-        }
-    }
-
-    /// Prefix for section header in the YDK format (`#` or `!`)
-    #[must_use]
-    pub fn ydk_prefix(self) -> char {
-        match self {
-            Self::Main | Self::Extra => '#',
-            Self::Side => '!',
-        }
+/// Prefix for section header in the YDK format (`#` or `!`)
+#[must_use]
+pub fn ydk_prefix(part: PartType) -> char {
+    match part {
+        PartType::Main | PartType::Extra => '#',
+        PartType::Side => '!',
     }
 }
 
@@ -73,7 +60,9 @@ impl Deck {
     pub fn from_ydk(reader: &mut impl Read) -> Result<Self, Error> {
         let mut data = String::new();
         reader.read_to_string(&mut data)?;
-        Ok(parse::parse(&data)?)
+        Ok(Self {
+            parts: parse::parse(&data)?,
+        })
     }
 
     /// Serialize the deck into the YDK format used by `YGOPRODeck`.
@@ -82,8 +71,8 @@ impl Deck {
     ///
     /// See [`writeln!`].
     pub fn to_ydk(&self, writer: &mut impl Write) -> io::Result<()> {
-        for part in Part::iter() {
-            writeln!(writer, "{}{}", part.ydk_prefix(), part.ydk_name())?;
+        for part in [PartType::Main, PartType::Extra, PartType::Side] {
+            writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
 
             for card in &self[part] {
                 writeln!(writer, "{}", card.get())?;
@@ -94,16 +83,16 @@ impl Deck {
     }
 }
 
-impl Index<Part> for Deck {
+impl Index<PartType> for Deck {
     type Output = Vec<Id>;
 
-    fn index(&self, index: Part) -> &Self::Output {
+    fn index(&self, index: PartType) -> &Self::Output {
         &self.parts[index as usize]
     }
 }
 
-impl IndexMut<Part> for Deck {
-    fn index_mut(&mut self, index: Part) -> &mut Self::Output {
+impl IndexMut<PartType> for Deck {
+    fn index_mut(&mut self, index: PartType) -> &mut Self::Output {
         &mut self.parts[index as usize]
     }
 }
@@ -120,7 +109,9 @@ mod parse {
         Finish, Parser,
     };
 
-    use super::{Deck, Part};
+    use crate::deck::PartType;
+
+    use super::ydk_name;
 
     pub type Error = nom::error::Error<String>;
     pub type Result<T> = std::result::Result<T, nom::error::Error<String>>;
@@ -141,44 +132,37 @@ mod parse {
         separated_list1(sep, id)(input)
     }
 
-    fn header_impl(name: &str, part: Part) -> impl IParser<Part> {
-        pair(one_of("#!"), tag(name)).map(move |_| part)
+    fn header_impl<'a>(part: PartType) -> impl IParser<'a, PartType> {
+        pair(one_of("#!"), tag(ydk_name(part))).map(move |_| part)
     }
 
-    fn header(input: &str) -> IResult<Part> {
+    fn header(input: &str) -> IResult<PartType> {
         alt((
-            header_impl("main", Part::Main),
-            header_impl("extra", Part::Extra),
-            header_impl("side", Part::Side),
+            header_impl(PartType::Main),
+            header_impl(PartType::Extra),
+            header_impl(PartType::Side),
         ))(input)
     }
 
-    fn section(input: &str) -> IResult<Deck> {
+    fn section(input: &str) -> IResult<(PartType, Vec<Id>)> {
         pair(header, opt(preceded(sep, ids)))
-            .map(|(part, ids)| {
-                let mut deck = Deck::default();
-                if let Some(ids) = ids {
-                    deck[part] = ids;
+            .map(|(part, ids)| (part, ids.unwrap_or_default()))
+            .parse(input)
+    }
+
+    fn deck(input: &str) -> IResult<[Vec<Id>; 3]> {
+        separated_list0(sep, section)
+            .map(|parts| {
+                let mut deck = [vec![], vec![], vec![]];
+                for (part_type, content) in parts {
+                    deck[part_type as usize].extend(&content);
                 }
                 deck
             })
             .parse(input)
     }
 
-    fn deck(input: &str) -> IResult<Deck> {
-        separated_list0(sep, section)
-            .map(|decks| {
-                decks.into_iter().fold(Deck::default(), |mut a, b| {
-                    for part in Part::iter() {
-                        a[part].extend(&b[part]);
-                    }
-                    a
-                })
-            })
-            .parse(input)
-    }
-
-    pub fn parse(input: &str) -> Result<Deck> {
+    pub fn parse(input: &str) -> Result<[Vec<Id>; 3]> {
         terminated(deck, many0(line_ending))
             .parse(input)
             .finish()
@@ -213,11 +197,15 @@ mod test {
                 let mut deck = Deck::default();
                 let mut ydk = Vec::new();
 
-                for (part, count) in Part::iter().zip([main_count, extra_count, side_count]) {
+                for (part, count) in [
+                    (PartType::Main, main_count),
+                    (PartType::Extra, extra_count),
+                    (PartType::Side, side_count),
+                ] {
                     match part {
-                        Part::Main => ydk.push("#main".to_owned()),
-                        Part::Extra => ydk.push("#extra".to_owned()),
-                        Part::Side => ydk.push("!side".to_owned()),
+                        PartType::Main => ydk.push("#main".to_owned()),
+                        PartType::Extra => ydk.push("#extra".to_owned()),
+                        PartType::Side => ydk.push("!side".to_owned()),
                     }
 
                     for _ in 0..count {

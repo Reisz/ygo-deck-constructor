@@ -1,4 +1,5 @@
 mod card_view;
+mod deck;
 mod ydk;
 
 use std::{cmp::Ordering, fmt::Display, rc::Rc};
