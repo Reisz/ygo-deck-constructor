@@ -1,9 +1,12 @@
+// TODO remove once actually used
+#![allow(unused)]
+
 use std::{
     io::{self, Read, Write},
     ops::{Index, IndexMut},
 };
 
-use data::card::Id;
+use common::card::Id;
 use thiserror::Error;
 
 /// The three parts of a Yu-Gi-Oh deck.
@@ -106,7 +109,7 @@ impl IndexMut<Part> for Deck {
 }
 
 mod parse {
-    use data::card::Id;
+    use common::card::Id;
     use nom::{
         branch::alt,
         bytes::complete::tag,
