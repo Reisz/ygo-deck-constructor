@@ -9,6 +9,7 @@ use ygo_deck_constructor::drag_drop::start_drag;
 pub fn CardView(
     cx: Scope,
     id: Id,
+    #[prop(default = 1)] count: usize,
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
     let card = &use_context::<&'static CardData>(cx).unwrap()[&id];
@@ -33,6 +34,10 @@ pub fn CardView(
             on:contextmenu=|ev| ev.prevent_default()
         >
             <img src=format!("images/{}.webp", id.get())/>
+            {(count > 1)
+                .then(|| {
+                    view! { cx, <div class="count">{count}</div> }
+                })}
             <div class="tooltip">{&card.name}</div>
         </div>
     }

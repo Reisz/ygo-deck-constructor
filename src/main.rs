@@ -2,18 +2,20 @@ mod card_view;
 mod deck;
 mod ydk;
 
-use std::{cmp::Ordering, fmt::Display, rc::Rc};
+use std::{cmp::Ordering, ops::Deref, rc::Rc};
 
 use bincode::Options;
 use card_view::CardView;
-use common::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
+use common::card::{CardData, Id};
 use gloo_net::http::Request;
 use leptos::{
-    component, create_local_resource, create_node_ref, html, mount_to_body, prelude::*,
-    provide_context, use_context, view, For, IntoView, Scope, Suspense,
+    component, create_local_resource, create_node_ref, expect_context, html, mount_to_body,
+    prelude::*, provide_context, use_context, view, For, IntoView, Scope, Suspense,
 };
 use lzma_rs::xz_decompress;
 use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, DropEffect};
+
+use crate::deck::{Deck, DeckPart, PartType};
 
 async fn load_cards(_: ()) -> &'static CardData {
     let request = Request::get("cards.bin.xz");
@@ -73,7 +75,7 @@ fn CardSearch(cx: Scope) -> impl IntoView {
     }
 }
 
-fn deck_order(data: &'static CardData, lhs: Id, rhs: Id) -> Ordering {
+fn deck_order(data: &CardData, lhs: Id, rhs: Id) -> Ordering {
     let lhs = &data[&lhs];
     let rhs = &data[&rhs];
 
@@ -180,81 +182,15 @@ fn Drawers(cx: Scope) -> impl IntoView {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum DeckPartType {
-    Main,
-    Extra,
-    Side,
-}
-
-impl DeckPartType {
-    fn can_contain(self, card: &Card) -> bool {
-        let is_extra = matches!(
-            card.card_type,
-            CardType::Monster {
-                stats: MonsterStats::Normal {
-                    monster_type: Some(
-                        MonsterType::Fusion | MonsterType::Synchro | MonsterType::Xyz
-                    ),
-                    ..
-                } | MonsterStats::Link { .. },
-                ..
-            }
-        );
-
-        match self {
-            Self::Main => !is_extra,
-            Self::Extra => is_extra,
-            Self::Side => true,
-        }
-    }
-
-    fn max(self) -> u8 {
-        match self {
-            Self::Main => 60,
-            Self::Extra | Self::Side => 15,
-        }
-    }
-}
-
-impl Display for DeckPartType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = match self {
-            Self::Main => "Main",
-            Self::Extra => "Extra",
-            Self::Side => "Side",
-        };
-        write!(f, "{name}")
-    }
-}
-
 #[component]
-fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
-    let (next_idx, set_next_idx) = create_signal(cx, 0usize);
-    let (content, set_content) = create_signal(cx, Vec::new());
+fn DeckPart(cx: Scope, part_type: PartType) -> impl IntoView {
+    let deck = expect_context::<Deck>(cx);
+    let part = deck[part_type];
 
     let cards = use_context::<&'static CardData>(cx).unwrap();
-    let push = move |id| {
-        set_content.update(|content| {
-            let (Ok(pos) | Err(pos)) =
-                content.binary_search_by(|(_, probe)| deck_order(cards, *probe, id));
-            content.insert(pos, (next_idx(), id));
-            set_next_idx.update(|idx| *idx += 1);
-        });
-    };
 
     let delete = move |delete_id| {
-        set_content.update(|content| {
-            let mut has_deleted = false;
-            content.retain(|(_, id)| {
-                if *id == delete_id && !has_deleted {
-                    has_deleted = true;
-                    false
-                } else {
-                    true
-                }
-            });
-        });
+        part.update(|part| part.remove(cx, delete_id));
     };
     let delete = Rc::new(delete);
 
@@ -270,7 +206,7 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
     view! { cx,
         <h2>{part_type.to_string()}</h2>
         <div class="part-size">
-            <span class="current">{move || content().len()}</span>
+            <span class="current">{move || part.with(DeckPart::len)}</span>
             <span class="divider">" / "</span>
             <span class="max">{part_type.max()}</span>
         </div>
@@ -281,17 +217,17 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
             on:drop=move |ev| {
                 if let Some(id) = get_dragged_card(&ev) {
                     if part_type.can_contain(&cards[&id]) {
-                        push(id);
+                        part.update(|part| part.add(cx, id));
                     }
                 }
             }
         >
             <For
-                each=content
-                key=|(idx, _)| *idx
-                view=move |cx, (_, id)| {
+                each=move || part.with(|part| part.deref().clone())
+                key=|el| *el
+                view=move |cx, (id, count)| {
                     let delete = delete.clone();
-                    view! { cx, <CardView id=id on_delete=delete/> }
+                    view! { cx, <CardView id=id count=count on_delete=delete/> }
                 }
             />
         </div>
@@ -299,12 +235,13 @@ fn DeckPart(cx: Scope, part_type: DeckPartType) -> impl IntoView {
 }
 
 #[component]
-fn Deck(cx: Scope) -> impl IntoView {
+fn DeckView(cx: Scope) -> impl IntoView {
+    provide_context(cx, Deck::new(cx, deck_order));
     view! { cx,
         <div class="deck-view">
-            <DeckPart part_type=DeckPartType::Main/>
-            <DeckPart part_type=DeckPartType::Extra/>
-            <DeckPart part_type=DeckPartType::Side/>
+            <DeckPart part_type=PartType::Main/>
+            <DeckPart part_type=PartType::Extra/>
+            <DeckPart part_type=PartType::Side/>
         </div>
     }
 }
@@ -317,7 +254,7 @@ fn DeckBuilder(cx: Scope, cards: &'static CardData) -> impl IntoView {
         <div class="deck-builder">
             <CardSearch/>
             <Drawers/>
-            <Deck/>
+            <DeckView/>
         </div>
     }
 }
