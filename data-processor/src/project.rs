@@ -98,6 +98,7 @@ impl From<&ygoprodeck::Card> for Race {
             Src::Fairy => Race::Fairy,
             Src::Fiend => Race::Fiend,
             Src::Fish => Race::Fish,
+            Src::Illusion => Race::Illusion,
             Src::Insect => Race::Insect,
             Src::Machine => Race::Machine,
             Src::Plant => Race::Plant,

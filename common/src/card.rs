@@ -53,6 +53,7 @@ pub enum Race {
     Fairy,
     Fiend,
     Fish,
+    Illusion,
     Insect,
     Machine,
     Plant,
