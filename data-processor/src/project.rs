@@ -74,7 +74,10 @@ impl From<&ygoprodeck::Card> for CardType {
                 monster! { MonsterEffect::Effect, is_tuner: true}
             }
             Src::UnionEffectMonster => monster! { MonsterEffect::Union},
-            Src::SkillCard | Src::Token => panic!("Unexpected card type: {:?}", value.card_type),
+            Src::SkillCard | Src::Token => panic!(
+                "Unexpected card type: {:?} (Id: {})",
+                value.card_type, value.id
+            ),
         }
     }
 }
@@ -109,7 +112,16 @@ impl From<&ygoprodeck::Card> for Race {
             Src::WingedBeast => Race::WingedBeast,
             Src::Wyrm => Race::Wyrm,
             Src::Zombie => Race::Zombie,
-            race => panic!("Unexpected race: {race:?}"),
+            race @ (Src::Normal
+            | Src::Field
+            | Src::Equip
+            | Src::Continuous
+            | Src::QuickPlay
+            | Src::Ritual
+            | Src::Counter) => {
+                panic!("Unexpected non-monster race {race:?} (Id: {})", value.id)
+            }
+            Src::Other(name) => panic!("Unexpected race: {name} (Id: {})", value.id),
         }
     }
 }
@@ -218,7 +230,10 @@ impl From<&ygoprodeck::Card> for SpellType {
             Src::Continuous => SpellType::Continuous,
             Src::QuickPlay => SpellType::QuickPlay,
             Src::Ritual => SpellType::Ritual,
-            _ => panic!("Unexpected race for spell card: {:?}", value.race),
+            _ => panic!(
+                "Unexpected race for spell card: {:?} (Id: {})",
+                value.race, value.id
+            ),
         }
     }
 }
@@ -230,7 +245,10 @@ impl From<&ygoprodeck::Card> for TrapType {
             Src::Normal => TrapType::Normal,
             Src::Continuous => TrapType::Continuous,
             Src::Counter => TrapType::Counter,
-            _ => panic!("Unexpected race for trap card: {:?}", value.race),
+            _ => panic!(
+                "Unexpected race for trap card: {:?} (Id: {})",
+                value.race, value.id
+            ),
         }
     }
 }

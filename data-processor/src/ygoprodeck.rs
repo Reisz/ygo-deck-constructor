@@ -4,6 +4,7 @@ use std::io::Read;
 
 use anyhow::Result;
 use serde::Deserialize;
+use serde_enum_str::Deserialize_enum_str;
 
 pub const VERSION_URL: &str = "https://db.ygoprodeck.com/api/v7/checkDBVer.php";
 pub const URL: &str = "https://db.ygoprodeck.com/api/v7/cardinfo.php?format=tcg";
@@ -113,7 +114,7 @@ pub enum CardType {
     Token,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize_enum_str)]
 pub enum Race {
     // Monster Cards
     Aqua,
@@ -162,7 +163,7 @@ pub enum Race {
     Counter,
 
     #[serde(other)]
-    Other,
+    Other(String),
 }
 
 #[derive(Debug, Deserialize)]
