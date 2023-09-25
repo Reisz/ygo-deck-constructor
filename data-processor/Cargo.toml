@@ -5,22 +5,22 @@ edition.workspace = true
 default-run = "data-processor"
 
 [dependencies]
-anyhow = "1.0.71"
+anyhow = "1.0.75"
 bincode.workspace = true
 common.path = "../common"
 console = "0.15.7"
-ctrlc = "3.4.0"
-governor = "0.5.1"
-indicatif = { version = "0.17.5", features = ["rayon"] }
-rayon = "1.7.0"
-reqwest = { version = "0.11.18", features = ["blocking", "json"] }
+ctrlc = "3.4.1"
+governor = "0.6.0"
+indicatif = { version = "0.17.7", features = ["rayon"] }
+rayon = "1.8.0"
+reqwest = { version = "0.11.20", features = ["blocking", "json"] }
 serde = { workspace = true, features = ["derive"] }
-serde-enum-str = "0.3"
-serde_json = "1.0.100"
+serde-enum-str = "0.4"
+serde_json = "1.0.107"
 xz2 = "0.1.7"
 zip = { version = "0.6.6", default-features = false }
 
 [dependencies.image]
-version = "0.24.6"
+version = "0.24.7"
 features = ["jpeg", "webp-encoder"]
 default-features = false
