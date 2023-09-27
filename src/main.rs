@@ -62,6 +62,7 @@ fn CardSearch() -> impl IntoView {
                     set_filter(input.value());
                 }
             />
+
             <div class="card-list">
                 <For
                     each=card_iter
@@ -70,6 +71,7 @@ fn CardSearch() -> impl IntoView {
                         view! { <CardView id=*id/> }
                     }
                 />
+
             </div>
         </div>
     }
@@ -135,6 +137,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                     }
                 }
             >
+
                 <For
                     each=data.content
                     key=|id| *id
@@ -143,6 +146,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                         view! { <CardView id=id on_delete=delete/> }
                     }
                 />
+
             </div>
         </div>
     }
@@ -173,6 +177,7 @@ fn Drawers() -> impl IntoView {
                     view! { <Drawer data=data set_drawers=set_drawers/> }
                 }
             />
+
             <button on:click=move |_| new_drawer()>"+"</button>
         </div>
     }
@@ -217,6 +222,7 @@ fn DeckPart(deck: Deck, part_type: PartType) -> impl IntoView {
                 }
             }
         >
+
             <For
                 each=move || part.with(|part| part.deref().clone())
                 key=|el| *el
@@ -225,6 +231,7 @@ fn DeckPart(deck: Deck, part_type: PartType) -> impl IntoView {
                     view! { <CardView id=id count=count on_delete=delete/> }
                 }
             />
+
         </div>
     }
 }
@@ -259,13 +266,16 @@ fn App() -> impl IntoView {
     let cards = create_local_resource(|| 1, |_| load_cards());
 
     view! {
-        <Suspense fallback=move || "Loading...">
+        <Suspense fallback=move || {
+            "Loading..."
+        }>
             {move || {
                 cards
                     .map(|cards| {
                         view! { <DeckBuilder cards=cards/> }
                     })
             }}
+
         </Suspense>
     }
 }

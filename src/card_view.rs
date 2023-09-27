@@ -37,6 +37,7 @@ pub fn CardView(
                 .then(|| {
                     view! { <div class="count">{count}</div> }
                 })}
+
             <div class="tooltip">{&card.name}</div>
         </div>
     }

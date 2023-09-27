@@ -1,3 +1,6 @@
+run:
+    trunk serve --open
+
 lint:
     cargo clippy --workspace -- \
     -W clippy::pedantic \
@@ -9,8 +12,9 @@ lint:
 test:
     cargo test --workspace
 
-run:
-    trunk serve --open
+check-fmt:
+    cargo fmt --all -- --check
+    leptosfmt --check **/*.rs
 
 load_images:
     cargo run --release -p data-processor --bin load_images
