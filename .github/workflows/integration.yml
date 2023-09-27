@@ -22,7 +22,7 @@ jobs:
                   profile: minimal
                   components: clippy, rustfmt
             - name: Install leptosfmt
-              run: cargo install --frozen leptosfmt
+              run: cargo install --locked leptosfmt
             - name: Run linter
               run: just lint
             - name: Run tests
