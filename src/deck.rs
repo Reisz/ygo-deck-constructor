@@ -5,7 +5,7 @@ use std::{
 };
 
 use common::card::{Card, CardData, CardType, Id, MonsterStats, MonsterType};
-use leptos::{create_rw_signal, expect_context, RwSignal, Scope};
+use leptos::{create_rw_signal, RwSignal};
 
 /// The three parts of a Yu-Gi-Oh deck.
 #[derive(Debug, Clone, Copy)]
@@ -72,21 +72,20 @@ impl DeckPart {
         }
     }
 
-    fn binary_search(&self, cx: Scope, id: Id) -> Result<usize, usize> {
-        let card_data = expect_context::<&'static CardData>(cx);
+    fn binary_search(&self, card_data: &CardData, id: Id) -> Result<usize, usize> {
         self.data
             .binary_search_by(|(probe, _)| (self.order)(card_data, *probe, id))
     }
 
-    pub fn add(&mut self, cx: Scope, id: Id) {
-        match self.binary_search(cx, id) {
+    pub fn add(&mut self, card_data: &CardData, id: Id) {
+        match self.binary_search(card_data, id) {
             Ok(pos) => self.data[pos].1 += 1,
             Err(pos) => self.data.insert(pos, (id, 1)),
         }
     }
 
-    pub fn remove(&mut self, cx: Scope, id: Id) {
-        if let Ok(pos) = self.binary_search(cx, id) {
+    pub fn remove(&mut self, card_data: &CardData, id: Id) {
+        if let Ok(pos) = self.binary_search(card_data, id) {
             if self.data[pos].1 == 1 {
                 self.data.remove(pos);
             } else {
@@ -114,12 +113,12 @@ pub struct Deck {
 }
 
 impl Deck {
-    pub fn new(cx: Scope, order: DeckOrdering) -> Self {
+    pub fn new(order: DeckOrdering) -> Self {
         Self {
             parts: [
-                create_rw_signal(cx, DeckPart::new(order)),
-                create_rw_signal(cx, DeckPart::new(order)),
-                create_rw_signal(cx, DeckPart::new(order)),
+                create_rw_signal(DeckPart::new(order)),
+                create_rw_signal(DeckPart::new(order)),
+                create_rw_signal(DeckPart::new(order)),
             ],
         }
     }
