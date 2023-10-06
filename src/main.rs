@@ -68,7 +68,7 @@ fn CardSearch() -> impl IntoView {
                 <For
                     each=card_iter
                     key=|(id, _)| *id
-                    view=move |(id, _)| {
+                    children=move |(id, _)| {
                         view! { <CardView id=*id/> }
                     }
                 />
@@ -142,7 +142,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                 <For
                     each=data.content
                     key=|id| *id
-                    view=move |id| {
+                    children=move |id| {
                         let delete = delete.clone();
                         view! { <CardView id=id on_delete=delete/> }
                     }
@@ -174,7 +174,7 @@ fn Drawers() -> impl IntoView {
             <For
                 each=drawers
                 key=|data| data.id
-                view=move |data| {
+                children=move |data| {
                     view! { <Drawer data=data set_drawers=set_drawers/> }
                 }
             />
@@ -228,7 +228,7 @@ fn DeckPart(part_type: PartType) -> impl IntoView {
             <For
                 each=move || part.with(|part| part.deref().clone())
                 key=|el| *el
-                view=move |(id, count)| {
+                children=move |(id, count)| {
                     let delete = delete.clone();
                     view! { <CardView id=id count=count on_delete=delete/> }
                 }
@@ -321,7 +321,7 @@ fn ErrorList() -> impl IntoView {
             <For
                 each=errors
                 key=Clone::clone
-                view=move |error| {
+                children=move |error| {
                     view! { <li>{error}</li> }
                 }
             />
