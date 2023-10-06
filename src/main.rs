@@ -6,11 +6,12 @@ use std::{cmp::Ordering, ops::Deref, rc::Rc};
 
 use bincode::Options;
 use card_view::CardView;
-use common::card::{CardData, Id};
+use common::card::{CardData, CardLimit, Id};
 use gloo_net::http::Request;
+use itertools::Itertools;
 use leptos::{
     component, create_local_resource, create_node_ref, expect_context, html, mount_to_body,
-    prelude::*, provide_context, view, For, IntoView, Suspense,
+    prelude::*, provide_context, view, with, For, IntoView, Suspense,
 };
 use lzma_rs::xz_decompress;
 use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, DropEffect};
@@ -184,7 +185,8 @@ fn Drawers() -> impl IntoView {
 }
 
 #[component]
-fn DeckPart(deck: Deck, part_type: PartType) -> impl IntoView {
+fn DeckPart(part_type: PartType) -> impl IntoView {
+    let deck = expect_context::<Deck>();
     let part = deck[part_type];
 
     let cards = expect_context::<&'static CardData>();
@@ -238,12 +240,101 @@ fn DeckPart(deck: Deck, part_type: PartType) -> impl IntoView {
 
 #[component]
 fn DeckView() -> impl IntoView {
-    let deck = Deck::new(deck_order);
     view! {
         <div class="deck-view">
-            <DeckPart deck=deck part_type=PartType::Main/>
-            <DeckPart deck=deck part_type=PartType::Extra/>
-            <DeckPart deck=deck part_type=PartType::Side/>
+            <DeckPart part_type=PartType::Main/>
+            <DeckPart part_type=PartType::Extra/>
+            <DeckPart part_type=PartType::Side/>
+        </div>
+    }
+}
+
+#[component]
+fn ErrorList() -> impl IntoView {
+    let deck = expect_context::<Deck>();
+    let cards = expect_context::<&'static CardData>();
+
+    let errors = move || {
+        let mut errors = Vec::new();
+
+        for part_type in PartType::iter() {
+            let len = deck[part_type].with(DeckPart::len);
+
+            if len < part_type.min().into() {
+                errors.push(format!(
+                    "{part_type} deck contains less than {} cards ({len})",
+                    part_type.min(),
+                ));
+            } else if len > part_type.max().into() {
+                errors.push(format!(
+                    "{part_type} deck contains more than {} cards ({len})",
+                    part_type.max(),
+                ));
+            }
+        }
+
+        let main = deck[PartType::Main];
+        let extra = deck[PartType::Extra];
+        let side = deck[PartType::Side];
+
+        with!(|main, extra, side| {
+            let merge =
+                move |lhs: &(Id, usize), rhs: &(Id, usize)| deck_order(cards, lhs.0, rhs.0).is_le();
+            let iter = main.iter().copied();
+            let iter = iter.merge_by(extra.iter().copied(), merge);
+            let iter = iter.merge_by(side.iter().copied(), merge);
+
+            let iter = iter.coalesce(|lhs, rhs| {
+                if lhs.0 == rhs.0 {
+                    Ok((lhs.0, lhs.1 + rhs.1))
+                } else {
+                    Err((lhs, rhs))
+                }
+            });
+
+            for (id, count) in iter {
+                let card = &cards[&id];
+
+                let limit = card.limit.count();
+                let term = match card.limit {
+                    CardLimit::Banned => "banned",
+                    CardLimit::Limited => "limited",
+                    CardLimit::SemiLimited => "semi-limited",
+                    CardLimit::Unlimited => "unlimited",
+                };
+
+                if count > limit.into() {
+                    errors.push(format!(
+                        "Card \"{}\" appears {count} times, but is {term} ({limit})",
+                        card.name
+                    ));
+                }
+            }
+        });
+
+        errors
+    };
+
+    view! {
+        <h3>{move || { if errors().is_empty() { "No Errors" } else { "Errors" } }}</h3>
+        <ul>
+            <For
+                each=errors
+                key=Clone::clone
+                view=move |error| {
+                    view! { <li>{error}</li> }
+                }
+            />
+
+        </ul>
+    }
+}
+
+#[component]
+fn Tools() -> impl IntoView {
+    view! {
+        <div class="tools">
+            <ErrorList/>
         </div>
     }
 }
@@ -251,12 +342,14 @@ fn DeckView() -> impl IntoView {
 #[component]
 fn DeckBuilder(cards: &'static CardData) -> impl IntoView {
     provide_context(cards);
+    provide_context(Deck::new(deck_order));
 
     view! {
         <div class="deck-builder">
             <CardSearch/>
             <Drawers/>
             <DeckView/>
+            <Tools/>
         </div>
     }
 }

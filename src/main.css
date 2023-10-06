@@ -157,6 +157,16 @@ h6 {
     border-radius: 2rem;
 }
 
+.tools {
+    padding: 1rem;
+
+    overflow-x: clip;
+    overflow-y: auto;
+
+    border: 1px solid black;
+    border-radius: 2rem;
+}
+
 /* Card */
 .card {
     position: relative;

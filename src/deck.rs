@@ -37,6 +37,17 @@ impl PartType {
         }
     }
 
+    pub fn iter() -> impl Iterator<Item = Self> {
+        [Self::Main, Self::Extra, Self::Side].into_iter()
+    }
+
+    pub fn min(self) -> u8 {
+        match self {
+            Self::Main => 40,
+            Self::Extra | Self::Side => 0,
+        }
+    }
+
     pub fn max(self) -> u8 {
         match self {
             Self::Main => 60,
