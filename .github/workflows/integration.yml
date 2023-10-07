@@ -28,4 +28,4 @@ jobs:
             - name: Run tests
               run: just test
             - name: Check formatting
-              run: just check-fmt
+              run: just check_fmt

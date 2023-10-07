@@ -12,9 +12,11 @@ lint:
 test:
     cargo test --workspace
 
-check-fmt:
+check_fmt:
     cargo fmt --all -- --check
     leptosfmt --check **/*.rs
+
+all_checks: lint test check_fmt
 
 load_images:
     cargo run --release -p data-processor --bin load_images
