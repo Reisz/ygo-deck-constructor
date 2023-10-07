@@ -39,7 +39,7 @@ fn CardSearch() -> impl IntoView {
     let (filter, set_filter) = create_signal(String::new());
 
     let card_iter = move || {
-        let filter = filter();
+        let filter = filter().to_ascii_lowercase();
         cards
             .iter()
             .filter(move |(_, card)| {
@@ -47,7 +47,7 @@ fn CardSearch() -> impl IntoView {
                     return true;
                 }
 
-                card.name.contains(&filter)
+                card.name.to_ascii_lowercase().contains(&filter)
             })
             .take(50) // TODO: implement paging
     };
@@ -57,6 +57,7 @@ fn CardSearch() -> impl IntoView {
         <div class="card-search">
             <input
                 type="text"
+                placeholder="Name"
                 node_ref=input_ref
                 on:input=move |_| {
                     let input = input_ref.get().unwrap();
