@@ -1,3 +1,5 @@
+use std::fmt;
+
 use common::card::{
     Attribute, Card, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
     MonsterType, Race, SpellType, TrapType,
@@ -5,35 +7,105 @@ use common::card::{
 
 use crate::ygoprodeck::{self, BanStatus};
 
-impl From<ygoprodeck::Card> for Card {
-    fn from(value: ygoprodeck::Card) -> Self {
-        let card_type = CardType::from(&value);
+#[derive(Debug, Clone)]
+pub struct ProjectionError {
+    card_id: u64,
+    field: &'static str,
+    error: ProjectionErrorKind,
+}
+
+impl ProjectionError {
+    fn new_unexpected(card_id: u64, field: &'static str, value: &impl fmt::Debug) -> Self {
+        Self {
+            card_id,
+            field,
+            error: ProjectionErrorKind::UnexpectedValue(format!("{value:?}")),
+        }
+    }
+
+    fn new_unknown(card_id: u64, field: &'static str, value: &impl fmt::Debug) -> Self {
+        Self {
+            card_id,
+            field,
+            error: ProjectionErrorKind::UnknownValue(format!("{value:?}")),
+        }
+    }
+}
+
+impl fmt::Display for ProjectionError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Error projecting field \"{}\" of card id {}: {}",
+            self.field, self.card_id, self.error
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ProjectionErrorKind {
+    MissingField,
+    UnexpectedValue(String),
+    UnknownValue(String),
+}
+
+impl fmt::Display for ProjectionErrorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            Self::MissingField => write!(f, "Field not present"),
+            Self::UnexpectedValue(value) => write!(f, "Unexpected value: {value}"),
+            Self::UnknownValue(value) => write!(f, "Unknown value: \"{value}\""),
+        }
+    }
+}
+
+trait TryUnwrapField<T> {
+    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProjectionError>;
+}
+
+impl<T> TryUnwrapField<T> for Option<T> {
+    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProjectionError> {
+        self.ok_or(ProjectionError {
+            card_id,
+            field,
+            error: ProjectionErrorKind::MissingField,
+        })
+    }
+}
+
+impl TryFrom<ygoprodeck::Card> for Card {
+    type Error = ProjectionError;
+
+    fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
+        let card_type = CardType::try_from(&value)?;
         let limit = CardLimit::from(&value);
 
-        Self {
+        Ok(Self {
             name: value.name,
             description: value.desc,
             card_type,
             limit,
             archetype: value.archetype,
-        }
+        })
     }
 }
 
-impl From<&ygoprodeck::Card> for CardType {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for CardType {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         macro_rules! monster {
             ($effect:expr) => {
                 monster! {$effect, is_tuner: false}
             };
             ($effect:expr, is_tuner: $tuner:expr) => {
-                CardType::Monster {
-                    race: Race::from(value),
-                    attribute: Attribute::from(value),
-                    stats: MonsterStats::from(value),
+                Ok(CardType::Monster {
+                    race: Race::try_from(value)?,
+                    attribute: Attribute::try_from(value)?,
+                    stats: MonsterStats::try_from(value)?,
                     effect: $effect,
                     is_tuner: $tuner,
-                }
+                })
             };
         }
 
@@ -66,27 +138,34 @@ impl From<&ygoprodeck::Card> for CardType {
                 monster! {MonsterEffect::Normal, is_tuner: true}
             }
             Src::PendulumTunerEffectMonster => monster! {MonsterEffect::Effect, is_tuner: true},
-            Src::SpellCard => CardType::Spell(SpellType::from(value)),
+            Src::SpellCard => Ok(CardType::Spell(SpellType::try_from(value)?)),
             Src::SpiritMonster => monster! { MonsterEffect::Spirit},
             Src::ToonMonster => monster! { MonsterEffect::Toon},
-            Src::TrapCard => CardType::Trap(TrapType::from(value)),
+            Src::TrapCard => Ok(CardType::Trap(TrapType::try_from(value)?)),
             Src::TunerMonster | Src::SynchroTunerMonster => {
                 monster! { MonsterEffect::Effect, is_tuner: true}
             }
             Src::UnionEffectMonster => monster! { MonsterEffect::Union},
-            Src::SkillCard | Src::Token => panic!(
-                "Unexpected card type: {:?} (Id: {})",
-                value.card_type, value.id
-            ),
+            Src::SkillCard | Src::Token => Err(ProjectionError::new_unexpected(
+                value.id,
+                "card_type",
+                &value.card_type,
+            )),
         }
     }
 }
 
-impl From<&ygoprodeck::Card> for Race {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for Race {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
 
-        match value.race.as_ref().expect("race") {
+        let result = match value
+            .race
+            .as_ref()
+            .try_unwrap_field(value.id, "race (monster)")?
+        {
             Src::Aqua => Race::Aqua,
             Src::Beast => Race::Beast,
             Src::BeastWarrior => Race::BeastWarrior,
@@ -120,18 +199,36 @@ impl From<&ygoprodeck::Card> for Race {
             | Src::QuickPlay
             | Src::Ritual
             | Src::Counter) => {
-                panic!("Unexpected non-monster race {race:?} (Id: {})", value.id)
+                return Err(ProjectionError::new_unexpected(
+                    value.id,
+                    "race (monster)",
+                    &race,
+                ))
             }
-            Src::Other(name) => panic!("Unexpected race: {name} (Id: {})", value.id),
-        }
+            Src::Other(name) => {
+                return Err(ProjectionError::new_unknown(
+                    value.id,
+                    "race (monster)",
+                    &name,
+                ))
+            }
+        };
+
+        Ok(result)
     }
 }
 
-impl From<&ygoprodeck::Card> for Attribute {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for Attribute {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Attribute;
 
-        match value.attribute.as_ref().expect("attribute") {
+        let result = match value
+            .attribute
+            .as_ref()
+            .try_unwrap_field(value.id, "attribute")?
+        {
             Src::Dark => Attribute::Dark,
             Src::Earth => Attribute::Earth,
             Src::Fire => Attribute::Fire,
@@ -139,39 +236,53 @@ impl From<&ygoprodeck::Card> for Attribute {
             Src::Water => Attribute::Water,
             Src::Wind => Attribute::Wind,
             Src::Divine => Attribute::Divine,
-        }
+        };
+
+        Ok(result)
     }
 }
 
-impl From<&ygoprodeck::Card> for MonsterStats {
-    fn from(value: &ygoprodeck::Card) -> Self {
-        let atk = value.atk.expect("atk stat");
+impl TryFrom<&ygoprodeck::Card> for MonsterStats {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
+        let atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
 
         if matches!(value.card_type, ygoprodeck::CardType::LinkMonster) {
-            MonsterStats::Link {
+            Ok(MonsterStats::Link {
                 atk,
-                link_value: value.linkval.expect("link value"),
-                link_markers: LinkMarkers::from(value),
-            }
+                link_value: value.linkval.try_unwrap_field(value.id, "link value")?,
+                link_markers: LinkMarkers::try_from(value)?,
+            })
         } else {
-            MonsterStats::Normal {
+            Ok(MonsterStats::Normal {
                 atk,
-                def: value.def.expect("def stat"),
-                level: value.level.expect("level"),
+                def: value.def.try_unwrap_field(value.id, "def stat")?,
+                level: value.level.try_unwrap_field(value.id, "level")?,
                 monster_type: Option::<MonsterType>::from(value),
-                pendulum_scale: is_pendulum(value).then(|| value.scale.expect("pendulum scale")),
-            }
+                pendulum_scale: is_pendulum(value)
+                    .then(|| value.scale.try_unwrap_field(value.id, "pendulum scale"))
+                    .transpose()?,
+            })
         }
     }
 }
 
-impl From<&ygoprodeck::Card> for LinkMarkers {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for LinkMarkers {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         let mut result = LinkMarkers::default();
-        for marker in value.linkmarkers.as_ref().expect("link markers") {
+
+        for marker in value
+            .linkmarkers
+            .as_ref()
+            .try_unwrap_field(value.id, "link markers")?
+        {
             result.add(LinkMarker::from(marker));
         }
-        result
+
+        Ok(result)
     }
 }
 
@@ -221,36 +332,58 @@ fn is_pendulum(card: &ygoprodeck::Card) -> bool {
     )
 }
 
-impl From<&ygoprodeck::Card> for SpellType {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for SpellType {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
-        match value.race.as_ref().expect("race for spell card") {
+        let result = match value
+            .race
+            .as_ref()
+            .try_unwrap_field(value.id, "race (spell)")?
+        {
             Src::Normal => SpellType::Normal,
             Src::Field => SpellType::Field,
             Src::Equip => SpellType::Equip,
             Src::Continuous => SpellType::Continuous,
             Src::QuickPlay => SpellType::QuickPlay,
             Src::Ritual => SpellType::Ritual,
-            _ => panic!(
-                "Unexpected race for spell card: {:?} (Id: {})",
-                value.race, value.id
-            ),
-        }
+            race => {
+                return Err(ProjectionError::new_unexpected(
+                    value.id,
+                    "race (spell)",
+                    &race,
+                ))
+            }
+        };
+
+        Ok(result)
     }
 }
 
-impl From<&ygoprodeck::Card> for TrapType {
-    fn from(value: &ygoprodeck::Card) -> Self {
+impl TryFrom<&ygoprodeck::Card> for TrapType {
+    type Error = ProjectionError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
-        match value.race.as_ref().expect("race for trap card") {
+        let result = match value
+            .race
+            .as_ref()
+            .try_unwrap_field(value.id, "race (trap)")?
+        {
             Src::Normal => TrapType::Normal,
             Src::Continuous => TrapType::Continuous,
             Src::Counter => TrapType::Counter,
-            _ => panic!(
-                "Unexpected race for trap card: {:?} (Id: {})",
-                value.race, value.id
-            ),
-        }
+            race => {
+                return Err(ProjectionError::new_unexpected(
+                    value.id,
+                    "race (trap)",
+                    &race,
+                ))
+            }
+        };
+
+        Ok(result)
     }
 }
 
@@ -270,6 +403,13 @@ impl From<&ygoprodeck::Card> for CardLimit {
 }
 
 #[must_use]
-pub fn project(card: ygoprodeck::Card) -> (Id, Card) {
-    (Id::new(card.id), card.into())
+pub fn project(card: ygoprodeck::Card) -> Option<(Id, Card)> {
+    let id = Id::new(card.id);
+    match card.try_into() {
+        Ok(val) => Some((id, val)),
+        Err(err) => {
+            eprintln!("{err}");
+            None
+        }
+    }
 }

@@ -61,7 +61,7 @@ fn main() -> Result<()> {
         .into_par_iter()
         .progress_with_style(style.clone())
         .filter(filter)
-        .map(project)
+        .filter_map(project)
         .collect::<CardData>();
 
     step("Checking images");
