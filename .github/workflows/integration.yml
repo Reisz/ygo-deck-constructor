@@ -2,27 +2,29 @@ name: Integration
 
 on: [push, pull_request, workflow_dispatch]
 
-env:
-    CARGO_TERM_COLOR: always
-
 jobs:
     checks:
         name: Run Checks
         runs-on: ubuntu-latest
         steps:
             - name: Checkout sources
-              uses: actions/checkout@v3
-            - name: Install just
-              uses: extractions/setup-just@v1
+              uses: actions/checkout@v4
+
             - name: Install rust toolchain
-              uses: actions-rs/toolchain@v1
+              uses: actions-rust-lang/setup-rust-toolchain@v1
               with:
                   toolchain: nightly
-                  default: true
-                  profile: minimal
                   components: clippy, rustfmt
+
+            - name: Install just
+              uses: baptiste0928/cargo-install@v2
+              with:
+                  crate: just
             - name: Install leptosfmt
-              run: cargo install --locked leptosfmt
+              uses: baptiste0928/cargo-install@v2
+              with:
+                  crate: leptosfmt
+
             - name: Run linter
               run: just lint
             - name: Run tests
