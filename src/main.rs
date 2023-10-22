@@ -6,7 +6,7 @@ use std::{cmp::Ordering, ops::Deref, rc::Rc};
 
 use bincode::Options;
 use card_view::CardView;
-use common::card::{CardData, CardLimit, Id};
+use common::card::{Card, CardData, CardLimit, Id};
 use gloo_net::http::Request;
 use itertools::Itertools;
 use leptos::{
@@ -32,38 +32,73 @@ async fn load_cards() -> &'static CardData {
     ))
 }
 
+#[derive(Debug, Default, Clone)]
+struct CardFilter {
+    name: String,
+    text: String,
+}
+
+impl CardFilter {
+    fn matches(&self, card: &Card) -> bool {
+        if !self.name.is_empty() && !card.name.to_ascii_lowercase().contains(&self.name) {
+            return false;
+        }
+
+        if !self.text.is_empty() && !card.description.to_ascii_lowercase().contains(&self.text) {
+            return false;
+        }
+
+        true
+    }
+
+    fn set_name_filter(&mut self, filter: &str) {
+        self.name = filter.to_ascii_lowercase();
+    }
+
+    fn set_text_filter(&mut self, filter: &str) {
+        self.text = filter.to_ascii_lowercase();
+    }
+}
+
 #[component]
 fn CardSearch() -> impl IntoView {
     let cards = expect_context::<&'static CardData>();
 
-    let (filter, set_filter) = create_signal(String::new());
+    let (filter, set_filter) = create_signal(CardFilter::default());
 
     let card_iter = move || {
-        let filter = filter().to_ascii_lowercase();
         cards
             .iter()
-            .filter(move |(_, card)| {
-                if filter.is_empty() {
-                    return true;
-                }
-
-                card.name.to_ascii_lowercase().contains(&filter)
-            })
+            .filter(move |(_, card)| filter.with(|filter| filter.matches(card)))
             .take(50) // TODO: implement paging
     };
 
-    let input_ref = create_node_ref::<html::Input>();
+    let name_input_ref = create_node_ref::<html::Input>();
+    let text_input_ref = create_node_ref::<html::Input>();
     view! {
         <div class="card-search">
-            <input
-                type="text"
-                placeholder="Name"
-                node_ref=input_ref
-                on:input=move |_| {
-                    let input = input_ref.get().unwrap();
-                    set_filter(input.value());
-                }
-            />
+            <div class="card-search-params">
+                <input
+                    type="text"
+                    placeholder="Name"
+                    node_ref=name_input_ref
+                    on:input=move |_| {
+                        let input = name_input_ref.get().unwrap();
+                        set_filter.update(|filter| filter.set_name_filter(&input.value()));
+                    }
+                />
+
+                <input
+                    type="text"
+                    placeholder="Description"
+                    node_ref=text_input_ref
+                    on:input=move |_| {
+                        let input = text_input_ref.get().unwrap();
+                        set_filter.update(|filter| filter.set_text_filter(&input.value()));
+                    }
+                />
+
+            </div>
 
             <div class="card-list">
                 <For
