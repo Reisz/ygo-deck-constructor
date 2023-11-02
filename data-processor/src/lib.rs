@@ -1,5 +1,3 @@
-#![feature(file_set_times)]
-
 use indicatif::ProgressStyle;
 
 pub mod cache;
