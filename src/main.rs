@@ -1,22 +1,23 @@
 mod card_view;
 mod deck;
+mod deck_part;
 mod ydk;
 
-use std::{cmp::Ordering, ops::Deref, rc::Rc};
+use std::{cmp::Ordering, rc::Rc};
 
 use bincode::Options;
 use card_view::CardView;
 use common::card::{Card, CardData, CardLimit, Id};
+use deck::PartType;
 use gloo_net::http::Request;
-use itertools::Itertools;
 use leptos::{
     component, create_local_resource, create_node_ref, expect_context, html, mount_to_body,
-    prelude::*, provide_context, view, with, For, IntoView, Suspense,
+    prelude::*, provide_context, view, For, IntoView, Suspense,
 };
 use lzma_rs::xz_decompress;
 use ygo_deck_constructor::drag_drop::{get_dragged_card, set_drop_effect, DropEffect};
 
-use crate::deck::{Deck, DeckPart, PartType};
+use crate::{deck::Deck, deck_part::DeckPart};
 
 async fn load_cards() -> &'static CardData {
     let request = Request::get("cards.bin.xz");
@@ -221,20 +222,21 @@ fn Drawers() -> impl IntoView {
 }
 
 #[component]
-fn DeckPart(part_type: PartType) -> impl IntoView {
-    let deck = expect_context::<Deck>();
-    let part = deck[part_type];
+fn PartView(part: DeckPart) -> impl IntoView {
+    let deck = expect_context::<RwSignal<Deck>>();
 
     let cards = expect_context::<&'static CardData>();
 
     let delete = move |delete_id| {
-        part.update(|part| part.remove(cards, delete_id));
+        deck.update(|deck| {
+            deck.decrement(delete_id, part.into(), 1);
+        });
     };
     let delete = Rc::new(delete);
 
     let drag_over = move |ev| {
         if let Some(id) = get_dragged_card(&ev) {
-            if part_type.can_contain(&cards[&id]) {
+            if part.can_contain(&cards[&id]) {
                 set_drop_effect(&ev, DropEffect::Copy);
                 ev.prevent_default();
             }
@@ -242,11 +244,18 @@ fn DeckPart(part_type: PartType) -> impl IntoView {
     };
 
     view! {
-        <h2>{part_type.to_string()}</h2>
+        <h2>{part.to_string()}</h2>
         <div class="part-size">
-            <span class="current">{move || part.with(DeckPart::len)}</span>
+            <span class="current">
+                {move || {
+                    deck.with(|deck| {
+                        deck.iter_part(cards, part).map(|(_, count)| count).sum::<usize>()
+                    })
+                }}
+
+            </span>
             <span class="divider">" / "</span>
-            <span class="max">{part_type.max()}</span>
+            <span class="max">{part.max()}</span>
         </div>
         <div
             class="card-list"
@@ -254,16 +263,18 @@ fn DeckPart(part_type: PartType) -> impl IntoView {
             on:dragover=drag_over
             on:drop=move |ev| {
                 if let Some(id) = get_dragged_card(&ev) {
-                    if part_type.can_contain(&cards[&id]) {
-                        part.update(|part| part.add(cards, id));
+                    if part.can_contain(&cards[&id]) {
+                        deck.update(|deck| {
+                            deck.increment(id, part.into(), 1);
+                        });
                     }
                 }
             }
         >
 
             <For
-                each=move || part.with(|part| part.deref().clone())
-                key=|el| *el
+                each=move || { deck.with(|deck| deck.iter_part(cards, part).collect::<Vec<_>>()) }
+                key=|el: &(Id, usize)| *el
                 children=move |(id, count)| {
                     let delete = delete.clone();
                     view! { <CardView id=id count=count on_delete=delete/> }
@@ -278,58 +289,44 @@ fn DeckPart(part_type: PartType) -> impl IntoView {
 fn DeckView() -> impl IntoView {
     view! {
         <div class="deck-view">
-            <DeckPart part_type=PartType::Main/>
-            <DeckPart part_type=PartType::Extra/>
-            <DeckPart part_type=PartType::Side/>
+            <PartView part=DeckPart::Main/>
+            <PartView part=DeckPart::Extra/>
+            <PartView part=DeckPart::Side/>
         </div>
     }
 }
 
 #[component]
 fn ErrorList() -> impl IntoView {
-    let deck = expect_context::<Deck>();
+    let deck = expect_context::<RwSignal<Deck>>();
     let cards = expect_context::<&'static CardData>();
 
     let errors = move || {
         let mut errors = Vec::new();
 
-        for part_type in PartType::iter() {
-            let len = deck[part_type].with(DeckPart::len);
+        deck.with(|deck| {
+            for part in DeckPart::iter() {
+                let len = deck
+                    .iter_part(cards, part)
+                    .map(|(_, count)| count)
+                    .sum::<usize>();
 
-            if len < part_type.min().into() {
-                errors.push(format!(
-                    "{part_type} deck contains less than {} cards ({len})",
-                    part_type.min(),
-                ));
-            } else if len > part_type.max().into() {
-                errors.push(format!(
-                    "{part_type} deck contains more than {} cards ({len})",
-                    part_type.max(),
-                ));
-            }
-        }
-
-        let main = deck[PartType::Main];
-        let extra = deck[PartType::Extra];
-        let side = deck[PartType::Side];
-
-        with!(|main, extra, side| {
-            let merge =
-                move |lhs: &(Id, usize), rhs: &(Id, usize)| deck_order(cards, lhs.0, rhs.0).is_le();
-            let iter = main.iter().copied();
-            let iter = iter.merge_by(extra.iter().copied(), merge);
-            let iter = iter.merge_by(side.iter().copied(), merge);
-
-            let iter = iter.coalesce(|lhs, rhs| {
-                if lhs.0 == rhs.0 {
-                    Ok((lhs.0, lhs.1 + rhs.1))
-                } else {
-                    Err((lhs, rhs))
+                if len < part.min().into() {
+                    errors.push(format!(
+                        "{part} deck contains less than {} cards ({len})",
+                        part.min(),
+                    ));
+                } else if len > part.max().into() {
+                    errors.push(format!(
+                        "{part} deck contains more than {} cards ({len})",
+                        part.max(),
+                    ));
                 }
-            });
+            }
 
-            for (id, count) in iter {
-                let card = &cards[&id];
+            for entry in deck.entries() {
+                let card = &cards[&entry.id()];
+                let count = entry.count(PartType::Playing) + entry.count(PartType::Side);
 
                 let limit = card.limit.count();
                 let term = match card.limit {
@@ -378,7 +375,7 @@ fn Tools() -> impl IntoView {
 #[component]
 fn DeckBuilder(cards: &'static CardData) -> impl IntoView {
     provide_context(cards);
-    provide_context(Deck::new(deck_order));
+    provide_context(RwSignal::new(Deck::new()));
 
     view! {
         <div class="deck-builder">

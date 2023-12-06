@@ -2,17 +2,17 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Id(u64);
 
 impl Id {
     #[must_use]
-    pub fn new(id: u64) -> Self {
+    pub const fn new(id: u64) -> Self {
         Self(id)
     }
 
     #[must_use]
-    pub fn get(&self) -> u64 {
+    pub const fn get(&self) -> u64 {
         self.0
     }
 }

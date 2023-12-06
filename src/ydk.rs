@@ -9,24 +9,24 @@ use std::{
 use common::card::Id;
 use thiserror::Error;
 
-use crate::deck::PartType;
+use crate::deck_part::DeckPart;
 
 /// Section name in the YDK format.
 #[must_use]
-pub fn ydk_name(part: PartType) -> &'static str {
+pub fn ydk_name(part: DeckPart) -> &'static str {
     match part {
-        PartType::Main => "main",
-        PartType::Extra => "extra",
-        PartType::Side => "side",
+        DeckPart::Main => "main",
+        DeckPart::Extra => "extra",
+        DeckPart::Side => "side",
     }
 }
 
 /// Prefix for section header in the YDK format (`#` or `!`)
 #[must_use]
-pub fn ydk_prefix(part: PartType) -> char {
+pub fn ydk_prefix(part: DeckPart) -> char {
     match part {
-        PartType::Main | PartType::Extra => '#',
-        PartType::Side => '!',
+        DeckPart::Main | DeckPart::Extra => '#',
+        DeckPart::Side => '!',
     }
 }
 
@@ -71,7 +71,7 @@ impl Deck {
     ///
     /// See [`writeln!`].
     pub fn to_ydk(&self, writer: &mut impl Write) -> io::Result<()> {
-        for part in [PartType::Main, PartType::Extra, PartType::Side] {
+        for part in DeckPart::iter() {
             writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
 
             for card in &self[part] {
@@ -83,16 +83,16 @@ impl Deck {
     }
 }
 
-impl Index<PartType> for Deck {
+impl Index<DeckPart> for Deck {
     type Output = Vec<Id>;
 
-    fn index(&self, index: PartType) -> &Self::Output {
+    fn index(&self, index: DeckPart) -> &Self::Output {
         &self.parts[index as usize]
     }
 }
 
-impl IndexMut<PartType> for Deck {
-    fn index_mut(&mut self, index: PartType) -> &mut Self::Output {
+impl IndexMut<DeckPart> for Deck {
+    fn index_mut(&mut self, index: DeckPart) -> &mut Self::Output {
         &mut self.parts[index as usize]
     }
 }
@@ -109,7 +109,7 @@ mod parse {
         Finish, Parser,
     };
 
-    use crate::deck::PartType;
+    use crate::deck_part::DeckPart;
 
     use super::ydk_name;
 
@@ -132,19 +132,19 @@ mod parse {
         separated_list1(sep, id)(input)
     }
 
-    fn header_impl<'a>(part: PartType) -> impl IParser<'a, PartType> {
+    fn header_impl<'a>(part: DeckPart) -> impl IParser<'a, DeckPart> {
         pair(one_of("#!"), tag(ydk_name(part))).map(move |_| part)
     }
 
-    fn header(input: &str) -> IResult<PartType> {
+    fn header(input: &str) -> IResult<DeckPart> {
         alt((
-            header_impl(PartType::Main),
-            header_impl(PartType::Extra),
-            header_impl(PartType::Side),
+            header_impl(DeckPart::Main),
+            header_impl(DeckPart::Extra),
+            header_impl(DeckPart::Side),
         ))(input)
     }
 
-    fn section(input: &str) -> IResult<(PartType, Vec<Id>)> {
+    fn section(input: &str) -> IResult<(DeckPart, Vec<Id>)> {
         pair(header, opt(preceded(sep, ids)))
             .map(|(part, ids)| (part, ids.unwrap_or_default()))
             .parse(input)
@@ -198,14 +198,14 @@ mod test {
                 let mut ydk = Vec::new();
 
                 for (part, count) in [
-                    (PartType::Main, main_count),
-                    (PartType::Extra, extra_count),
-                    (PartType::Side, side_count),
+                    (DeckPart::Main, main_count),
+                    (DeckPart::Extra, extra_count),
+                    (DeckPart::Side, side_count),
                 ] {
                     match part {
-                        PartType::Main => ydk.push("#main".to_owned()),
-                        PartType::Extra => ydk.push("#extra".to_owned()),
-                        PartType::Side => ydk.push("!side".to_owned()),
+                        DeckPart::Main => ydk.push("#main".to_owned()),
+                        DeckPart::Extra => ydk.push("#extra".to_owned()),
+                        DeckPart::Side => ydk.push("!side".to_owned()),
                     }
 
                     for _ in 0..count {
