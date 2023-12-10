@@ -68,6 +68,7 @@ impl DeckEntry {
         }
     }
 
+    #[must_use]
     pub fn id(&self) -> Id {
         self.id
     }
@@ -83,6 +84,7 @@ impl DeckEntry {
         &mut self.counts[Self::idx(part_type)]
     }
 
+    #[must_use]
     pub fn count(&self, part_type: PartType) -> usize {
         self.counts[Self::idx(part_type)].get().try_into().unwrap()
     }
@@ -96,6 +98,7 @@ impl DeckEntry {
 pub struct Deck(Vec<DeckEntry>);
 
 impl Deck {
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -155,7 +158,7 @@ mod test {
                 .map(|entry| (entry.id(), entry.count(part_type)))
                 .filter(|(_, count)| *count > 0)
                 .collect::<Vec<_>>(),
-            expected.iter().copied().collect::<Vec<_>>(),
+            expected.to_vec(),
             "part_type = {part_type:?}"
         );
     }
@@ -264,13 +267,13 @@ mod test {
         const EXTRA_ID: Id = Id::new(2345);
 
         let data = {
-            let mut data = Box::new(HashMap::new());
+            let mut data = Box::<HashMap<Id, Card>>::default();
 
             data.insert(
                 MAIN_ID,
                 Card {
-                    name: "".to_string(),
-                    description: "".to_string(),
+                    name: String::new(),
+                    description: String::new(),
                     card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
                     limit: common::card::CardLimit::Unlimited,
                     archetype: None,
@@ -280,8 +283,8 @@ mod test {
             data.insert(
                 EXTRA_ID,
                 Card {
-                    name: "".to_string(),
-                    description: "".to_string(),
+                    name: String::new(),
+                    description: String::new(),
                     card_type: common::card::CardType::Monster {
                         race: common::card::Race::Aqua,
                         attribute: common::card::Attribute::Dark,

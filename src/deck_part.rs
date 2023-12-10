@@ -14,6 +14,7 @@ impl DeckPart {
         [Self::Main, Self::Extra, Self::Side].into_iter()
     }
 
+    #[must_use]
     pub fn min(self) -> u8 {
         match self {
             Self::Main => 40,
@@ -21,6 +22,7 @@ impl DeckPart {
         }
     }
 
+    #[must_use]
     pub fn max(self) -> u8 {
         match self {
             Self::Main => 60,
@@ -28,6 +30,7 @@ impl DeckPart {
         }
     }
 
+    #[must_use]
     pub fn can_contain(self, card: &Card) -> bool {
         let is_extra = matches!(
             card.card_type,

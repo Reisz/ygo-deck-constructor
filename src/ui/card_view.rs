@@ -3,9 +3,11 @@ use std::rc::Rc;
 use common::card::{CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
 use leptos::{component, use_context, view, IntoView};
 use web_sys::MouseEvent;
-use ygo_deck_constructor::drag_drop::start_drag;
+
+use crate::ui::drag_drop::start_drag;
 
 #[component]
+#[must_use]
 pub fn CardView(
     id: Id,
     #[prop(default = 1)] count: usize,
