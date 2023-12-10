@@ -210,19 +210,14 @@ h6 {
     border: 1px solid black;
 }
 
-.card .tooltip {
-    visibility: hidden;
-
+.card-tooltip {
     position: absolute;
     z-index: 9;
-    left: calc(100% + 0.5rem);
+
+    margin-left: 0.5rem;
 
     background: darkgray;
 
     border-radius: 0.5rem;
     padding: 0.5rem;
-}
-
-.card:hover .tooltip {
-    visibility: visible;
 }

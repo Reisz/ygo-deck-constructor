@@ -1,10 +1,45 @@
 use std::rc::Rc;
 
-use common::card::{CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
-use leptos::{component, use_context, view, IntoView};
+use common::card::{Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
+use leptos::{
+    component, create_node_ref, create_signal, expect_context, html::Div, provide_context,
+    use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, WriteSignal,
+};
 use web_sys::MouseEvent;
 
 use crate::ui::drag_drop::start_drag;
+
+#[derive(Clone, Copy)]
+struct TooltipData {
+    card: &'static Card,
+    node: NodeRef<Div>,
+}
+
+#[component]
+#[must_use]
+pub fn CardTooltip() -> impl IntoView {
+    let (tooltip_data, set_tooltip_data) = create_signal(None);
+    provide_context(set_tooltip_data);
+
+    let popup = move || {
+        tooltip_data.get().map(|data: TooltipData| {
+            let rect = data.node.get().unwrap().get_bounding_client_rect();
+            let left = rect.right();
+            let top = rect.top();
+            view! {
+                <div
+                    class="card-tooltip"
+                    style:left=format!("{left}px")
+                    style:top=format!("{top}px")
+                >
+                    {&data.card.name}
+                </div>
+            }
+        })
+    };
+
+    view! { <Show when=move || tooltip_data.get().is_some()>{popup}</Show> }
+}
 
 #[component]
 #[must_use]
@@ -26,11 +61,16 @@ pub fn CardView(
         Box::new(move |_ev: MouseEvent| {})
     };
 
+    let set_tooltip_data = expect_context::<WriteSignal<Option<TooltipData>>>();
+    let node = create_node_ref();
     view! {
         <div
             class=get_class(&card.card_type)
+            ref=node
             draggable="true"
             on:dragstart=move |ev| start_drag(&ev, id, card)
+            on:mouseover=move |_| set_tooltip_data.set(Some(TooltipData { card, node }))
+            on:mouseout=move |_| set_tooltip_data.set(None)
             on:mouseup=on_click
             on:contextmenu=|ev| ev.prevent_default()
         >
@@ -40,7 +80,6 @@ pub fn CardView(
                     view! { <div class="count">{count}</div> }
                 })}
 
-            <div class="tooltip">{&card.name}</div>
         </div>
     }
 }

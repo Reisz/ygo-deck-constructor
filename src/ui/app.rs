@@ -8,7 +8,10 @@ use lzma_rs::xz_decompress;
 
 use crate::{
     deck::Deck,
-    ui::{card_search::CardSearch, deck_view::DeckView, drawers::Drawers, tools::Tools},
+    ui::{
+        card_search::CardSearch, card_view::CardTooltip, deck_view::DeckView, drawers::Drawers,
+        tools::Tools,
+    },
 };
 
 async fn load_cards() -> &'static CardData {
@@ -37,6 +40,7 @@ pub fn App() -> impl IntoView {
             provide_context(RwSignal::new(Deck::new()));
 
             view! {
+                <CardTooltip/>
                 <div class="deck-builder">
                     <CardSearch/>
                     <Drawers/>
