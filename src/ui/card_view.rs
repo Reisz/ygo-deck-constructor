@@ -3,7 +3,7 @@ use std::rc::Rc;
 use common::card::{Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
 use leptos::{
     component, create_node_ref, create_signal, expect_context, html::Div, provide_context,
-    use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, WriteSignal,
+    use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal,
 };
 use web_sys::MouseEvent;
 
@@ -13,6 +13,45 @@ use crate::ui::drag_drop::start_drag;
 struct TooltipData {
     card: &'static Card,
     node: NodeRef<Div>,
+}
+
+fn process_description(description: &'static str) -> Vec<View> {
+    let mut result = Vec::new();
+    let mut current_list: Option<Vec<&'static str>> = None;
+
+    for paragraph in description.split('\n') {
+        if let Some(paragraph) = paragraph.strip_prefix('●') {
+            current_list.get_or_insert(Vec::default()).push(paragraph);
+            continue;
+        }
+
+        if let Some(list) = current_list.take() {
+            result.push(
+                view! {
+                    <ul>
+                        {list
+                            .into_iter()
+                            .map(|element| view! { <li>{element}</li> })
+                            .collect::<Vec<_>>()}
+                    </ul>
+                }
+                .into_view(),
+            );
+        }
+
+        match paragraph.trim() {
+            "[ Pendulum Effect ]" | "[ Monster Effect ]" => {
+                result.push(
+                    view! { <h2>{paragraph.trim_matches(&['[', ']', ' '])}</h2> }.into_view(),
+                );
+            }
+            paragraph => {
+                result.push(view! { <p>{paragraph}</p> }.into_view());
+            }
+        }
+    }
+
+    result
 }
 
 #[component]
@@ -32,7 +71,8 @@ pub fn CardTooltip() -> impl IntoView {
                     style:left=format!("{left}px")
                     style:top=format!("{top}px")
                 >
-                    {&data.card.name}
+                    <h1>{&data.card.name}</h1>
+                    <div class="description">{process_description(&data.card.description)}</div>
                 </div>
             }
         })

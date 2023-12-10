@@ -15,7 +15,7 @@ body {
 }
 
 body {
-    line-height: 1.5;
+    line-height: 1.2;
     -webkit-font-smoothing: antialiased;
 }
 
@@ -215,9 +215,33 @@ h6 {
     z-index: 9;
 
     margin-left: 0.5rem;
+    width: 30rem;
 
     background: darkgray;
 
     border-radius: 0.5rem;
     padding: 0.5rem;
+}
+
+.card-tooltip h1 {
+    font: bold condensed 1.2rem sans-serif;
+
+    margin-bottom: 0.5rem;
+}
+
+.card-tooltip h2 {
+    font: bold condensed 1rem sans-serif;
+
+    margin-top: 0.25rem;
+}
+
+.card-tooltip .description {
+    display: grid;
+    gap: 0.25rem;
+
+    hyphens: auto;
+}
+
+.card-tooltip .description ul {
+    padding-left: 1.25rem;
 }
