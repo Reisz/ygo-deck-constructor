@@ -1,8 +1,8 @@
 run:
     trunk serve --open
 
-lint:
-    cargo clippy --workspace -- \
+lint *FLAGS:
+    cargo clippy --workspace {{FLAGS}} -- \
     -W clippy::pedantic \
     -A clippy::missing-errors-doc \
     -A clippy::missing-panics-doc \
