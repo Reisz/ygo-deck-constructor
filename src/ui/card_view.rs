@@ -2,8 +2,10 @@ use std::rc::Rc;
 
 use common::card::{Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
 use leptos::{
-    component, create_node_ref, create_signal, expect_context, html::Div, provide_context,
-    use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal,
+    component, create_node_ref, create_signal, expect_context,
+    html::{self, Div},
+    provide_context, use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
+    WriteSignal,
 };
 use web_sys::MouseEvent;
 
@@ -27,26 +29,26 @@ fn process_description(description: &'static str) -> Vec<View> {
 
         if let Some(list) = current_list.take() {
             result.push(
-                view! {
-                    <ul>
-                        {list
-                            .into_iter()
-                            .map(|element| view! { <li>{element}</li> })
-                            .collect::<Vec<_>>()}
-                    </ul>
-                }
-                .into_view(),
+                html::ul()
+                    .child(
+                        list.into_iter()
+                            .map(|element| html::li().child(element))
+                            .collect::<Vec<_>>(),
+                    )
+                    .into_view(),
             );
         }
 
         match paragraph.trim() {
             "[ Pendulum Effect ]" | "[ Monster Effect ]" => {
                 result.push(
-                    view! { <h2>{paragraph.trim_matches(&['[', ']', ' '])}</h2> }.into_view(),
+                    html::h2()
+                        .child(paragraph.trim_matches(&['[', ']', ' ']))
+                        .into_view(),
                 );
             }
             paragraph => {
-                result.push(view! { <p>{paragraph}</p> }.into_view());
+                result.push(html::p().child(paragraph).into_view());
             }
         }
     }
@@ -115,11 +117,7 @@ pub fn CardView(
             on:contextmenu=|ev| ev.prevent_default()
         >
             <img src=format!("images/{}.webp", id.get())/>
-            {(count > 1)
-                .then(|| {
-                    view! { <div class="count">{count}</div> }
-                })}
-
+            {(count > 1).then(|| html::div().class("count", true).child(count))}
         </div>
     }
 }

@@ -1,5 +1,5 @@
 use common::card::{CardData, CardLimit};
-use leptos::{component, expect_context, view, For, IntoView, RwSignal, SignalWith};
+use leptos::{component, expect_context, html, view, For, IntoView, RwSignal, SignalWith};
 
 use crate::{
     deck::{Deck, PartType},
@@ -61,14 +61,7 @@ pub fn ErrorList() -> impl IntoView {
     view! {
         <h3>{move || { if errors().is_empty() { "No Errors" } else { "Errors" } }}</h3>
         <ul>
-            <For
-                each=errors
-                key=Clone::clone
-                children=move |error| {
-                    view! { <li>{error}</li> }
-                }
-            />
-
+            <For each=errors key=Clone::clone children=move |error| { html::li().child(error) }/>
         </ul>
     }
 }
