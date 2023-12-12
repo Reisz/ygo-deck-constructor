@@ -235,6 +235,24 @@ h6 {
     margin-top: 0.25rem;
 }
 
+.card-tooltip .tags {
+    padding: 0;
+    list-style-type: none;
+
+    display: flex;
+    gap: 0.4rem;
+
+    margin-left: 0.5rem;
+    margin-bottom: 0.5rem;
+
+    font-size: 0.8rem;
+    opacity: 80%;
+}
+
+.card-tooltip .tags .level {
+    margin-left: 0.5rem;
+}
+
 .card-tooltip .description {
     display: grid;
     gap: 0.25rem;

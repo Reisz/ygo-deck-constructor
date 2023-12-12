@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use common::card::{Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType};
+use common::card::{
+    Attribute, Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType, Race,
+    SpellType, TrapType,
+};
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
@@ -56,6 +59,132 @@ fn process_description(description: &'static str) -> Vec<View> {
     result
 }
 
+fn map_race(race: Race) -> &'static str {
+    match race {
+        Race::Aqua => "Aqua",
+        Race::Beast => "Beast",
+        Race::BeastWarrior => "Beast-Warrior",
+        Race::CreatorGod => "Creator God",
+        Race::Cyberse => "Cyberse",
+        Race::Dinosaur => "Dinosaur",
+        Race::DivineBeast => "Divine-Beast",
+        Race::Dragon => "Dragon",
+        Race::Fairy => "Fairy",
+        Race::Fiend => "Fiend",
+        Race::Fish => "Fish",
+        Race::Illusion => "Illusion",
+        Race::Insect => "Insect",
+        Race::Machine => "Machine",
+        Race::Plant => "Plant",
+        Race::Psychic => "Psychic",
+        Race::Pyro => "Pyro",
+        Race::Reptile => "Reptile",
+        Race::Rock => "Rock",
+        Race::SeaSerpent => "Sea Serpent",
+        Race::Spellcaster => "Spellcaster",
+        Race::Thunder => "Thunder",
+        Race::Warrior => "Warrior",
+        Race::WingedBeast => "Winged Beast",
+        Race::Wyrm => "Wyrm",
+        Race::Zombie => "Zombie",
+    }
+}
+
+fn get_tags(card_type: &CardType) -> Vec<View> {
+    let mut tags = Vec::new();
+
+    match card_type {
+        CardType::Monster {
+            race,
+            attribute,
+            stats,
+            effect,
+            is_tuner,
+        } => {
+            let (monster, level) = match stats {
+                MonsterStats::Normal {
+                    level,
+                    monster_type,
+                    ..
+                } => {
+                    let monster_type = match monster_type {
+                        None => "Monster",
+                        Some(MonsterType::Fusion) => "Fusion Monster",
+                        Some(MonsterType::Ritual) => "Ritual Monster",
+                        Some(MonsterType::Synchro) => "Synchro Monster",
+                        Some(MonsterType::Xyz) => "Xyz Monster",
+                    };
+                    (monster_type, level)
+                }
+                MonsterStats::Link { link_value, .. } => ("Link Monster", link_value),
+            };
+            tags.push(view! { <li>{monster} <span class="level">{*level}</span></li> });
+
+            if let MonsterStats::Normal {
+                pendulum_scale: Some(scale),
+                ..
+            } = stats
+            {
+                tags.push(view! { <li>"Pendulum" <span class="level">{*scale}</span></li> });
+            }
+
+            let effect = match effect {
+                MonsterEffect::Normal => None,
+                MonsterEffect::Effect => Some("Effect"),
+                MonsterEffect::Spirit => Some("Spirit Effect"),
+                MonsterEffect::Toon => Some("Toon Effect"),
+                MonsterEffect::Union => Some("Union Effect"),
+                MonsterEffect::Gemini => Some("Gemini Effect"),
+                MonsterEffect::Flip => Some("Flip Effect"),
+            };
+            if let Some(effect) = effect {
+                tags.push(html::li().child(effect));
+            }
+
+            if *is_tuner {
+                tags.push(html::li().child("Tuner"));
+            }
+
+            let attribute = match attribute {
+                Attribute::Dark => "Dark",
+                Attribute::Earth => "Earth",
+                Attribute::Fire => "Fire",
+                Attribute::Light => "Light",
+                Attribute::Water => "Water",
+                Attribute::Wind => "Wind",
+                Attribute::Divine => "Divine",
+            };
+            tags.push(html::li().child(attribute));
+
+            tags.push(html::li().child(map_race(*race)));
+        }
+        CardType::Trap(trap_type) => {
+            let tag = match trap_type {
+                TrapType::Normal => "Trap",
+                TrapType::Counter => "Counter Trap",
+                TrapType::Continuous => "Continuous Trap",
+            };
+            tags.push(html::li().child(tag));
+        }
+        CardType::Spell(spell_type) => {
+            let tag = match spell_type {
+                SpellType::Normal => "Spell",
+                SpellType::Field => "Field Spell",
+                SpellType::Equip => "Equip Spell",
+                SpellType::Continuous => "Continuous Spell",
+                SpellType::QuickPlay => "Quick-Play Spell",
+                SpellType::Ritual => "Ritual Spell",
+            };
+            tags.push(html::li().child(tag));
+        }
+    }
+
+    tags.into_iter()
+        .map(IntoView::into_view)
+        .intersperse_with(|| html::li().child("•").into_view())
+        .collect()
+}
+
 #[component]
 #[must_use]
 pub fn CardTooltip() -> impl IntoView {
@@ -74,6 +203,7 @@ pub fn CardTooltip() -> impl IntoView {
                     style:top=format!("{top}px")
                 >
                     <h1>{&data.card.name}</h1>
+                    <ul class="tags">{get_tags(&data.card.card_type)}</ul>
                     <div class="description">{process_description(&data.card.description)}</div>
                 </div>
             }
