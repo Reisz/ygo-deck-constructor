@@ -132,9 +132,30 @@ pub enum LinkMarker {
     Left,
 }
 
+impl LinkMarker {
+    pub fn iter() -> impl Iterator<Item = Self> {
+        [
+            LinkMarker::TopLeft,
+            LinkMarker::Top,
+            LinkMarker::TopRight,
+            LinkMarker::Right,
+            LinkMarker::BottomRight,
+            LinkMarker::Bottom,
+            LinkMarker::BottomLeft,
+            LinkMarker::Left,
+        ]
+        .into_iter()
+    }
+}
+
 impl LinkMarkers {
     pub fn add(&mut self, marker: LinkMarker) {
         self.0[marker as usize] = true;
+    }
+
+    #[must_use]
+    pub fn has(&self, marker: LinkMarker) -> bool {
+        self.0[marker as usize]
     }
 }
 

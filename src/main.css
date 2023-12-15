@@ -266,6 +266,10 @@ h6 {
     margin-right: 0.75rem;
 }
 
+.card-tooltip .stats .link {
+    display: inline;
+}
+
 .card-tooltip .tags .level {
     margin-left: 0.5rem;
 }

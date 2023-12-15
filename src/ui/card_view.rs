@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use common::card::{
-    Attribute, Card, CardData, CardType, Id, MonsterEffect, MonsterStats, MonsterType, Race,
-    SpellType, TrapType,
+    Attribute, Card, CardData, CardType, Id, LinkMarker, MonsterEffect, MonsterStats, MonsterType,
+    Race, SpellType, TrapType,
 };
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
-    provide_context, use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
+    provide_context, svg, use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
     WriteSignal,
 };
 use web_sys::MouseEvent;
@@ -185,13 +185,29 @@ fn get_tags(card_type: &CardType) -> Vec<View> {
         .collect()
 }
 
+fn link_marker_path(link_marker: LinkMarker) -> &'static str {
+    // These use a 6 x 6 grid
+    match link_marker {
+        LinkMarker::Top => "3,0 4,2 2,2",
+        LinkMarker::TopLeft => "0,0 2,0 0,2",
+        LinkMarker::TopRight => "4,0 6,0 6,2",
+        LinkMarker::Right => "4,2 6,3 4,4",
+        LinkMarker::BottomRight => "6,4 6,6 4,6",
+        LinkMarker::Bottom => "3,6 4,4 2,4",
+        LinkMarker::BottomLeft => "0,4 0,6 2,6",
+        LinkMarker::Left => "0,3 2,2 2,4",
+    }
+}
+
 #[component]
 #[must_use]
 fn Stats(card_type: &'static CardType) -> impl IntoView {
     if let CardType::Monster { stats, .. } = &card_type {
-        let (atk, def) = match stats {
-            MonsterStats::Normal { atk, def, .. } => (atk, Some(def)),
-            MonsterStats::Link { atk, .. } => (atk, None),
+        let (atk, def, link) = match stats {
+            MonsterStats::Normal { atk, def, .. } => (atk, Some(def), None),
+            MonsterStats::Link {
+                atk, link_markers, ..
+            } => (atk, None, Some(link_markers)),
         };
 
         let atk = view! {
@@ -206,10 +222,26 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
             }
         });
 
+        let link = link.map(|link| {
+            let markers = LinkMarker::iter()
+                .map(|marker| {
+                    svg::polygon()
+                        .attr("points", link_marker_path(marker))
+                        .attr("fill-opacity", if link.has(marker) { "1" } else { "0.2" })
+                })
+                .collect::<Vec<_>>();
+            view! {
+                <span class="label">"LINKS"</span>
+                <svg class="link" viewBox="0 0 6 6" width="1em" height="1em">
+                    {markers}
+                </svg>
+            }
+        });
+
         Some(
             html::div()
                 .class("stats", true)
-                .child((atk, def))
+                .child((atk, def, link))
                 .into_view(),
         )
     } else {
