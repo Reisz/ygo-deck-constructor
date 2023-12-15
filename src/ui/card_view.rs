@@ -187,6 +187,38 @@ fn get_tags(card_type: &CardType) -> Vec<View> {
 
 #[component]
 #[must_use]
+fn Stats(card_type: &'static CardType) -> impl IntoView {
+    if let CardType::Monster { stats, .. } = &card_type {
+        let (atk, def) = match stats {
+            MonsterStats::Normal { atk, def, .. } => (atk, Some(def)),
+            MonsterStats::Link { atk, .. } => (atk, None),
+        };
+
+        let atk = view! {
+            <span class="label">"ATK"</span>
+            <span class="data">{*atk}</span>
+        };
+
+        let def = def.map(|def| {
+            view! {
+                <span class="label">"DEF"</span>
+                <span class="data">{*def}</span>
+            }
+        });
+
+        Some(
+            html::div()
+                .class("stats", true)
+                .child((atk, def))
+                .into_view(),
+        )
+    } else {
+        None
+    }
+}
+
+#[component]
+#[must_use]
 pub fn CardTooltip() -> impl IntoView {
     let (tooltip_data, set_tooltip_data) = create_signal(None);
     provide_context(set_tooltip_data);
@@ -204,6 +236,7 @@ pub fn CardTooltip() -> impl IntoView {
                 >
                     <h1>{&data.card.name}</h1>
                     <ul class="tags">{get_tags(&data.card.card_type)}</ul>
+                    <Stats card_type=&data.card.card_type/>
                     <div class="description">{process_description(&data.card.description)}</div>
                 </div>
             }

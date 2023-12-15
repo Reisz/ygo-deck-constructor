@@ -248,6 +248,24 @@ h6 {
     opacity: 80%;
 }
 
+.card-tooltip .stats {
+    margin-bottom: 0.5rem;
+
+    font-size: 0.8rem;
+    opacity: 80%;
+}
+
+.card-tooltip .stats .label {
+    font-size: 80%;
+    font-weight: bold;
+
+    margin-right: 0.5rem;
+}
+
+.card-tooltip .stats .data {
+    margin-right: 0.75rem;
+}
+
 .card-tooltip .tags .level {
     margin-left: 0.5rem;
 }
