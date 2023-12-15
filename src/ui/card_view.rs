@@ -263,7 +263,7 @@ pub fn CardTooltip() -> impl IntoView {
             view! {
                 <div
                     class="card-tooltip"
-                    style:left=format!("{left}px")
+                    style=("--left", format!("{left}px"))
                     style:top=format!("{top}px")
                 >
                     <h1>{&data.card.name}</h1>
