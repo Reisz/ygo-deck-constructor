@@ -307,6 +307,9 @@ impl From<&ygoprodeck::Card> for Option<MonsterType> {
         type Src = ygoprodeck::CardType;
 
         match value.card_type {
+            Src::RitualMonster | Src::RitualEffectMonster | Src::PendulumEffectRitualMonster => {
+                Some(MonsterType::Ritual)
+            }
             Src::FusionMonster | Src::PendulumEffectFusionMonster => Some(MonsterType::Fusion),
             Src::SynchroMonster | Src::SynchroPendulumEffectMonster | Src::SynchroTunerMonster => {
                 Some(MonsterType::Synchro)
