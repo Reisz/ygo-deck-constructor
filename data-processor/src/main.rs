@@ -8,9 +8,9 @@ use anyhow::{anyhow, Result};
 use common::card::CardData;
 use data_processor::{
     cache::{self, CacheBehavior},
-    default_progress_style,
+    default_progress_style, extract,
     image::{self, save_missing_ids},
-    project::project,
+    refine,
     reqwest_indicatif::ProgressReader,
     step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
@@ -56,12 +56,19 @@ fn main() -> Result<()> {
 
     let cards = get_card_info(cache)?;
 
-    step("Converting");
+    step("Extractíng");
     let cards = cards
         .into_par_iter()
         .progress_with_style(style.clone())
         .filter(filter)
-        .filter_map(project)
+        .filter_map(extract::extract)
+        .collect::<Vec<_>>();
+
+    step("Refining");
+    let cards = cards
+        .into_par_iter()
+        .progress_with_style(style.clone())
+        .filter_map(refine::refine)
         .collect::<CardData>();
 
     step("Checking images");

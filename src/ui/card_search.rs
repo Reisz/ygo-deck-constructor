@@ -25,7 +25,7 @@ impl CardFilter {
 
         if self
             .text
-            .with(|text| !text.is_empty() && !card.description.to_ascii_lowercase().contains(text))
+            .with(|text| !text.is_empty() && !card.search_text.contains(text))
         {
             return false;
         }

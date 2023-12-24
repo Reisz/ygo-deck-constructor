@@ -1,86 +1,36 @@
-use std::fmt;
-
 use common::card::{
-    Attribute, Card, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
+    Attribute, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
     MonsterType, Race, SpellType, TrapType,
 };
 
-use crate::ygoprodeck::{self, BanStatus};
+use crate::{
+    error::{ProcessingError, TryUnwrapField},
+    ygoprodeck::{self, BanStatus},
+};
 
-#[derive(Debug, Clone)]
-pub struct ProjectionError {
-    card_id: u64,
-    field: &'static str,
-    error: ProjectionErrorKind,
+#[must_use]
+pub fn extract(card: ygoprodeck::Card) -> Option<ExtractionResult> {
+    card.try_into().map_err(|err| eprintln!("{err}")).ok()
 }
 
-impl ProjectionError {
-    fn new_unexpected(card_id: u64, field: &'static str, value: &impl fmt::Debug) -> Self {
-        Self {
-            card_id,
-            field,
-            error: ProjectionErrorKind::UnexpectedValue(format!("{value:?}")),
-        }
-    }
-
-    fn new_unknown(card_id: u64, field: &'static str, value: &impl fmt::Debug) -> Self {
-        Self {
-            card_id,
-            field,
-            error: ProjectionErrorKind::UnknownValue(format!("{value:?}")),
-        }
-    }
+pub struct ExtractionResult {
+    pub id: Id,
+    pub name: String,
+    pub description: String,
+    pub card_type: CardType,
+    pub limit: CardLimit,
+    pub archetype: Option<String>,
 }
 
-impl fmt::Display for ProjectionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Error projecting field \"{}\" of card id {}: {}",
-            self.field, self.card_id, self.error
-        )
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ProjectionErrorKind {
-    MissingField,
-    UnexpectedValue(String),
-    UnknownValue(String),
-}
-
-impl fmt::Display for ProjectionErrorKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self {
-            Self::MissingField => write!(f, "Field not present"),
-            Self::UnexpectedValue(value) => write!(f, "Unexpected value: {value}"),
-            Self::UnknownValue(value) => write!(f, "Unknown value: \"{value}\""),
-        }
-    }
-}
-
-trait TryUnwrapField<T> {
-    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProjectionError>;
-}
-
-impl<T> TryUnwrapField<T> for Option<T> {
-    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProjectionError> {
-        self.ok_or(ProjectionError {
-            card_id,
-            field,
-            error: ProjectionErrorKind::MissingField,
-        })
-    }
-}
-
-impl TryFrom<ygoprodeck::Card> for Card {
-    type Error = ProjectionError;
+impl TryFrom<ygoprodeck::Card> for ExtractionResult {
+    type Error = ProcessingError;
 
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
         let card_type = CardType::try_from(&value)?;
         let limit = CardLimit::from(&value);
 
         Ok(Self {
+            id: Id::new(value.id),
             name: value.name,
             description: value.desc,
             card_type,
@@ -91,7 +41,7 @@ impl TryFrom<ygoprodeck::Card> for Card {
 }
 
 impl TryFrom<&ygoprodeck::Card> for CardType {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         macro_rules! monster {
@@ -146,7 +96,7 @@ impl TryFrom<&ygoprodeck::Card> for CardType {
                 monster! { MonsterEffect::Effect, is_tuner: true}
             }
             Src::UnionEffectMonster => monster! { MonsterEffect::Union},
-            Src::SkillCard | Src::Token => Err(ProjectionError::new_unexpected(
+            Src::SkillCard | Src::Token => Err(ProcessingError::new_unexpected(
                 value.id,
                 "card_type",
                 &value.card_type,
@@ -156,7 +106,7 @@ impl TryFrom<&ygoprodeck::Card> for CardType {
 }
 
 impl TryFrom<&ygoprodeck::Card> for Race {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
@@ -199,14 +149,14 @@ impl TryFrom<&ygoprodeck::Card> for Race {
             | Src::QuickPlay
             | Src::Ritual
             | Src::Counter) => {
-                return Err(ProjectionError::new_unexpected(
+                return Err(ProcessingError::new_unexpected(
                     value.id,
                     "race (monster)",
                     &race,
                 ))
             }
             Src::Other(name) => {
-                return Err(ProjectionError::new_unknown(
+                return Err(ProcessingError::new_unknown(
                     value.id,
                     "race (monster)",
                     &name,
@@ -219,7 +169,7 @@ impl TryFrom<&ygoprodeck::Card> for Race {
 }
 
 impl TryFrom<&ygoprodeck::Card> for Attribute {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Attribute;
@@ -243,7 +193,7 @@ impl TryFrom<&ygoprodeck::Card> for Attribute {
 }
 
 impl TryFrom<&ygoprodeck::Card> for MonsterStats {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         let atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
@@ -269,7 +219,7 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
 }
 
 impl TryFrom<&ygoprodeck::Card> for LinkMarkers {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         let mut result = LinkMarkers::default();
@@ -336,7 +286,7 @@ fn is_pendulum(card: &ygoprodeck::Card) -> bool {
 }
 
 impl TryFrom<&ygoprodeck::Card> for SpellType {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
@@ -352,7 +302,7 @@ impl TryFrom<&ygoprodeck::Card> for SpellType {
             Src::QuickPlay => SpellType::QuickPlay,
             Src::Ritual => SpellType::Ritual,
             race => {
-                return Err(ProjectionError::new_unexpected(
+                return Err(ProcessingError::new_unexpected(
                     value.id,
                     "race (spell)",
                     &race,
@@ -365,7 +315,7 @@ impl TryFrom<&ygoprodeck::Card> for SpellType {
 }
 
 impl TryFrom<&ygoprodeck::Card> for TrapType {
-    type Error = ProjectionError;
+    type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
         type Src = ygoprodeck::Race;
@@ -378,7 +328,7 @@ impl TryFrom<&ygoprodeck::Card> for TrapType {
             Src::Continuous => TrapType::Continuous,
             Src::Counter => TrapType::Counter,
             race => {
-                return Err(ProjectionError::new_unexpected(
+                return Err(ProcessingError::new_unexpected(
                     value.id,
                     "race (trap)",
                     &race,
@@ -401,18 +351,6 @@ impl From<&ygoprodeck::Card> for CardLimit {
             Some(BanStatus::Limited) => CardLimit::Limited,
             Some(BanStatus::SemiLimited) => CardLimit::SemiLimited,
             Some(BanStatus::Banned) => CardLimit::Banned,
-        }
-    }
-}
-
-#[must_use]
-pub fn project(card: ygoprodeck::Card) -> Option<(Id, Card)> {
-    let id = Id::new(card.id);
-    match card.try_into() {
-        Ok(val) => Some((id, val)),
-        Err(err) => {
-            eprintln!("{err}");
-            None
         }
     }
 }

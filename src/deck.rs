@@ -148,7 +148,7 @@ mod test {
         mem::{align_of, size_of},
     };
 
-    use common::card::{Card, MonsterType};
+    use common::card::{Card, CardDescription, MonsterType};
 
     use super::*;
 
@@ -273,7 +273,8 @@ mod test {
                 MAIN_ID,
                 Card {
                     name: String::new(),
-                    description: String::new(),
+                    description: CardDescription::Regular(Vec::new()),
+                    search_text: String::new(),
                     card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
                     limit: common::card::CardLimit::Unlimited,
                     archetype: None,
@@ -284,7 +285,8 @@ mod test {
                 EXTRA_ID,
                 Card {
                     name: String::new(),
-                    description: String::new(),
+                    description: CardDescription::Regular(Vec::new()),
+                    search_text: String::new(),
                     card_type: common::card::CardType::Monster {
                         race: common::card::Race::Aqua,
                         attribute: common::card::Attribute::Dark,

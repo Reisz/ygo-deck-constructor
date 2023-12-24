@@ -1,14 +1,14 @@
 use std::rc::Rc;
 
 use common::card::{
-    Attribute, Card, CardData, CardType, Id, LinkMarker, MonsterEffect, MonsterStats, MonsterType,
-    Race, SpellType, TrapType,
+    Attribute, Card, CardData, CardDescription, CardDescriptionPart, CardType, Id, LinkMarker,
+    MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
 };
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
-    provide_context, svg, use_context, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
-    WriteSignal,
+    provide_context, svg, use_context, view, CollectView, IntoView, NodeRef, Show, SignalGet,
+    SignalSet, View, WriteSignal,
 };
 use web_sys::MouseEvent;
 
@@ -18,45 +18,6 @@ use crate::ui::drag_drop::start_drag;
 struct TooltipData {
     card: &'static Card,
     node: NodeRef<Div>,
-}
-
-fn process_description(description: &'static str) -> Vec<View> {
-    let mut result = Vec::new();
-    let mut current_list: Option<Vec<&'static str>> = None;
-
-    for paragraph in description.split('\n') {
-        if let Some(paragraph) = paragraph.strip_prefix('●') {
-            current_list.get_or_insert(Vec::default()).push(paragraph);
-            continue;
-        }
-
-        if let Some(list) = current_list.take() {
-            result.push(
-                html::ul()
-                    .child(
-                        list.into_iter()
-                            .map(|element| html::li().child(element))
-                            .collect::<Vec<_>>(),
-                    )
-                    .into_view(),
-            );
-        }
-
-        match paragraph.trim() {
-            "[ Pendulum Effect ]" | "[ Monster Effect ]" => {
-                result.push(
-                    html::h2()
-                        .child(paragraph.trim_matches(&['[', ']', ' ']))
-                        .into_view(),
-                );
-            }
-            paragraph => {
-                result.push(html::p().child(paragraph).into_view());
-            }
-        }
-    }
-
-    result
 }
 
 fn map_race(race: Race) -> &'static str {
@@ -251,6 +212,45 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
 
 #[component]
 #[must_use]
+fn DescriptionParts(parts: &'static [CardDescriptionPart]) -> impl IntoView {
+    parts
+        .iter()
+        .map(|part| match part {
+            CardDescriptionPart::Paragraph(paragraph) => html::p().child(paragraph).into_view(),
+            CardDescriptionPart::List(elements) => html::ul()
+                .child(
+                    elements
+                        .iter()
+                        .map(|element| html::li().child(element))
+                        .collect_view(),
+                )
+                .into_view(),
+        })
+        .collect::<Vec<_>>()
+}
+
+#[component]
+#[must_use]
+fn Description(description: &'static CardDescription) -> impl IntoView {
+    match description {
+        CardDescription::Regular(elements) => {
+            view! { <DescriptionParts parts=elements.as_slice()/> }.into_view()
+        }
+        CardDescription::Pendulum {
+            spell_effect,
+            monster_effect,
+        } => view! {
+            <h2>"Spell Effect"</h2>
+            <DescriptionParts parts=spell_effect.as_slice()/>
+            <h2>"Monster Effect"</h2>
+            <DescriptionParts parts=monster_effect/>
+        }
+        .into_view(),
+    }
+}
+
+#[component]
+#[must_use]
 pub fn CardTooltip() -> impl IntoView {
     let (tooltip_data, set_tooltip_data) = create_signal(None);
     provide_context(set_tooltip_data);
@@ -269,7 +269,7 @@ pub fn CardTooltip() -> impl IntoView {
                     <h1>{&data.card.name}</h1>
                     <ul class="tags">{get_tags(&data.card.card_type)}</ul>
                     <Stats card_type=&data.card.card_type/>
-                    <div class="description">{process_description(&data.card.description)}</div>
+                    <Description description=&data.card.description/>
                 </div>
             }
         })

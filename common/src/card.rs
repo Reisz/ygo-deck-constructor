@@ -20,10 +20,26 @@ impl Id {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Card {
     pub name: String,
-    pub description: String,
+    pub description: CardDescription,
+    pub search_text: String,
     pub card_type: CardType,
     pub limit: CardLimit,
     pub archetype: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum CardDescription {
+    Regular(Vec<CardDescriptionPart>),
+    Pendulum {
+        spell_effect: Vec<CardDescriptionPart>,
+        monster_effect: Vec<CardDescriptionPart>,
+    },
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub enum CardDescriptionPart {
+    Paragraph(String),
+    List(Vec<String>),
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -38,6 +54,17 @@ pub enum CardType {
     },
     Spell(SpellType),
     Trap(TrapType),
+}
+
+impl CardType {
+    #[must_use]
+    pub fn is_pendulum_monster(&self) -> bool {
+        if let Self::Monster { stats, .. } = self {
+            stats.is_pendulum()
+        } else {
+            false
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
@@ -95,6 +122,19 @@ pub enum MonsterStats {
         link_value: u8,
         link_markers: LinkMarkers,
     },
+}
+
+impl MonsterStats {
+    #[must_use]
+    pub fn is_pendulum(&self) -> bool {
+        matches!(
+            self,
+            Self::Normal {
+                pendulum_scale: Some(_),
+                ..
+            }
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]

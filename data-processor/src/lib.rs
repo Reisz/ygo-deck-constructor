@@ -1,8 +1,10 @@
 use indicatif::ProgressStyle;
 
 pub mod cache;
+pub mod error;
+pub mod extract;
 pub mod image;
-pub mod project;
+pub mod refine;
 pub mod reqwest_indicatif;
 pub mod ygoprodeck;
 
