@@ -1,6 +1,9 @@
 use common::card::{CardData, Id};
 
-use crate::deck_part::DeckPart;
+use crate::{
+    deck_part::DeckPart,
+    undo_redo::{UndoRedo, UndoRedoMessage},
+};
 
 /// The two types of deck part a card can be in
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,31 +97,83 @@ impl DeckEntry {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+enum DeckMessage {
+    Inc(Id, PartType, u32),
+    Dec(Id, PartType, u32),
+}
+
+impl UndoRedoMessage for DeckMessage {
+    fn invert(self) -> Self {
+        match self {
+            Self::Inc(id, part_type, amount) => Self::Dec(id, part_type, amount),
+            Self::Dec(id, part_type, amount) => Self::Inc(id, part_type, amount),
+        }
+    }
+}
+
 #[derive(Debug, Default, Clone)]
-pub struct Deck(Vec<DeckEntry>);
+pub struct Deck {
+    entries: Vec<DeckEntry>,
+    undo_redo: UndoRedo<DeckMessage>,
+}
 
 impl Deck {
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
+    pub fn increment(&mut self, id: Id, part_type: PartType, amount: u32) {
+        let amount = self.increment_internal(id, part_type, amount);
+        if amount > 0 {
+            self.undo_redo
+                .push_action(DeckMessage::Inc(id, part_type, amount));
+        }
     }
 
-    pub fn increment(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
+    pub fn decrement(&mut self, id: Id, part_type: PartType, amount: u32) {
+        let amount = self.decrement_internal(id, part_type, amount);
+        if amount > 0 {
+            self.undo_redo
+                .push_action(DeckMessage::Dec(id, part_type, amount));
+        }
+    }
+
+    pub fn undo(&mut self) {
+        if let Some(message) = self.undo_redo.undo() {
+            self.apply(message);
+        }
+    }
+
+    pub fn redo(&mut self) {
+        if let Some(message) = self.undo_redo.redo() {
+            self.apply(message);
+        }
+    }
+
+    fn apply(&mut self, message: DeckMessage) {
+        match message {
+            DeckMessage::Inc(id, part_type, amount) => {
+                debug_assert_eq!(amount, self.increment_internal(id, part_type, amount));
+            }
+            DeckMessage::Dec(id, part_type, amount) => {
+                debug_assert_eq!(amount, self.decrement_internal(id, part_type, amount));
+            }
+        }
+    }
+
+    fn increment_internal(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
         let idx = self
-            .0
+            .entries
             .binary_search_by_key(&id, DeckEntry::id)
             .unwrap_or_else(|idx| {
-                self.0.insert(idx, DeckEntry::new(id));
+                self.entries.insert(idx, DeckEntry::new(id));
                 idx
             });
-        self.0[idx].count_mut(part_type).increment(amount)
+        self.entries[idx].count_mut(part_type).increment(amount)
     }
 
-    pub fn decrement(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
-        if let Ok(idx) = self.0.binary_search_by_key(&id, DeckEntry::id) {
-            let ret = self.0[idx].count_mut(part_type).decrement(amount);
-            if self.0[idx].empty() {
-                self.0.remove(idx);
+    fn decrement_internal(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
+        if let Ok(idx) = self.entries.binary_search_by_key(&id, DeckEntry::id) {
+            let ret = self.entries[idx].count_mut(part_type).decrement(amount);
+            if self.entries[idx].empty() {
+                self.entries.remove(idx);
             }
             ret
         } else {
@@ -127,7 +182,7 @@ impl Deck {
     }
 
     pub fn entries(&self) -> impl Iterator<Item = &DeckEntry> {
-        self.0.iter()
+        self.entries.iter()
     }
 
     pub fn iter_part(
@@ -152,15 +207,19 @@ mod test {
 
     use super::*;
 
-    fn assert_part_eq(deck: &Deck, part_type: PartType, expected: &[(Id, usize)]) {
-        assert_eq!(
-            deck.entries()
-                .map(|entry| (entry.id(), entry.count(part_type)))
-                .filter(|(_, count)| *count > 0)
-                .collect::<Vec<_>>(),
-            expected.to_vec(),
-            "part_type = {part_type:?}"
-        );
+    macro_rules! assert_part_eq {
+        ($deck: expr, $part_type: expr, $expected: expr) => {
+            assert_eq!(
+                $deck
+                    .entries()
+                    .map(|entry| (entry.id(), entry.count($part_type)))
+                    .filter(|(_, count)| *count > 0)
+                    .collect::<Vec<_>>(),
+                $expected.to_vec(),
+                "part_type = {:?}",
+                $part_type
+            );
+        };
     }
 
     #[derive(Debug, Clone, Copy)]
@@ -193,10 +252,18 @@ mod test {
 
     #[test]
     fn empty_deck() {
-        let deck = Deck::new();
+        let mut deck = Deck::default();
 
-        assert_part_eq(&deck, PartType::Playing, &[]);
-        assert_part_eq(&deck, PartType::Side, &[]);
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
+
+        deck.undo();
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
+
+        deck.redo();
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
     }
 
     #[test]
@@ -205,15 +272,31 @@ mod test {
         const AMOUNT: u32 = 4321;
 
         for TestCase { current, other } in TestCase::iter() {
-            let mut deck = Deck::new();
-            assert_eq!(deck.increment(ID, current, AMOUNT), AMOUNT);
+            let mut deck = Deck::default();
 
-            assert_part_eq(&deck, current, &[(ID, AMOUNT as usize)]);
-            assert_part_eq(&deck, other, &[]);
+            deck.increment(ID, current, AMOUNT);
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, &[]);
 
-            assert_eq!(deck.decrement(ID, current, AMOUNT), AMOUNT);
-            assert_part_eq(&deck, current, &[]);
-            assert_part_eq(&deck, other, &[]);
+            deck.decrement(ID, current, AMOUNT);
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
         }
     }
 
@@ -222,12 +305,20 @@ mod test {
         const ID: Id = Id::new(1234);
         const AMOUNT: u32 = 4321;
 
-        let mut deck = Deck::new();
-        assert_eq!(deck.decrement(ID, PartType::Playing, AMOUNT), 0);
-        assert_eq!(deck.decrement(ID, PartType::Side, AMOUNT), 0);
+        let mut deck = Deck::default();
+        deck.decrement(ID, PartType::Playing, AMOUNT);
+        deck.decrement(ID, PartType::Side, AMOUNT);
 
-        assert_part_eq(&deck, PartType::Playing, &[]);
-        assert_part_eq(&deck, PartType::Side, &[]);
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
+
+        deck.undo();
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
+
+        deck.redo();
+        assert_part_eq!(&deck, PartType::Playing, &[]);
+        assert_part_eq!(&deck, PartType::Side, &[]);
     }
 
     #[test]
@@ -236,13 +327,29 @@ mod test {
         const AMOUNT: u32 = 4321;
         const REMOVE_AMOUNT: u32 = 9876;
 
-        for TestCase { current, other: _ } in TestCase::iter() {
-            let mut deck = Deck::new();
-            assert_eq!(deck.increment(ID, current, AMOUNT), AMOUNT);
-            assert_eq!(deck.decrement(ID, current, REMOVE_AMOUNT), AMOUNT);
+        for TestCase { current, other } in TestCase::iter() {
+            let mut deck = Deck::default();
+            deck.increment(ID, current, AMOUNT);
+            deck.decrement(ID, current, REMOVE_AMOUNT);
 
-            assert_part_eq(&deck, PartType::Playing, &[]);
-            assert_part_eq(&deck, PartType::Side, &[]);
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
         }
     }
 
@@ -252,12 +359,28 @@ mod test {
         const AMOUNT: u32 = 4321;
 
         for TestCase { current, other } in TestCase::iter() {
-            let mut deck = Deck::new();
-            assert_eq!(deck.increment(ID, current, u32::MAX - 1), u32::MAX - 1);
-            assert_eq!(deck.increment(ID, current, AMOUNT), 1);
+            let mut deck = Deck::default();
+            deck.increment(ID, current, u32::MAX - 1);
+            deck.increment(ID, current, AMOUNT);
 
-            assert_part_eq(&deck, current, &[(ID, u32::MAX as usize)]);
-            assert_part_eq(&deck, other, &[]);
+            assert_part_eq!(&deck, current, &[(ID, u32::MAX as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[(ID, (u32::MAX - 1) as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, &[]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[(ID, (u32::MAX - 1) as usize)]);
+            assert_part_eq!(&deck, other, &[]);
+
+            deck.redo();
+            assert_part_eq!(&deck, current, &[(ID, u32::MAX as usize)]);
+            assert_part_eq!(&deck, other, &[]);
         }
     }
 
@@ -308,7 +431,7 @@ mod test {
             Box::leak(data)
         };
 
-        let mut deck = Deck::new();
+        let mut deck = Deck::default();
         deck.increment(MAIN_ID, PartType::Playing, 2);
         deck.increment(MAIN_ID, PartType::Side, 3);
         deck.increment(EXTRA_ID, PartType::Playing, 4);
