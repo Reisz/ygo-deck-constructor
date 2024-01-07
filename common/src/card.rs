@@ -58,6 +58,21 @@ pub enum CardType {
 
 impl CardType {
     #[must_use]
+    pub fn is_monster(&self) -> bool {
+        matches!(self, Self::Monster { .. })
+    }
+
+    #[must_use]
+    pub fn is_spell(&self) -> bool {
+        matches!(self, Self::Spell { .. })
+    }
+
+    #[must_use]
+    pub fn is_trap(&self) -> bool {
+        matches!(self, Self::Trap { .. })
+    }
+
+    #[must_use]
     pub fn is_pendulum_monster(&self) -> bool {
         if let Self::Monster { stats, .. } = self {
             stats.is_pendulum()

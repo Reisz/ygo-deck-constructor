@@ -169,16 +169,6 @@ h6 {
     border-radius: 2rem;
 }
 
-.tools {
-    padding: 1rem;
-
-    overflow-x: clip;
-    overflow-y: auto;
-
-    border: 1px solid black;
-    border-radius: 2rem;
-}
-
 /* Card */
 .card {
     position: relative;
@@ -292,4 +282,56 @@ h6 {
 
 .card-tooltip .description ul {
     padding-left: 1.25rem;
+}
+
+/* Tools */
+
+.tools {
+    padding: 1rem;
+
+    overflow-x: clip;
+    overflow-y: auto;
+
+    border: 1px solid black;
+    border-radius: 2rem;
+}
+
+.tools h3 {
+    margin-bottom: 0.5rem;
+}
+
+.tools h3:not(:first-child) {
+    margin-top: 2rem;
+}
+
+.graph {
+    width: 100%;
+    height: 4rem;
+}
+
+.graph * {
+    vector-effect: non-scaling-stroke;
+}
+
+.graph .helper {
+    stroke: gray;
+}
+
+.graph .axis {
+    stroke: black;
+    stroke-width: 4px;
+}
+
+.graph .bar {
+    height: 8px;
+
+    fill: var(--primary-color);
+    stroke: color-mix(in srgb, var(--primary-color) 20%, black);
+}
+
+.graph .label {
+    font-family: sans-serif;
+
+    dominant-baseline: central;
+    transform: translateX(0.3rem);
 }
