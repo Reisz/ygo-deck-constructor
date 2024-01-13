@@ -2,14 +2,15 @@
 #![allow(unused)]
 
 use std::{
+    collections::HashMap,
     io::{self, Read, Write},
     ops::{Index, IndexMut},
 };
 
-use common::card::Id;
+use common::card::{CardData, Id};
 use thiserror::Error;
 
-use crate::deck_part::DeckPart;
+use crate::{deck::Deck, deck_part::DeckPart};
 
 /// Section name in the YDK format.
 #[must_use]
@@ -39,62 +40,44 @@ pub enum Error {
     Parser(#[from] parse::Error),
 }
 
-/// A single Yu-Gi-Oh deck.
+/// Deserialize a deck from the YDK format used by `YGOPRODeck`.
 ///
-/// Content is accessed by indexing with the [`Part`] type.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Deck {
-    parts: [Vec<Id>; 3],
-}
+/// Due to the absence of a centralized standard, this implementation is quite lenient.
+///
+/// # Errors
+///
+/// If the input can not be parsed, an error is returned.
+pub fn load(data: &str) -> Result<Deck, Error> {
+    let result = parse::parse(data)?;
 
-impl Deck {
-    /// Deserialize a deck from the YDK format used by `YGOPRODeck`.
-    ///
-    /// Due to the absence of a centralized standard, this implementation is quite lenient.
-    ///
-    /// # Errors
-    ///
-    /// If the input can not be parsed, an error is returned.
-    ///
-    /// See [`Read::read_to_string`] for other error semantics.
-    pub fn from_ydk(reader: &mut impl Read) -> Result<Self, Error> {
-        let mut data = String::new();
-        reader.read_to_string(&mut data)?;
-        Ok(Self {
-            parts: parse::parse(&data)?,
-        })
+    let mut deck = Deck::default();
+    for part in DeckPart::iter() {
+        for id in &result[part as usize] {
+            deck.increment(*id, part.into(), 1);
+        }
     }
 
-    /// Serialize the deck into the YDK format used by `YGOPRODeck`.
-    ///
-    /// # Errors
-    ///
-    /// See [`writeln!`].
-    pub fn to_ydk(&self, writer: &mut impl Write) -> io::Result<()> {
-        for part in DeckPart::iter() {
-            writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
+    deck.reset_history();
+    Ok(deck)
+}
 
-            for card in &self[part] {
-                writeln!(writer, "{}", card.get())?;
+/// Serialize the deck into the YDK format used by `YGOPRODeck`.
+///
+/// # Errors
+///
+/// See [`writeln!`].
+pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> io::Result<()> {
+    for part in DeckPart::iter() {
+        writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
+
+        for (id, count) in deck.iter_part(cards, part) {
+            for _ in 0..count {
+                writeln!(writer, "{}", id.get())?;
             }
         }
-
-        Ok(())
     }
-}
 
-impl Index<DeckPart> for Deck {
-    type Output = Vec<Id>;
-
-    fn index(&self, index: DeckPart) -> &Self::Output {
-        &self.parts[index as usize]
-    }
-}
-
-impl IndexMut<DeckPart> for Deck {
-    fn index_mut(&mut self, index: DeckPart) -> &mut Self::Output {
-        &mut self.parts[index as usize]
-    }
+    Ok(())
 }
 
 mod parse {
@@ -176,14 +159,20 @@ mod parse {
 
 #[cfg(test)]
 mod test {
+    use common::card::{
+        Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
+        Race::Machine, SpellType,
+    };
     use itertools::iproduct;
 
     use super::*;
 
     struct YdkData {
         deck: Deck,
-        ydk: Vec<String>,
+        ydk: String,
     }
+
+    const IDS: [[u64; 4]; 3] = [[1, 23, 456, 7890], [2, 24, 457, 7891], [3, 25, 458, 7892]];
 
     impl YdkData {
         fn get() -> Vec<Self> {
@@ -191,7 +180,11 @@ mod test {
 
             let mut result = Vec::new();
 
-            let mut numbers = [1, 23, 456, 7890].into_iter().cycle();
+            let mut numbers = [
+                IDS[0].iter().copied().cycle(),
+                IDS[1].iter().copied().cycle(),
+                IDS[2].iter().copied().cycle(),
+            ];
 
             for (main_count, extra_count, side_count) in iproduct!(0..=MAX, 0..=MAX, 0..=MAX) {
                 let mut deck = Deck::default();
@@ -202,6 +195,8 @@ mod test {
                     (DeckPart::Extra, extra_count),
                     (DeckPart::Side, side_count),
                 ] {
+                    let mut ids = Vec::new();
+
                     match part {
                         DeckPart::Main => ydk.push("#main".to_owned()),
                         DeckPart::Extra => ydk.push("#extra".to_owned()),
@@ -209,11 +204,17 @@ mod test {
                     }
 
                     for _ in 0..count {
-                        let number = numbers.next().unwrap();
-                        deck[part].push(Id::new(number));
-                        ydk.push(format!("{number}"));
+                        let number = numbers[part as usize].next().unwrap();
+                        deck.increment(Id::new(number), part.into(), 1);
+                        ids.push(number);
                     }
+
+                    ids.sort_unstable();
+                    ydk.extend(ids.into_iter().map(|id| format!("{id}")));
                 }
+
+                let mut ydk = ydk.join("\n");
+                ydk.push('\n');
 
                 result.push(YdkData { deck, ydk });
             }
@@ -222,28 +223,70 @@ mod test {
         }
     }
 
+    fn card_data() -> &'static CardData {
+        let mut data = HashMap::new();
+
+        for id in IDS[0].iter().chain(IDS[2].iter()) {
+            data.insert(
+                Id::new(*id),
+                Card {
+                    name: "".to_string(),
+                    description: CardDescription::Regular(Vec::new()),
+                    search_text: "".to_string(),
+                    card_type: CardType::Spell(SpellType::Normal),
+                    limit: CardLimit::Unlimited,
+                    archetype: None,
+                },
+            );
+        }
+
+        for id in IDS[1].iter() {
+            data.insert(
+                Id::new(*id),
+                Card {
+                    name: "".to_string(),
+                    description: CardDescription::Regular(Vec::new()),
+                    search_text: "".to_string(),
+                    card_type: CardType::Monster {
+                        race: Machine,
+                        attribute: Dark,
+                        stats: common::card::MonsterStats::Link {
+                            atk: 0,
+                            link_value: 0,
+                            link_markers: LinkMarkers::default(),
+                        },
+                        effect: MonsterEffect::Normal,
+                        is_tuner: false,
+                    },
+                    limit: CardLimit::Unlimited,
+                    archetype: None,
+                },
+            );
+        }
+
+        Box::leak(Box::new(data))
+    }
+
     #[test]
     fn ydk_serialization() {
         for data in YdkData::get() {
             let mut output = Vec::new();
-            data.deck.to_ydk(&mut output).unwrap();
-            itertools::assert_equal(
-                data.ydk.iter(),
-                String::from_utf8(output)
-                    .unwrap()
-                    .lines()
-                    .filter(|l| !l.is_empty()),
-            );
+            save(&data.deck, card_data(), &mut output).unwrap();
+            assert_eq!(data.ydk, String::from_utf8(output).unwrap());
         }
     }
 
     #[test]
     fn ydk_deserialization() {
         for data in YdkData::get() {
-            assert_eq!(
-                data.deck,
-                Deck::from_ydk(&mut data.ydk.join("\n").as_bytes()).unwrap()
-            );
+            let mut deck = load(&data.ydk).unwrap();
+            itertools::assert_equal(data.deck.entries(), deck.entries());
+
+            // Ensure history is empty
+            deck.undo();
+            itertools::assert_equal(data.deck.entries(), deck.entries());
+            deck.redo();
+            itertools::assert_equal(data.deck.entries(), deck.entries());
         }
     }
 }

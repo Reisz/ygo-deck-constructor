@@ -24,7 +24,7 @@ impl From<DeckPart> for PartType {
 }
 
 /// Counter with saturating value, which returns the actual change for repeatable message-based undo-redo.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct ReversibleSaturatingCounter(u32);
 
 impl ReversibleSaturatingCounter {
@@ -55,7 +55,7 @@ impl ReversibleSaturatingCounter {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DeckEntry {
     /// The card id of this entry
     id: Id,
@@ -145,6 +145,10 @@ impl Deck {
         if let Some(message) = self.undo_redo.redo() {
             self.apply(message);
         }
+    }
+
+    pub fn reset_history(&mut self) {
+        self.undo_redo = UndoRedo::default();
     }
 
     fn apply(&mut self, message: DeckMessage) {

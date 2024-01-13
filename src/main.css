@@ -153,6 +153,13 @@ h6 {
     gap: 0.25rem;
 }
 
+.extras {
+    display: grid;
+    gap: 0.5rem;
+
+    grid-template-rows: min-content 1fr;
+}
+
 /* Card List */
 .card-list {
     display: flex;
@@ -282,6 +289,16 @@ h6 {
 
 .card-tooltip .description ul {
     padding-left: 1.25rem;
+}
+
+/* Menu */
+.menu {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.menu button {
+    text-align: left;
 }
 
 /* Tools */

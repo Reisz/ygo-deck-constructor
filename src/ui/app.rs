@@ -13,7 +13,7 @@ use crate::{
     deck::Deck,
     ui::{
         card_search::CardSearch, card_view::CardTooltip, deck_view::DeckView, drawers::Drawers,
-        tools::Tools,
+        menu::Menu, tools::Tools,
     },
 };
 
@@ -68,7 +68,10 @@ pub fn App() -> impl IntoView {
                     <CardSearch/>
                     <Drawers/>
                     <DeckView/>
-                    <Tools/>
+                    <div class="extras">
+                        <Menu/>
+                        <Tools/>
+                    </div>
                 </div>
             }
         })
