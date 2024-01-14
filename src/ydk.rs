@@ -85,10 +85,10 @@ mod parse {
     use nom::{
         branch::alt,
         bytes::complete::tag,
-        character::complete::{self as character, line_ending, one_of},
+        character::complete::{self as character, line_ending, multispace0, multispace1, one_of},
         combinator::opt,
         multi::{many0, many1, separated_list0, separated_list1},
-        sequence::{pair, preceded, terminated},
+        sequence::{delimited, pair, preceded, terminated},
         Finish, Parser,
     };
 
@@ -103,16 +103,12 @@ mod parse {
     trait IParser<'a, T>: Parser<&'a str, T, nom::error::Error<&'a str>> {}
     impl<'a, T, U: Parser<&'a str, T, nom::error::Error<&'a str>>> IParser<'a, T> for U {}
 
-    fn sep(input: &str) -> IResult<()> {
-        many1(line_ending).map(|_| ()).parse(input)
-    }
-
     fn id(input: &str) -> IResult<Id> {
         character::u64.map(Id::new).parse(input)
     }
 
     fn ids(input: &str) -> IResult<Vec<Id>> {
-        separated_list1(sep, id)(input)
+        separated_list1(multispace1, id)(input)
     }
 
     fn header_impl<'a>(part: DeckPart) -> impl IParser<'a, DeckPart> {
@@ -128,13 +124,13 @@ mod parse {
     }
 
     fn section(input: &str) -> IResult<(DeckPart, Vec<Id>)> {
-        pair(header, opt(preceded(sep, ids)))
+        pair(header, opt(preceded(multispace1, ids)))
             .map(|(part, ids)| (part, ids.unwrap_or_default()))
             .parse(input)
     }
 
     fn deck(input: &str) -> IResult<[Vec<Id>; 3]> {
-        separated_list0(sep, section)
+        separated_list1(multispace1, section)
             .map(|parts| {
                 let mut deck = [vec![], vec![], vec![]];
                 for (part_type, content) in parts {
@@ -146,7 +142,7 @@ mod parse {
     }
 
     pub fn parse(input: &str) -> Result<[Vec<Id>; 3]> {
-        terminated(deck, many0(line_ending))
+        delimited(multispace0, deck, multispace0)
             .parse(input)
             .finish()
             .map_err(|nom::error::Error { input, code }| Error {
