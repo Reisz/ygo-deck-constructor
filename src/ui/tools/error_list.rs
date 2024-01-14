@@ -58,10 +58,21 @@ pub fn ErrorList() -> impl IntoView {
         errors
     };
 
-    view! {
-        <h3>{move || { if errors().is_empty() { "No Errors" } else { "Errors" } }}</h3>
-        <ul>
-            <For each=errors key=Clone::clone children=move |error| { html::li().child(error) }/>
-        </ul>
+    move || {
+        if errors().is_empty() {
+            ().into_view()
+        } else {
+            view! {
+                <h3>"Errors"</h3>
+                <ul>
+                    <For
+                        each=errors
+                        key=Clone::clone
+                        children=move |error| { html::li().child(error) }
+                    />
+                </ul>
+            }
+            .into_view()
+        }
     }
 }
