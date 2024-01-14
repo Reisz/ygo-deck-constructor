@@ -1,12 +1,32 @@
+use std::error::Error;
+
 use common::card::CardData;
-use gloo_file::{futures::read_as_text, Blob};
+use gloo_file::{futures::read_as_text, Blob, File};
 use leptos::{
     component, expect_context, html, spawn_local, view, IntoView, NodeRef, RwSignal, SignalSet,
     SignalWith,
 };
 use web_sys::Url;
 
-use crate::{deck::Deck, ydk};
+use crate::{deck::Deck, error_handling::JsException, print_error, ydk};
+
+async fn do_import(file: File, cards: &'static CardData) -> Result<Deck, Box<dyn Error>> {
+    leptos::logging::log!("do import");
+    Ok(ydk::load(&read_as_text(&file.into()).await?, cards)?)
+}
+
+fn do_export(deck: &Deck, cards: &'static CardData) -> Result<(), Box<dyn Error>> {
+    let mut buffer = Vec::new();
+    ydk::save(deck, cards, &mut buffer)?;
+
+    let blob = Blob::new_with_options(buffer.as_slice(), Some("text/ydk"));
+    let url = Url::create_object_url_with_blob(blob.as_ref()).map_err(JsException::from)?;
+
+    view! { <a href=&url download="deck.ydk"></a> }.click();
+    Url::revoke_object_url(&url).map_err(JsException::from)?;
+
+    Ok(())
+}
 
 #[component]
 #[must_use]
@@ -17,22 +37,21 @@ pub fn Menu() -> impl IntoView {
     let input_ref = NodeRef::<html::Input>::new();
     let import = move |_| {
         let input = input_ref.get().unwrap();
-        if let Some(file) = input.files().and_then(|files| files.get(0)) {
+        let files = input.files().unwrap(/* should only be null if type!=file */);
+        if let Some(file) = files.get(0) {
             spawn_local(async move {
-                deck.set(ydk::load(&read_as_text(&file.into()).await.unwrap(), cards).unwrap());
+                let name = file.name();
+                match do_import(file.into(), cards).await {
+                    Ok(new_deck) => deck.set(new_deck),
+                    Err(err) => print_error!("Error while importing \"{name}\":\n\n{err}"),
+                }
             });
         }
     };
 
-    let export = move |_| {
-        let mut buffer = Vec::new();
-        deck.with(|deck| ydk::save(deck, cards, &mut buffer).unwrap());
-
-        let blob = Blob::new_with_options(buffer.as_slice(), Some("text/ydk"));
-        let url = Url::create_object_url_with_blob(blob.as_ref()).unwrap();
-
-        view! { <a href=&url download="deck.ydk"></a> }.click();
-        Url::revoke_object_url(&url).unwrap();
+    let export = move |_| match deck.with(|deck| do_export(deck, cards)) {
+        Ok(()) => {}
+        Err(err) => print_error!("Error while exporting:\n\n{err}"),
     };
 
     view! {
