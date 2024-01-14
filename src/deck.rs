@@ -1,4 +1,4 @@
-use common::card::{CardData, Id};
+use common::{card::Id, card_data::CardData};
 
 use crate::{
     deck_part::DeckPart,
@@ -196,7 +196,7 @@ impl Deck {
     ) -> impl Iterator<Item = (Id, usize)> + '_ {
         self.entries()
             .map(move |entry| (entry.id(), entry.count(part.into())))
-            .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[&id]))
+            .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
     }
 }
 
@@ -394,7 +394,7 @@ mod test {
         const EXTRA_ID: Id = Id::new(2345);
 
         let data = {
-            let mut data = Box::<HashMap<Id, Card>>::default();
+            let mut data = HashMap::new();
 
             data.insert(
                 MAIN_ID,
@@ -432,7 +432,7 @@ mod test {
                 },
             );
 
-            Box::leak(data)
+            Box::leak(Box::new(CardData::new(data, HashMap::new())))
         };
 
         let mut deck = Deck::default();

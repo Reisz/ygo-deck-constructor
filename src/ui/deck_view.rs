@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use common::card::{CardData, Id};
+use common::{card::Id, card_data::CardData};
 use leptos::{component, expect_context, view, For, IntoView, RwSignal, SignalUpdate, SignalWith};
 
 use crate::{
@@ -26,7 +26,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
 
     let drag_over = move |ev| {
         if let Some(id) = get_dragged_card(&ev) {
-            if part.can_contain(&cards[&id]) {
+            if part.can_contain(&cards[id]) {
                 set_drop_effect(&ev, DropEffect::Copy);
                 ev.prevent_default();
             }
@@ -53,7 +53,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             on:dragover=drag_over
             on:drop=move |ev| {
                 if let Some(id) = get_dragged_card(&ev) {
-                    if part.can_contain(&cards[&id]) {
+                    if part.can_contain(&cards[id]) {
                         deck.update(|deck| {
                             deck.increment(id, part.into(), 1);
                         });

@@ -1,4 +1,4 @@
-use common::card::{CardData, CardLimit};
+use common::{card::CardLimit, card_data::CardData};
 use leptos::{component, expect_context, html, view, For, IntoView, RwSignal, SignalWith};
 
 use crate::{
@@ -35,7 +35,7 @@ pub fn ErrorList() -> impl IntoView {
             }
 
             for entry in deck.entries() {
-                let card = &cards[&entry.id()];
+                let card = &cards[entry.id()];
                 let count = entry.count(PartType::Playing) + entry.count(PartType::Side);
 
                 let limit = card.limit.count();

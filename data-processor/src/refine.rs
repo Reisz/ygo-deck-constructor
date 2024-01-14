@@ -3,15 +3,11 @@ use common::card::{Card, CardDescription, CardDescriptionPart, Id};
 use crate::{error::ProcessingError, extract::ExtractionResult};
 
 #[must_use]
-pub fn map(card: &ExtractionResult) -> (String, Id) {
-    (card.name.clone(), card.id)
-}
-
-#[must_use]
-pub fn refine(card: ExtractionResult) -> Option<(Id, Card)> {
+pub fn refine(card: ExtractionResult) -> Option<(Vec<Id>, Card)> {
     let description = (&card).try_into().map_err(|err| eprintln!("{err}")).ok()?;
+
     Some((
-        card.id,
+        card.ids,
         Card {
             name: card.name,
             description,
@@ -47,7 +43,7 @@ impl TryFrom<&ExtractionResult> for CardDescription {
                 "[ Pendulum Effect ]" => {
                     if !card.card_type.is_pendulum_monster() {
                         return Err(ProcessingError::new_unexpected(
-                            card.id.get(),
+                            card.ids.first().unwrap().get(),
                             "description",
                             "pendulum header on non-pendulum card",
                         ));

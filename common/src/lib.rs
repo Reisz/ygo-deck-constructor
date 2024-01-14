@@ -1,4 +1,5 @@
 pub mod card;
+pub mod card_data;
 
 use bincode::Options;
 

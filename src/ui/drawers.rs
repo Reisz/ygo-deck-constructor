@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, rc::Rc};
 
-use common::card::{CardData, Id};
+use common::{card::Id, card_data::CardData};
 use leptos::{
     component, create_rw_signal, create_signal, expect_context, view, For, IntoView, RwSignal,
     SignalGet, SignalUpdate, WriteSignal,
@@ -12,8 +12,8 @@ use crate::ui::{
 };
 
 fn deck_order(data: &CardData, lhs: Id, rhs: Id) -> Ordering {
-    let lhs = &data[&lhs];
-    let rhs = &data[&rhs];
+    let lhs = &data[lhs];
+    let rhs = &data[rhs];
 
     // TODO: order by card type first
     lhs.name.cmp(&rhs.name)

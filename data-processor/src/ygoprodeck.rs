@@ -45,6 +45,8 @@ pub struct Card {
     pub linkval: Option<u8>,
     pub linkmarkers: Option<Vec<LinkMarker>>,
 
+    pub card_images: Vec<ImageInfo>,
+
     pub banlist_info: Option<BanlistInfo>,
 }
 
@@ -206,6 +208,11 @@ pub enum BanStatus {
     #[serde(rename = "Semi-Limited")]
     SemiLimited,
     Banned,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ImageInfo {
+    pub id: u64,
 }
 
 #[derive(Debug, Deserialize)]

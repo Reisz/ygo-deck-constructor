@@ -7,7 +7,7 @@ use std::{
     ops::{Index, IndexMut},
 };
 
-use common::card::{CardData, Id};
+use common::{card::Id, card_data::CardData};
 use thiserror::Error;
 
 use crate::{deck::Deck, deck_part::DeckPart};
@@ -55,11 +55,13 @@ pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
     let mut deck = Deck::default();
     for part in DeckPart::iter() {
         for id in &result[part as usize] {
-            if !cards.contains_key(id) {
-                return Err(Error::UnknownId(*id));
+            let id = cards.normalize(*id);
+
+            if !cards.contains(id) {
+                return Err(Error::UnknownId(id));
             }
 
-            deck.increment(*id, part.into(), 1);
+            deck.increment(id, part.into(), 1);
         }
     }
 
@@ -266,7 +268,7 @@ mod test {
             );
         }
 
-        Box::leak(Box::new(data))
+        Box::leak(Box::new(CardData::new(data, HashMap::new())))
     }
 
     #[test]

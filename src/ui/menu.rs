@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use common::card::CardData;
+use common::card_data::CardData;
 use gloo_file::{futures::read_as_text, Blob, File};
 use leptos::{
     component, expect_context, html, spawn_local, view, IntoView, NodeRef, RwSignal, SignalSet,

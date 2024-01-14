@@ -14,7 +14,7 @@ pub fn extract(card: ygoprodeck::Card) -> Option<ExtractionResult> {
 }
 
 pub struct ExtractionResult {
-    pub id: Id,
+    pub ids: Vec<Id>,
     pub name: String,
     pub description: String,
     pub card_type: CardType,
@@ -29,8 +29,18 @@ impl TryFrom<ygoprodeck::Card> for ExtractionResult {
         let card_type = CardType::try_from(&value)?;
         let limit = CardLimit::from(&value);
 
+        let mut ids = value
+            .card_images
+            .into_iter()
+            .map(|info| Id::new(info.id))
+            .collect::<Vec<Id>>();
+        if !ids.contains(&Id::new(value.id)) {
+            ids.push(Id::new(value.id));
+        }
+        ids.sort_unstable();
+
         Ok(Self {
-            id: Id::new(value.id),
+            ids,
             name: value.name,
             description: value.desc,
             card_type,

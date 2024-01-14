@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -250,5 +248,3 @@ impl CardLimit {
         }
     }
 }
-
-pub type CardData = HashMap<Id, Card>;

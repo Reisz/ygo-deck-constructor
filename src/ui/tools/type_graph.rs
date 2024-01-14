@@ -1,4 +1,4 @@
-use common::card::{CardData, CardType};
+use common::{card::CardType, card_data::CardData};
 use leptos::{component, expect_context, view, IntoView, RwSignal, SignalWith};
 
 use crate::{deck::Deck, deck_part::DeckPart};
@@ -10,7 +10,7 @@ fn make_counter(predicate: fn(&CardType) -> bool) -> impl Fn() -> usize + Copy {
     move || {
         deck.with(|deck| {
             deck.iter_part(cards, DeckPart::Main)
-                .filter_map(|(id, count)| predicate(&cards[&id].card_type).then_some(count))
+                .filter_map(|(id, count)| predicate(&cards[id].card_type).then_some(count))
                 .sum::<usize>()
         })
     }

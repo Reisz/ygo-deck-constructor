@@ -1,5 +1,5 @@
 use bincode::Options;
-use common::{self, card::CardData};
+use common::{self, card_data::CardData};
 use gloo_net::http::Request;
 use leptos::{
     component, create_local_resource, expect_context, provide_context, view, IntoView, RwSignal,

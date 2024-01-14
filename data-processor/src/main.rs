@@ -1,11 +1,16 @@
 use std::{
+    collections::HashMap,
     fs::{self, File},
     io::{self, BufRead, BufReader, BufWriter, Read, Write},
     os::unix::prelude::MetadataExt,
 };
 
-use anyhow::{anyhow, Result};
-use common::card::CardData;
+use anyhow::Result;
+use bincode::Options;
+use common::{
+    card::{Card, Id},
+    card_data::CardData,
+};
 use data_processor::{
     cache::{self, CacheBehavior},
     default_progress_style, extract,
@@ -14,9 +19,8 @@ use data_processor::{
     reqwest_indicatif::ProgressReader,
     step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
-use indicatif::{DecimalBytes, HumanCount, ParallelProgressIterator, ProgressIterator};
+use indicatif::{DecimalBytes, HumanCount, ParallelProgressIterator};
 use rayon::prelude::*;
-use serde::{ser::SerializeMap, Serializer};
 use xz2::write::XzEncoder;
 
 fn filter(card: &ygoprodeck::Card) -> bool {
@@ -45,6 +49,25 @@ fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>>
     ygoprodeck::parse(reader)
 }
 
+fn to_card_data(iter: impl ParallelIterator<Item = (Vec<Id>, Card)>) -> CardData {
+    type Entries = HashMap<Id, Card>;
+    type Ids = Vec<(Id, Vec<Id>)>;
+
+    let (entries, ids): (Entries, Ids) = iter
+        .map(|(mut ids, card)| {
+            let id = ids.remove(0);
+            ((id, card), (id, ids))
+        })
+        .unzip();
+
+    let alternatives = ids
+        .into_iter()
+        .flat_map(|(id, ids)| ids.into_iter().map(move |src| (src, id)))
+        .collect();
+
+    CardData::new(entries, alternatives)
+}
+
 fn main() -> Result<()> {
     let style = default_progress_style();
 
@@ -65,15 +88,17 @@ fn main() -> Result<()> {
         .collect::<Vec<_>>();
 
     step("Refining");
-    let cards = cards
-        .into_par_iter()
-        .progress_with_style(style.clone())
-        .filter_map(refine::refine)
-        .collect::<CardData>();
+    let cards = to_card_data(
+        cards
+            .into_par_iter()
+            .progress_with_style(style.clone())
+            .filter_map(refine::refine),
+    );
 
     step("Checking images");
     let images = image::available_ids()?;
     let missing_images = cards
+        .entries()
         .par_iter()
         .filter(|(id, _)| !images.contains(id))
         .map(|(&id, _)| id)
@@ -86,18 +111,11 @@ fn main() -> Result<()> {
 
     step("Saving");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
-
-    let mut serializer =
-        bincode::Serializer::new(XzEncoder::new(file, 9), common::bincode_options());
-    let mut map = serializer.serialize_map(Some(cards.len()))?;
-    cards
-        .iter()
-        .progress_with_style(style)
-        .try_for_each(|(k, v)| map.serialize_entry(k, v).map_err(|e| anyhow!(e)))?;
+    common::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
 
     println!(
         "  Saved {} cards in {}.",
-        HumanCount(cards.len().try_into()?),
+        HumanCount(cards.entries().len().try_into()?),
         DecimalBytes(fs::metadata(OUTPUT_FILE)?.size())
     );
 

@@ -1,8 +1,11 @@
 use std::rc::Rc;
 
-use common::card::{
-    Attribute, Card, CardData, CardDescription, CardDescriptionPart, CardType, Id, LinkMarker,
-    MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+use common::{
+    card::{
+        Attribute, Card, CardDescription, CardDescriptionPart, CardType, Id, LinkMarker,
+        MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+    },
+    card_data::CardData,
 };
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
@@ -285,7 +288,7 @@ pub fn CardView(
     #[prop(default = 1)] count: usize,
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
-    let card = &use_context::<&'static CardData>().unwrap()[&id];
+    let card = &use_context::<&'static CardData>().unwrap()[id];
 
     let on_click: Box<dyn FnMut(MouseEvent)> = if let Some(on_delete) = on_delete {
         Box::new(move |ev: MouseEvent| {

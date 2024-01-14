@@ -1,4 +1,4 @@
-use common::card::{Card, CardData};
+use common::{card::Card, card_data::CardData};
 use leptos::{
     component, create_memo, create_node_ref, create_signal, expect_context, html, provide_context,
     view, For, IntoView, NodeRef, RwSignal, SignalGetUntracked, SignalSet, SignalWith,
@@ -81,6 +81,7 @@ pub fn CardSearch() -> impl IntoView {
     let filter = CardFilter::default();
     let filtered_cards = create_memo(move |_| {
         cards
+            .entries()
             .iter()
             .filter(move |(_, card)| filter.matches(card))
             .map(|(id, _)| *id)
