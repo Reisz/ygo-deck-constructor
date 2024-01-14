@@ -19,7 +19,7 @@ pub fn Menu() -> impl IntoView {
         let input = input_ref.get().unwrap();
         if let Some(file) = input.files().and_then(|files| files.get(0)) {
             spawn_local(async move {
-                deck.set(ydk::load(&read_as_text(&file.into()).await.unwrap()).unwrap());
+                deck.set(ydk::load(&read_as_text(&file.into()).await.unwrap(), cards).unwrap());
             });
         }
     };

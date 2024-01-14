@@ -38,6 +38,8 @@ pub enum Error {
     Reader(#[from] io::Error),
     #[error("could not parse input")]
     Parser(#[from] parse::Error),
+    #[error("unknown id: {0:?}")]
+    UnknownId(Id),
 }
 
 /// Deserialize a deck from the YDK format used by `YGOPRODeck`.
@@ -47,12 +49,16 @@ pub enum Error {
 /// # Errors
 ///
 /// If the input can not be parsed, an error is returned.
-pub fn load(data: &str) -> Result<Deck, Error> {
+pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
     let result = parse::parse(data)?;
 
     let mut deck = Deck::default();
     for part in DeckPart::iter() {
         for id in &result[part as usize] {
+            if !cards.contains_key(id) {
+                return Err(Error::UnknownId(*id));
+            }
+
             deck.increment(*id, part.into(), 1);
         }
     }
@@ -275,7 +281,7 @@ mod test {
     #[test]
     fn ydk_deserialization() {
         for data in YdkData::get() {
-            let mut deck = load(&data.ydk).unwrap();
+            let mut deck = load(&data.ydk, card_data()).unwrap();
             itertools::assert_equal(data.deck.entries(), deck.entries());
 
             // Ensure history is empty
