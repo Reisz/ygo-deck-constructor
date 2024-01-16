@@ -69,7 +69,7 @@ impl Tool for ErrorList {
                 view! {
                     <div>
                         <h3>"Errors"</h3>
-                        <ul>
+                        <ul class="errors">
                             <For
                                 each=errors
                                 key=Clone::clone
