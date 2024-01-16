@@ -63,14 +63,16 @@ pub fn ErrorList() -> impl IntoView {
             ().into_view()
         } else {
             view! {
-                <h3>"Errors"</h3>
-                <ul>
-                    <For
-                        each=errors
-                        key=Clone::clone
-                        children=move |error| { html::li().child(error) }
-                    />
-                </ul>
+                <div>
+                    <h3>"Errors"</h3>
+                    <ul>
+                        <For
+                            each=errors
+                            key=Clone::clone
+                            children=move |error| { html::li().child(error) }
+                        />
+                    </ul>
+                </div>
             }
             .into_view()
         }
