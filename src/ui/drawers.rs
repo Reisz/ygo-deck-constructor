@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, rc::Rc};
+use std::rc::Rc;
 
 use common::{card::Id, card_data::CardData};
 use leptos::{
@@ -6,18 +6,13 @@ use leptos::{
     SignalGet, SignalUpdate, WriteSignal,
 };
 
-use crate::ui::{
-    card_view::CardView,
-    drag_drop::{get_dragged_card, set_drop_effect, DropEffect},
+use crate::{
+    deck_order::deck_order,
+    ui::{
+        card_view::CardView,
+        drag_drop::{get_dragged_card, set_drop_effect, DropEffect},
+    },
 };
-
-fn deck_order(data: &CardData, lhs: Id, rhs: Id) -> Ordering {
-    let lhs = &data[lhs];
-    let rhs = &data[rhs];
-
-    // TODO: order by card type first
-    lhs.name.cmp(&rhs.name)
-}
 
 #[derive(Debug, Clone, Copy)]
 struct DrawerData {
@@ -35,7 +30,9 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
     let cards = expect_context::<&'static CardData>();
     let push = move |id| {
         data.content.update(|content| {
-            if let Err(pos) = content.binary_search_by(|probe| deck_order(cards, *probe, id)) {
+            if let Err(pos) =
+                content.binary_search_by(|probe| deck_order(&cards[*probe], &cards[id]))
+            {
                 content.insert(pos, id);
             }
         });

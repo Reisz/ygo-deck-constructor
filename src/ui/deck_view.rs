@@ -1,10 +1,13 @@
 use std::rc::Rc;
 
 use common::{card::Id, card_data::CardData};
-use leptos::{component, expect_context, view, For, IntoView, RwSignal, SignalUpdate, SignalWith};
+use leptos::{
+    component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalUpdate, SignalWith,
+};
 
 use crate::{
     deck::Deck,
+    deck_order::deck_order,
     deck_part::DeckPart,
     ui::{
         card_view::CardView,
@@ -32,6 +35,12 @@ fn PartView(part: DeckPart) -> impl IntoView {
             }
         }
     };
+
+    let entries = create_memo(move |_| {
+        let mut result = deck.with(|deck| deck.iter_part(cards, part).collect::<Vec<_>>());
+        result.sort_unstable_by(move |(lhs, _), (rhs, _)| deck_order(&cards[*lhs], &cards[*rhs]));
+        result
+    });
 
     view! {
         <h2>{part.to_string()}</h2>
@@ -63,7 +72,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
         >
 
             <For
-                each=move || { deck.with(|deck| deck.iter_part(cards, part).collect::<Vec<_>>()) }
+                each=entries
                 key=|el: &(Id, usize)| *el
                 children=move |(id, count)| {
                     let delete = delete.clone();
