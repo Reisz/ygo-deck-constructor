@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use common::card::{Card, CardType, MonsterStats, MonsterType};
+use common::card::Card;
 
 #[derive(Debug, Clone, Copy)]
 pub enum DeckPart {
@@ -32,18 +32,7 @@ impl DeckPart {
 
     #[must_use]
     pub fn can_contain(self, card: &Card) -> bool {
-        let is_extra = matches!(
-            card.card_type,
-            CardType::Monster {
-                stats: MonsterStats::Normal {
-                    monster_type: Some(
-                        MonsterType::Fusion | MonsterType::Synchro | MonsterType::Xyz
-                    ),
-                    ..
-                } | MonsterStats::Link { .. },
-                ..
-            }
-        );
+        let is_extra = card.card_type.is_extra_deck_monster();
 
         match self {
             Self::Main => !is_extra,

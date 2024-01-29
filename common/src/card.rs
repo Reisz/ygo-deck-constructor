@@ -78,6 +78,22 @@ impl CardType {
             false
         }
     }
+
+    #[must_use]
+    pub fn is_extra_deck_monster(&self) -> bool {
+        matches!(
+            self,
+            CardType::Monster {
+                stats: MonsterStats::Normal {
+                    monster_type: Some(
+                        MonsterType::Fusion | MonsterType::Synchro | MonsterType::Xyz
+                    ),
+                    ..
+                } | MonsterStats::Link { .. },
+                ..
+            }
+        )
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
