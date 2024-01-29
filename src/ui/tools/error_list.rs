@@ -1,86 +1,92 @@
-use common::{card::CardLimit, card_data::CardData};
-use leptos::{expect_context, html, view, For, IntoView, RwSignal, SignalWith, View};
+use common::card::CardLimit;
+use leptos::{html, view, For, IntoView, SignalWith};
 
-use crate::{
-    deck::{Deck, PartType},
-    deck_part::DeckPart,
-};
+use crate::deck_part::DeckPart;
 
 use super::Tool;
 
-pub struct ErrorList;
+fn limit_name(limit: CardLimit) -> &'static str {
+    match limit {
+        CardLimit::Banned => "banned",
+        CardLimit::Limited => "limited",
+        CardLimit::SemiLimited => "semi-limited",
+        CardLimit::Unlimited => "unlimited",
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ErrorList {
+    totals: [usize; 3],
+    errors: Vec<String>,
+}
 
 impl Tool for ErrorList {
-    fn view(&self) -> View {
-        let deck = expect_context::<RwSignal<Deck>>();
-        let cards = expect_context::<&'static CardData>();
+    fn init() -> Self {
+        Self::default()
+    }
 
-        let errors = move || {
-            let mut errors = Vec::new();
-
-            deck.with(|deck| {
-                for part in DeckPart::iter() {
-                    let len = deck
-                        .iter_part(cards, part)
-                        .map(|(_, count)| count)
-                        .sum::<usize>();
-
-                    if len < part.min().into() {
-                        errors.push(format!(
-                            "{part} deck contains less than {} cards ({len})",
-                            part.min(),
-                        ));
-                    } else if len > part.max().into() {
-                        errors.push(format!(
-                            "{part} deck contains more than {} cards ({len})",
-                            part.max(),
-                        ));
-                    }
-                }
-
-                for entry in deck.entries() {
-                    let card = &cards[entry.id()];
-                    let count = entry.count(PartType::Playing) + entry.count(PartType::Side);
-
-                    let limit = card.limit.count();
-                    let term = match card.limit {
-                        CardLimit::Banned => "banned",
-                        CardLimit::Limited => "limited",
-                        CardLimit::SemiLimited => "semi-limited",
-                        CardLimit::Unlimited => "unlimited",
-                    };
-
-                    if count > limit.into() {
-                        errors.push(format!(
-                            "Card \"{}\" appears {count} times, but is {term} ({limit})",
-                            card.name
-                        ));
-                    }
-                }
-            });
-
-            errors
+    fn fold(&mut self, entry: &super::CardDeckEntry) {
+        let playing_part = if entry.card.card_type.is_extra_deck_monster() {
+            DeckPart::Extra
+        } else {
+            DeckPart::Main
         };
 
-        let view = move || {
-            if errors().is_empty() {
-                ().into_view()
-            } else {
-                view! {
-                    <div>
-                        <h3>"Errors"</h3>
-                        <ul class="errors">
-                            <For
-                                each=errors
-                                key=Clone::clone
-                                children=move |error| { html::li().child(error) }
-                            />
-                        </ul>
-                    </div>
-                }
-                .into_view()
+        self.totals[playing_part as usize] += entry.playing;
+        self.totals[DeckPart::Side as usize] += entry.side;
+
+        let count = entry.playing + entry.side;
+        let limit = entry.card.limit.count();
+
+        if count > limit.into() {
+            self.errors.push(format!(
+                "Card \"{name}\" appears {count} times, but is {term} ({limit})",
+                name = entry.card.name,
+                term = limit_name(entry.card.limit)
+            ));
+        }
+    }
+
+    fn finish(&mut self) {
+        for part in DeckPart::iter() {
+            let len = self.totals[part as usize];
+
+            if len < part.min().into() {
+                self.errors.push(format!(
+                    "{part} deck contains less than {} cards ({len})",
+                    part.min(),
+                ));
+            } else if len > part.max().into() {
+                self.errors.push(format!(
+                    "{part} deck contains more than {} cards ({len})",
+                    part.max(),
+                ));
             }
-        };
-        view.into_view()
+        }
+    }
+
+    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+        move || {
+            data.with(|data| {
+                if data.errors.is_empty() {
+                    ().into_view()
+                } else {
+                    let errors = data.errors.clone();
+                    view! {
+                        <div>
+                            <h3>"Errors"</h3>
+                            <ul class="errors">
+                                <For
+                                    each=move || errors.clone()
+                                    key=Clone::clone
+                                    children=move |error| { html::li().child(error) }
+                                />
+                            </ul>
+                        </div>
+                    }
+                    .into_view()
+                }
+            })
+        }
     }
 }

@@ -1,30 +1,39 @@
-use common::{card::CardType, card_data::CardData};
-use leptos::{expect_context, view, IntoView, RwSignal, SignalWith, View};
+use common::card::CardType;
+use leptos::{view, IntoView, SignalWith};
 
-use crate::{deck::Deck, deck_part::DeckPart};
+use super::{CardDeckEntry, Tool};
 
-use super::Tool;
-
-fn make_counter(predicate: fn(&CardType) -> bool) -> impl Fn() -> usize + Copy {
-    let cards = expect_context::<&'static CardData>();
-    let deck = expect_context::<RwSignal<Deck>>();
-
-    move || {
-        deck.with(|deck| {
-            deck.iter_part(cards, DeckPart::Main)
-                .filter_map(|(id, count)| predicate(&cards[id].card_type).then_some(count))
-                .sum::<usize>()
-        })
-    }
+#[derive(Debug, Default)]
+pub struct TypeGraph {
+    monster: usize,
+    spell: usize,
+    trap: usize,
 }
 
-pub struct TypeGraph;
-
 impl Tool for TypeGraph {
-    fn view(&self) -> View {
-        let monsters = make_counter(CardType::is_monster);
-        let spells = make_counter(CardType::is_spell);
-        let traps = make_counter(CardType::is_trap);
+    fn init() -> Self {
+        Self::default()
+    }
+
+    fn fold(&mut self, entry: &CardDeckEntry) {
+        let counter = match entry.card.card_type {
+            CardType::Monster { .. } => {
+                if entry.card.card_type.is_extra_deck_monster() {
+                    return;
+                }
+
+                &mut self.monster
+            }
+            CardType::Spell(_) => &mut self.spell,
+            CardType::Trap(_) => &mut self.trap,
+        };
+        *counter += entry.playing;
+    }
+
+    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+        let monsters = move || data.with(|data| data.monster);
+        let spells = move || data.with(|data| data.spell);
+        let traps = move || data.with(|data| data.trap);
 
         view! {
             <div>
@@ -49,6 +58,5 @@ impl Tool for TypeGraph {
                 </svg>
             </div>
         }
-        .into_view()
     }
 }
