@@ -343,14 +343,6 @@ h6 {
     padding-left: 1.5rem;
 }
 
-.type-graph .graph {
-    height: 5rem;
-}
-
-.extra-type-graph .graph {
-    height: 6.66rem;
-}
-
 .graph {
     width: 100%;
 }
@@ -380,5 +372,8 @@ h6 {
     font-weight: bold;
 
     dominant-baseline: central;
+}
+
+.graph .label.value {
     transform: translateX(0.4rem);
 }

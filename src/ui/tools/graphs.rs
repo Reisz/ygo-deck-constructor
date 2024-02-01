@@ -9,6 +9,7 @@ use super::{CardDeckEntry, Tool};
 struct GraphBar {
     width: Signal<usize>,
     class: &'static str,
+    label: Option<&'static str>,
 }
 
 impl GraphBar {
@@ -16,6 +17,19 @@ impl GraphBar {
         Self {
             width: width.into_signal(),
             class,
+            label: None,
+        }
+    }
+
+    fn with_label(
+        width: impl IntoSignal<Value = usize>,
+        class: &'static str,
+        label: &'static str,
+    ) -> Self {
+        Self {
+            width: width.into_signal(),
+            class,
+            label: Some(label),
         }
     }
 }
@@ -29,6 +43,7 @@ fn Graph<'a, const N: usize>(
     bars: &'a [GraphBar; N],
 ) -> impl IntoView {
     let height = N * 10;
+    let n: f64 = u32::try_from(N).unwrap().into();
 
     let helper_positions = (0..)
         .step_by(spacing.unwrap_or(10))
@@ -44,14 +59,25 @@ fn Graph<'a, const N: usize>(
     }
 
     let labels = bars.iter().enumerate().map(|(idx, bar)| {
-        let n: f64 = u32::try_from(N).unwrap().into();
         let idx: f64 = u32::try_from(idx).unwrap().into();
         let pos = ((1.0 + 2.0 * idx) / (2.0 * n)) * 100.0;
-        view! {
-            <text y=format!("{pos}%") font-size="0.9rem" class="label backdrop">
+        let y = format!("{pos}%");
+
+        let value = view! {
+            <text y=&y font-size="0.9rem" class="label value backdrop">
                 {bar.width}
             </text>
-        }
+        };
+
+        let label = bar.label.map(|label| {
+            view! {
+                <text text-anchor="end" x="100%" y=&y font-size="0.9rem" class="label">
+                    {label}
+                </text>
+            }
+        });
+
+        (value, label)
     });
 
     let bars = bars.iter().enumerate().map(|(idx, bar)| {
@@ -59,7 +85,7 @@ fn Graph<'a, const N: usize>(
     });
 
     view! {
-        <svg class="graph">
+        <svg class="graph" height=format!("{}rem", n * 1.8)>
             <svg viewBox=format!("0 0 {extent} {height}") preserveAspectRatio="none">
                 <path d=helper_path class="helper"></path>
                 {bars.collect_view()}
@@ -105,7 +131,7 @@ impl Tool for TypeGraph {
         ];
 
         view! {
-            <div class="type-graph">
+            <div>
                 <h3>"Card Types"</h3>
                 <Graph extent=40 bars=&bars/>
             </div>
@@ -158,9 +184,69 @@ impl Tool for ExtraTypeGraph {
         ];
 
         view! {
-            <div class="extra-type-graph">
+            <div>
                 <h3>"Extra Deck Card Types"</h3>
                 <Graph extent=15 spacing=5 bars=&bars/>
+            </div>
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct LevelGraph {
+    no_tribute: usize,
+    one_tribute: usize,
+    two_tributes: usize,
+}
+
+impl Tool for LevelGraph {
+    fn init() -> Self {
+        Self::default()
+    }
+
+    fn fold(&mut self, entry: &CardDeckEntry) {
+        if let CardType::Monster {
+            stats:
+                MonsterStats::Normal {
+                    level,
+                    monster_type,
+                    ..
+                },
+            ..
+        } = &entry.card.card_type
+        {
+            if monster_type.is_some() {
+                return;
+            }
+
+            let counter = match level {
+                0..=4 => &mut self.no_tribute,
+                5..=6 => &mut self.one_tribute,
+                7.. => &mut self.two_tributes,
+            };
+            *counter += entry.playing;
+        }
+    }
+
+    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+        let bars = [
+            GraphBar::with_label(
+                move || data.with(|data| data.no_tribute),
+                "monster",
+                "0 - 4",
+            ),
+            GraphBar::with_label(
+                move || data.with(|data| data.one_tribute),
+                "monster",
+                "5 - 6",
+            ),
+            GraphBar::with_label(move || data.with(|data| data.two_tributes), "monster", "7+"),
+        ];
+
+        view! {
+            <div>
+                <h3>"Monster Levels"</h3>
+                <Graph extent=30 bars=&bars/>
             </div>
         }
     }
