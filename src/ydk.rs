@@ -1,11 +1,4 @@
-// TODO remove once actually used
-#![allow(unused)]
-
-use std::{
-    collections::HashMap,
-    io::{self, Read, Write},
-    ops::{Index, IndexMut},
-};
+use std::io::{self, Write};
 
 use common::{card::Id, card_data::CardData};
 use thiserror::Error;
@@ -93,10 +86,10 @@ mod parse {
     use nom::{
         branch::alt,
         bytes::complete::tag,
-        character::complete::{self as character, line_ending, multispace0, multispace1, one_of},
+        character::complete::{self as character, multispace0, multispace1, one_of},
         combinator::opt,
-        multi::{many0, many1, separated_list0, separated_list1},
-        sequence::{delimited, pair, preceded, terminated},
+        multi::separated_list1,
+        sequence::{delimited, pair, preceded},
         Finish, Parser,
     };
 
@@ -163,6 +156,8 @@ mod parse {
 
 #[cfg(test)]
 mod test {
+    use std::collections::HashMap;
+
     use common::card::{
         Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
         Race::Machine, SpellType,
