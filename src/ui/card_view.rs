@@ -315,7 +315,8 @@ pub fn CardView(
             on:contextmenu=|ev| ev.prevent_default()
         >
             <img src=format!("images/{}.webp", id.get())/>
-            {(count > 1).then(|| html::div().class("count", true).child(count))}
+            {(count > 1)
+                .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
         </div>
     }
 }

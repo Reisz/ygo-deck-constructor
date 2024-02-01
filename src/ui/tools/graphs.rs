@@ -48,7 +48,7 @@ fn Graph<'a, const N: usize>(
         let idx: f64 = u32::try_from(idx).unwrap().into();
         let pos = ((1.0 + 2.0 * idx) / (2.0 * n)) * 100.0;
         view! {
-            <text y=format!("{pos}%") font-size="0.9rem" class="label">
+            <text y=format!("{pos}%") font-size="0.9rem" class="label backdrop">
                 {bar.width}
             </text>
         }

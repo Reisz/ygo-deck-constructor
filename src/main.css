@@ -46,6 +46,18 @@ h6 {
     overflow-wrap: break-word;
 }
 
+/* Generic Helpers */
+.backdrop {
+    /* stack to increase opacity */
+    text-shadow:
+        0 0 4px white,
+        0 0 4px white,
+        0 0 4px white,
+        0 0 4px white,
+        0 0 4px white,
+        0 0 4px white;
+}
+
 /* Colors */
 .monster {
     --primary-color: #bdaf7e;
@@ -217,15 +229,6 @@ h6 {
 
     font-family: sans-serif;
     font-weight: bold;
-
-    /* stack to increase opacity */
-    text-shadow:
-        0 0 4px white,
-        0 0 4px white,
-        0 0 4px white,
-        0 0 4px white,
-        0 0 4px white,
-        0 0 4px white;
 }
 
 /* Card Tooltip */
@@ -374,7 +377,8 @@ h6 {
 
 .graph .label {
     font-family: sans-serif;
+    font-weight: bold;
 
     dominant-baseline: central;
-    transform: translateX(0.3rem);
+    transform: translateX(0.4rem);
 }
