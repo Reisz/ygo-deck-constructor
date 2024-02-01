@@ -1,6 +1,6 @@
 use std::fmt::Write;
 
-use common::card::CardType;
+use common::card::{CardType, MonsterStats, MonsterType};
 use leptos::{component, view, CollectView, IntoSignal, IntoView, Signal, SignalWith};
 
 use super::{CardDeckEntry, Tool};
@@ -23,10 +23,17 @@ impl GraphBar {
 #[must_use]
 #[component]
 #[allow(clippy::needless_lifetimes)] // falso positive
-fn Graph<'a, const N: usize>(extent: usize, bars: &'a [GraphBar; N]) -> impl IntoView {
+fn Graph<'a, const N: usize>(
+    extent: usize,
+    #[prop(optional)] spacing: Option<usize>,
+    bars: &'a [GraphBar; N],
+) -> impl IntoView {
     let height = N * 10;
 
-    let helper_positions = (0..).step_by(10).skip(1).take_while(|pos| *pos < extent);
+    let helper_positions = (0..)
+        .step_by(spacing.unwrap_or(10))
+        .skip(1)
+        .take_while(|pos| *pos < extent);
 
     let mut helper_path = String::new();
     for elem in helper_positions.map(Some).intersperse(None) {
@@ -91,20 +98,69 @@ impl Tool for TypeGraph {
     }
 
     fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
-        let monsters = move || data.with(|data| data.monster);
-        let spells = move || data.with(|data| data.spell);
-        let traps = move || data.with(|data| data.trap);
-
         let bars = [
-            GraphBar::new(monsters, "monster effect"),
-            GraphBar::new(spells, "spell"),
-            GraphBar::new(traps, "trap"),
+            GraphBar::new(move || data.with(|data| data.monster), "monster effect"),
+            GraphBar::new(move || data.with(|data| data.spell), "spell"),
+            GraphBar::new(move || data.with(|data| data.trap), "trap"),
         ];
 
         view! {
-            <div>
+            <div class="type-graph">
                 <h3>"Card Types"</h3>
                 <Graph extent=40 bars=&bars/>
+            </div>
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct ExtraTypeGraph {
+    fusion: usize,
+    synchro: usize,
+    xyz: usize,
+    link: usize,
+}
+
+impl Tool for ExtraTypeGraph {
+    fn init() -> Self {
+        Self::default()
+    }
+
+    fn fold(&mut self, entry: &CardDeckEntry) {
+        if let CardType::Monster { stats, .. } = &entry.card.card_type {
+            let counter = match stats {
+                MonsterStats::Normal {
+                    monster_type: Some(MonsterType::Fusion),
+                    ..
+                } => &mut self.fusion,
+                MonsterStats::Normal {
+                    monster_type: Some(MonsterType::Synchro),
+                    ..
+                } => &mut self.synchro,
+                MonsterStats::Normal {
+                    monster_type: Some(MonsterType::Xyz),
+                    ..
+                } => &mut self.xyz,
+                MonsterStats::Normal { .. } => return,
+                MonsterStats::Link { .. } => &mut self.link,
+            };
+
+            *counter += entry.playing;
+        }
+    }
+
+    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+        let bars = [
+            GraphBar::new(move || data.with(|data| data.fusion), "monster fusion"),
+            GraphBar::new(move || data.with(|data| data.synchro), "monster synchro"),
+            GraphBar::new(move || data.with(|data| data.xyz), "monster xyz"),
+            GraphBar::new(move || data.with(|data| data.link), "monster link"),
+        ];
+
+        view! {
+            <div class="extra-type-graph">
+                <h3>"Extra Deck Card Types"</h3>
+                <Graph extent=15 spacing=5 bars=&bars/>
             </div>
         }
     }

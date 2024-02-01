@@ -90,7 +90,11 @@ macro_rules! tools {
     }
 }
 
-tools!(error_list::ErrorList, graphs::TypeGraph);
+tools!(
+    error_list::ErrorList,
+    graphs::TypeGraph,
+    graphs::ExtraTypeGraph
+);
 
 #[component]
 #[must_use]

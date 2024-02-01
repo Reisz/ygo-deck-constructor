@@ -340,9 +340,16 @@ h6 {
     padding-left: 1.5rem;
 }
 
+.type-graph .graph {
+    height: 5rem;
+}
+
+.extra-type-graph .graph {
+    height: 6.66rem;
+}
+
 .graph {
     width: 100%;
-    height: 4rem;
 }
 
 .graph * {
