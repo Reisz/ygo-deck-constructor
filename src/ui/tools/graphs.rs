@@ -1,0 +1,111 @@
+use std::fmt::Write;
+
+use common::card::CardType;
+use leptos::{component, view, CollectView, IntoSignal, IntoView, Signal, SignalWith};
+
+use super::{CardDeckEntry, Tool};
+
+#[derive(Debug, Clone)]
+struct GraphBar {
+    width: Signal<usize>,
+    class: &'static str,
+}
+
+impl GraphBar {
+    fn new(width: impl IntoSignal<Value = usize>, class: &'static str) -> Self {
+        Self {
+            width: width.into_signal(),
+            class,
+        }
+    }
+}
+
+#[must_use]
+#[component]
+#[allow(clippy::needless_lifetimes)] // falso positive
+fn Graph<'a, const N: usize>(extent: usize, bars: &'a [GraphBar; N]) -> impl IntoView {
+    let height = N * 10;
+
+    let helper_positions = (0..).step_by(10).skip(1).take_while(|pos| *pos < extent);
+
+    let mut helper_path = String::new();
+    for elem in helper_positions.map(Some).intersperse(None) {
+        match elem {
+            Some(pos) => write!(helper_path, "M{pos} 0 V{height}").unwrap(),
+            None => helper_path.push(' '),
+        }
+    }
+
+    let labels = bars.iter().enumerate().map(|(idx, bar)| {
+        let n: f64 = u32::try_from(N).unwrap().into();
+        let idx: f64 = u32::try_from(idx).unwrap().into();
+        let pos = ((1.0 + 2.0 * idx) / (2.0 * n)) * 100.0;
+        view! {
+            <text y=format!("{pos}%") font-size="0.9rem" class="label">
+                {bar.width}
+            </text>
+        }
+    });
+
+    let bars = bars.iter().enumerate().map(|(idx, bar)| {
+        view! { <rect y=10 * idx + 1 width=bar.width class=format!("bar {}", bar.class)></rect> }
+    });
+
+    view! {
+        <svg class="graph">
+            <svg viewBox=format!("0 0 {extent} {height}") preserveAspectRatio="none">
+                <path d=helper_path class="helper"></path>
+                {bars.collect_view()}
+                <path d=format!("M0 0 V{height}") class="axis"></path>
+            </svg>
+            {labels.collect_view()}
+        </svg>
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TypeGraph {
+    monster: usize,
+    spell: usize,
+    trap: usize,
+}
+
+impl Tool for TypeGraph {
+    fn init() -> Self {
+        Self::default()
+    }
+
+    fn fold(&mut self, entry: &CardDeckEntry) {
+        let counter = match entry.card.card_type {
+            CardType::Monster { .. } => {
+                if entry.card.card_type.is_extra_deck_monster() {
+                    return;
+                }
+
+                &mut self.monster
+            }
+            CardType::Spell(_) => &mut self.spell,
+            CardType::Trap(_) => &mut self.trap,
+        };
+        *counter += entry.playing;
+    }
+
+    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+        let monsters = move || data.with(|data| data.monster);
+        let spells = move || data.with(|data| data.spell);
+        let traps = move || data.with(|data| data.trap);
+
+        let bars = [
+            GraphBar::new(monsters, "monster effect"),
+            GraphBar::new(spells, "spell"),
+            GraphBar::new(traps, "trap"),
+        ];
+
+        view! {
+            <div>
+                <h3>"Card Types"</h3>
+                <Graph extent=40 bars=&bars/>
+            </div>
+        }
+    }
+}

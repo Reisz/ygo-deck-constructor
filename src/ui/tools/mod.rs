@@ -1,5 +1,5 @@
 mod error_list;
-mod type_graph;
+mod graphs;
 
 use common::{card::Card, card_data::CardData};
 use leptos::{component, create_memo, expect_context, view, IntoView, Memo, RwSignal, SignalWith};
@@ -90,7 +90,7 @@ macro_rules! tools {
     }
 }
 
-tools!(error_list::ErrorList, type_graph::TypeGraph);
+tools!(error_list::ErrorList, graphs::TypeGraph);
 
 #[component]
 #[must_use]
