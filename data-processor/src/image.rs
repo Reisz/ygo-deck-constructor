@@ -101,7 +101,10 @@ pub fn load_missing_images() -> Result<()> {
                     return Err(anyhow!("Server returned '{}' for {}", image.status(), &url));
                 }
                 let image = image::load(Cursor::new(image.bytes()?), image::ImageFormat::Jpeg)?;
-                let image = image.crop_imm(0, 0, image.width(), image.width()); // Crop for pendulum cards
+
+                let square_size = image.width().min(image.height());
+                let image = image.crop_imm(0, 0, square_size, square_size);
+
                 let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
 
                 let mut data = Vec::new();
