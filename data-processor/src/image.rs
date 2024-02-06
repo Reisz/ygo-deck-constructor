@@ -82,6 +82,7 @@ pub fn load_missing_images() -> Result<()> {
         RateLimiter::direct_with_clock(Quota::per_second(NonZeroU32::new(15).unwrap()), &clock);
 
     let ids = load_missing_ids()?;
+    let errors = Mutex::new(Vec::new());
     let remaining_ids: Vec<_> = ids
         .into_par_iter()
         .progress_with_style(default_progress_style())
@@ -118,13 +119,17 @@ pub fn load_missing_images() -> Result<()> {
             })();
 
             if let Err(e) = result {
-                eprintln!("Error processing artwork with id {}: {}", id.get(), e);
+                errors.lock().unwrap().push((id.get(), e));
                 Some(id)
             } else {
                 None
             }
         })
         .collect();
+
+    for (id, e) in errors.lock().unwrap().iter() {
+        eprintln!("Error processing artwork with id {id}: {e}");
+    }
 
     writer.lock().unwrap().finish()?;
 
