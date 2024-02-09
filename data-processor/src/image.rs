@@ -125,21 +125,24 @@ pub fn load_missing_images() -> Result<()> {
     let ids = load_missing_ids()?;
     let remaining_ids: Vec<_> = ids
         .into_par_progress_iter()
-        .filter_map(|id| {
+        .flat_map(|id| {
             if exit_requested.load(Relaxed) {
-                return Some(Ok(id));
+                return vec![Ok(id)];
             }
 
             while let Err(time) = rate_limit.check() {
                 thread::sleep(time.wait_time_from(clock.now()));
             }
 
-            || -> Result<()> {
+            let result = || -> Result<()> {
                 let data = load_image(id)?;
                 write_image(id, &data, &mut writer.lock().unwrap())
-            }()
-            .map(|()| None)
-            .transpose()
+            }();
+
+            match result {
+                Ok(()) => vec![],
+                Err(err) => vec![Ok(id), Err(err)],
+            }
         })
         .collect_without_errors();
 
