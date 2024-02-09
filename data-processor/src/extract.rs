@@ -8,12 +8,7 @@ use crate::{
     ygoprodeck::{self, BanStatus},
 };
 
-#[must_use]
-pub fn extract(card: ygoprodeck::Card) -> Option<ExtractionResult> {
-    card.try_into().map_err(|err| eprintln!("{err}")).ok()
-}
-
-pub struct ExtractionResult {
+pub struct Extraction {
     pub ids: Vec<Id>,
     pub name: String,
     pub description: String,
@@ -22,7 +17,7 @@ pub struct ExtractionResult {
     pub archetype: Option<String>,
 }
 
-impl TryFrom<ygoprodeck::Card> for ExtractionResult {
+impl TryFrom<ygoprodeck::Card> for Extraction {
     type Error = ProcessingError;
 
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {

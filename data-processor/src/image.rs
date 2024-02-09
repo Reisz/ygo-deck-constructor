@@ -1,7 +1,7 @@
 use std::{
     collections::HashSet,
     fs::{self, File, OpenOptions},
-    io::{BufReader, BufWriter, Cursor, Write},
+    io::{BufReader, BufWriter, Cursor, Seek, Write},
     num::NonZeroU32,
     path::Path,
     sync::{
@@ -14,12 +14,15 @@ use std::{
 use anyhow::{anyhow, Result};
 use common::card::Id;
 use governor::{clock::Clock, Quota, RateLimiter};
-use image::{imageops::FilterType, ImageOutputFormat};
-use indicatif::ParallelProgressIterator;
-use rayon::prelude::{IntoParallelIterator, ParallelIterator};
+use image::{imageops::FilterType, DynamicImage, ImageOutputFormat};
+use rayon::prelude::ParallelIterator;
 use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
-use crate::{default_progress_style, ygoprodeck::ARTWORK_URL, MISSING_IMAGES};
+use crate::{
+    iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
+    ygoprodeck::ARTWORK_URL,
+    MISSING_IMAGES,
+};
 
 const IMAGE_ARCHIVE: &str = "data/images.zip";
 
@@ -56,6 +59,39 @@ fn load_missing_ids() -> Result<Vec<Id>> {
     Ok(result)
 }
 
+fn download(id: Id) -> Result<DynamicImage> {
+    let url = format!("{}{}.jpg", ARTWORK_URL, id.get());
+    let image = reqwest::blocking::get(&url)?;
+    if !image.status().is_success() {
+        return Err(anyhow!("Server returned '{}' for {}", image.status(), &url));
+    }
+    let image = image::load(Cursor::new(image.bytes()?), image::ImageFormat::Jpeg)?;
+
+    Ok(image)
+}
+
+fn make_square(image: &DynamicImage) -> DynamicImage {
+    let size = image.width().min(image.height());
+    image.crop_imm(0, 0, size, size)
+}
+
+fn load_image<W: Write + Seek>(id: Id, writer: &mut ZipWriter<W>) -> Result<()> {
+    let image = download(id)?;
+    let image = make_square(&image);
+    let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
+
+    let mut data = Vec::new();
+    image.write_to(&mut Cursor::new(&mut data), IMAGE_FORMAT)?;
+
+    writer.start_file(
+        format!("{}{FILE_ENDING}", id.get()),
+        FileOptions::default().compression_method(CompressionMethod::Stored),
+    )?;
+    writer.write_all(&data)?;
+
+    Ok(())
+}
+
 pub fn load_missing_images() -> Result<()> {
     let exit_requested = Arc::new(AtomicBool::new(false));
     ctrlc::set_handler({
@@ -75,61 +111,28 @@ pub fn load_missing_images() -> Result<()> {
         ZipWriter::new(File::create(IMAGE_ARCHIVE)?)
     };
     let writer = Mutex::new(writer);
-    let options = FileOptions::default().compression_method(CompressionMethod::Stored);
 
     let clock = governor::clock::DefaultClock::default();
     let rate_limit =
         RateLimiter::direct_with_clock(Quota::per_second(NonZeroU32::new(15).unwrap()), &clock);
 
     let ids = load_missing_ids()?;
-    let errors = Mutex::new(Vec::new());
     let remaining_ids: Vec<_> = ids
-        .into_par_iter()
-        .progress_with_style(default_progress_style())
+        .into_par_progress_iter()
         .filter_map(|id| {
             if exit_requested.load(Relaxed) {
-                return Some(id);
+                return Some(Ok(id));
             }
 
             while let Err(time) = rate_limit.check() {
                 thread::sleep(time.wait_time_from(clock.now()));
             }
 
-            let result = (|| -> Result<()> {
-                let url = format!("{}{}.jpg", ARTWORK_URL, id.get());
-                let image = reqwest::blocking::get(&url)?;
-                if !image.status().is_success() {
-                    return Err(anyhow!("Server returned '{}' for {}", image.status(), &url));
-                }
-                let image = image::load(Cursor::new(image.bytes()?), image::ImageFormat::Jpeg)?;
-
-                let square_size = image.width().min(image.height());
-                let image = image.crop_imm(0, 0, square_size, square_size);
-
-                let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
-
-                let mut data = Vec::new();
-                image.write_to(&mut Cursor::new(&mut data), IMAGE_FORMAT)?;
-
-                let mut writer = writer.lock().unwrap();
-                writer.start_file(format!("{}{FILE_ENDING}", id.get()), options)?;
-                writer.write_all(&data)?;
-
-                Ok(())
-            })();
-
-            if let Err(e) = result {
-                errors.lock().unwrap().push((id.get(), e));
-                Some(id)
-            } else {
-                None
-            }
+            load_image(id, &mut writer.lock().unwrap())
+                .map(|()| None)
+                .transpose()
         })
-        .collect();
-
-    for (id, e) in errors.lock().unwrap().iter() {
-        eprintln!("Error processing artwork with id {id}: {e}");
-    }
+        .collect_without_errors();
 
     writer.lock().unwrap().finish()?;
 

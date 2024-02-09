@@ -1,12 +1,17 @@
-use common::card::{Card, CardDescription, CardDescriptionPart, Id};
+use std::collections::HashMap;
 
-use crate::{error::ProcessingError, extract::ExtractionResult};
+use common::{
+    card::{Card, CardDescription, CardDescriptionPart, Id},
+    card_data::CardData,
+};
+use rayon::iter::{FromParallelIterator, IntoParallelIterator, ParallelIterator};
 
-#[must_use]
-pub fn refine(card: ExtractionResult) -> Option<(Vec<Id>, Card)> {
-    let description = (&card).try_into().map_err(|err| eprintln!("{err}")).ok()?;
+use crate::{error::ProcessingError, extract::Extraction};
 
-    Some((
+pub fn refine(card: Extraction) -> Result<(Vec<Id>, Card), ProcessingError> {
+    let description = (&card).try_into()?;
+
+    Ok((
         card.ids,
         Card {
             name: card.name,
@@ -19,10 +24,34 @@ pub fn refine(card: ExtractionResult) -> Option<(Vec<Id>, Card)> {
     ))
 }
 
-impl TryFrom<&ExtractionResult> for CardDescription {
+pub struct CardDataProxy(pub CardData);
+
+impl FromParallelIterator<(Vec<Id>, Card)> for CardDataProxy {
+    fn from_par_iter<T: IntoParallelIterator<Item = (Vec<Id>, Card)>>(iter: T) -> Self {
+        type Entries = HashMap<Id, Card>;
+        type Ids = Vec<(Id, Vec<Id>)>;
+
+        let (entries, ids): (Entries, Ids) = iter
+            .into_par_iter()
+            .map(|(mut ids, card)| {
+                let id = ids.remove(0);
+                ((id, card), (id, ids))
+            })
+            .unzip();
+
+        let alternatives = ids
+            .into_iter()
+            .flat_map(|(id, ids)| ids.into_iter().map(move |src| (src, id)))
+            .collect();
+
+        CardDataProxy(CardData::new(entries, alternatives))
+    }
+}
+
+impl TryFrom<&Extraction> for CardDescription {
     type Error = ProcessingError;
 
-    fn try_from(card: &ExtractionResult) -> Result<Self, Self::Error> {
+    fn try_from(card: &Extraction) -> Result<Self, Self::Error> {
         let mut spell_effect = None;
         let mut monster_effect = Vec::new();
         let mut current_list = None;
