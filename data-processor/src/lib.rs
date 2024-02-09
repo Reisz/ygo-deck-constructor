@@ -7,9 +7,9 @@ pub mod refine;
 pub mod reqwest_indicatif;
 pub mod ygoprodeck;
 
-pub const CARD_INFO_LOCAL: &str = "data/card_info.json";
+pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
 pub const OUTPUT_FILE: &str = "dist/cards.bin.xz";
-pub const MISSING_IMAGES: &str = "data/missing_images.bin";
+pub const MISSING_IMAGES: &str = "target/missing_images.bin";
 
 pub fn step(text: &str) {
     println!("{} {text}...", console::style(">").bold().blue());
