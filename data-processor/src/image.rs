@@ -75,20 +75,22 @@ fn make_square(image: &DynamicImage) -> DynamicImage {
     image.crop_imm(0, 0, size, size)
 }
 
-fn load_image<W: Write + Seek>(id: Id, writer: &mut ZipWriter<W>) -> Result<()> {
+fn load_image(id: Id) -> Result<Vec<u8>> {
     let image = download(id)?;
     let image = make_square(&image);
     let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
 
     let mut data = Vec::new();
     image.write_to(&mut Cursor::new(&mut data), IMAGE_FORMAT)?;
+    Ok(data)
+}
 
+fn write_image<W: Write + Seek>(id: Id, data: &[u8], writer: &mut ZipWriter<W>) -> Result<()> {
     writer.start_file(
         format!("{}{FILE_ENDING}", id.get()),
         FileOptions::default().compression_method(CompressionMethod::Stored),
     )?;
     writer.write_all(&data)?;
-
     Ok(())
 }
 
@@ -128,9 +130,12 @@ pub fn load_missing_images() -> Result<()> {
                 thread::sleep(time.wait_time_from(clock.now()));
             }
 
-            load_image(id, &mut writer.lock().unwrap())
-                .map(|()| None)
-                .transpose()
+            || -> Result<()> {
+                let data = load_image(id)?;
+                write_image(id, &data, &mut writer.lock().unwrap())
+            }()
+            .map(|()| None)
+            .transpose()
         })
         .collect_without_errors();
 
