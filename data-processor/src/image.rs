@@ -72,7 +72,11 @@ fn download(id: Id) -> Result<DynamicImage> {
 
 fn make_square(image: &DynamicImage) -> DynamicImage {
     let size = image.width().min(image.height());
-    image.crop_imm(0, 0, size, size)
+    // Center horizontally for wide artworks
+    let x = (image.width() - size) / 2;
+    // Align at top for full card artworks
+    let y = 0;
+    image.crop_imm(x, y, size, size)
 }
 
 fn load_image(id: Id) -> Result<Vec<u8>> {
