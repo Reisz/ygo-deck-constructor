@@ -11,7 +11,6 @@ use web_sys::Url;
 use crate::{deck::Deck, error_handling::JsException, print_error, ydk};
 
 async fn do_import(file: File, cards: &'static CardData) -> Result<Deck, Box<dyn Error>> {
-    leptos::logging::log!("do import");
     Ok(ydk::load(&read_as_text(&file.into()).await?, cards)?)
 }
 
@@ -57,7 +56,9 @@ pub fn Menu() -> impl IntoView {
     view! {
         <div class="menu">
             <button on:click=move |_| deck.set(Deck::default())>"New"</button>
-            <button on:click=move |_| input_ref.get().unwrap().click()>"Import..."</button>
+            <button on:click:undelegated=move |_| {
+                input_ref.get().unwrap().click();
+            }>"Import..."</button>
             <button on:click=export>"Export..."</button>
             <input type="file" accept=".ydk" ref=input_ref on:change=import style="display: none"/>
         </div>
