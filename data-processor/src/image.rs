@@ -94,7 +94,7 @@ fn write_image<W: Write + Seek>(id: Id, data: &[u8], writer: &mut ZipWriter<W>) 
         format!("{}{FILE_ENDING}", id.get()),
         FileOptions::default().compression_method(CompressionMethod::Stored),
     )?;
-    writer.write_all(&data)?;
+    writer.write_all(data)?;
     Ok(())
 }
 
