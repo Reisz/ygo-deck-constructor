@@ -3,10 +3,11 @@ use std::error::Error;
 use common::card_data::CardData;
 use gloo_file::{futures::read_as_text, Blob, File};
 use leptos::{
-    component, expect_context, html, spawn_local, view, IntoView, NodeRef, RwSignal, SignalSet,
-    SignalWith,
+    component, expect_context, html, provide_context, spawn_local, view, IntoView, NodeRef,
+    RwSignal, SignalSet, SignalUpdate, SignalWith,
 };
-use web_sys::Url;
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::{KeyboardEvent, Url};
 
 use crate::{deck::Deck, error_handling::JsException, print_error, ydk};
 
@@ -25,6 +26,33 @@ fn do_export(deck: &Deck, cards: &'static CardData) -> Result<(), Box<dyn Error>
     Url::revoke_object_url(&url).map_err(JsException::from)?;
 
     Ok(())
+}
+
+fn install_undo_redo_shortcuts() {
+    let deck = expect_context::<RwSignal<Deck>>();
+    let keyup = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
+        let key = if ev.shift_key() {
+            ev.key().to_uppercase()
+        } else {
+            ev.key()
+        };
+
+        if ev.ctrl_key() || ev.meta_key() {
+            match key.as_str() {
+                "z" => deck.update(Deck::undo),
+                "y" | "Z" => deck.update(Deck::redo),
+                _ => {}
+            }
+        }
+    });
+    leptos::document().set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
+    keyup.forget();
+}
+
+/// Install the main deck instance as leptos context
+pub fn install_as_context() {
+    provide_context(RwSignal::new(Deck::default()));
+    install_undo_redo_shortcuts();
 }
 
 #[component]

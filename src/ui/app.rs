@@ -1,20 +1,12 @@
 use bincode::Options;
 use common::{self, card_data::CardData};
 use gloo_net::http::Request;
-use leptos::{
-    component, create_local_resource, expect_context, provide_context, view, IntoView, RwSignal,
-    SignalUpdate, Suspense,
-};
+use leptos::{component, create_local_resource, provide_context, view, IntoView, Suspense};
 use lzma_rs::xz_decompress;
-use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::KeyboardEvent;
 
-use crate::{
-    deck::Deck,
-    ui::{
-        card_search::CardSearch, card_view::CardTooltip, deck_view::DeckView, drawers::Drawers,
-        menu::Menu, tools::Tools,
-    },
+use crate::ui::{
+    card_search::CardSearch, card_view::CardTooltip, deck::Menu, deck_view::DeckView,
+    drawers::Drawers, tools::Tools,
 };
 
 async fn load_cards() -> &'static CardData {
@@ -40,27 +32,7 @@ pub fn App() -> impl IntoView {
     let app = move || {
         cards.map(|cards| {
             provide_context::<&'static CardData>(*cards);
-            provide_context(RwSignal::new(Deck::default()));
-
-            // TODO find a better place for this
-            let deck = expect_context::<RwSignal<Deck>>();
-            let keyup = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
-                let key = if ev.shift_key() {
-                    ev.key().to_uppercase()
-                } else {
-                    ev.key()
-                };
-
-                if ev.ctrl_key() || ev.meta_key() {
-                    match key.as_str() {
-                        "z" => deck.update(Deck::undo),
-                        "y" | "Z" => deck.update(Deck::redo),
-                        _ => {}
-                    }
-                }
-            });
-            leptos::document().set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
-            keyup.forget();
+            crate::ui::deck::install_as_context();
 
             view! {
                 <CardTooltip/>
