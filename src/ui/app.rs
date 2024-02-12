@@ -26,7 +26,7 @@ async fn load_cards() -> &'static CardData {
 #[component]
 #[must_use]
 pub fn App() -> impl IntoView {
-    let cards = create_local_resource(|| 1, |_| load_cards());
+    let cards = create_local_resource(|| (), |()| load_cards());
 
     let fallback = move || "Loading...";
     let app = move || {

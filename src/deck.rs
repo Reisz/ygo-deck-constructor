@@ -1,7 +1,10 @@
+use std::fmt;
+
 use common::{card::Id, card_data::CardData};
 
 use crate::{
     deck_part::DeckPart,
+    text_encoding::TextEncoding,
     undo_redo::{UndoRedo, UndoRedoMessage},
 };
 
@@ -63,6 +66,28 @@ pub struct DeckEntry {
     counts: [ReversibleSaturatingCounter; 2],
 }
 
+impl TextEncoding for DeckEntry {
+    fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let id = self.id.get();
+        let [playing, side] = self.counts;
+        write!(writer, "{id}:{}:{}", playing.get(), side.get())
+    }
+
+    fn decode(text: &str) -> Option<Self> {
+        let (id, text) = text.split_once(':')?;
+        let (playing, side) = text.split_once(':')?;
+
+        let id = Id::new(id.parse().ok()?);
+        let playing = ReversibleSaturatingCounter(playing.parse().ok()?);
+        let side = ReversibleSaturatingCounter(side.parse().ok()?);
+
+        Some(Self {
+            id,
+            counts: [playing, side],
+        })
+    }
+}
+
 impl DeckEntry {
     fn new(id: Id) -> Self {
         Self {
@@ -109,6 +134,52 @@ impl UndoRedoMessage for DeckMessage {
             Self::Inc(id, part_type, amount) => Self::Dec(id, part_type, amount),
             Self::Dec(id, part_type, amount) => Self::Inc(id, part_type, amount),
         }
+    }
+}
+
+impl TextEncoding for DeckMessage {
+    fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let sign = match self {
+            Self::Inc(..) => '+',
+            Self::Dec(..) => '-',
+        };
+
+        let (Self::Inc(id, part, count) | Self::Dec(id, part, count)) = self;
+        let id = id.get();
+        let part = match part {
+            PartType::Playing => 'p',
+            PartType::Side => 's',
+        };
+
+        write!(writer, "{sign}{part}{id}:{count}")
+    }
+
+    fn decode(text: &str) -> Option<Self> {
+        text.starts_with(['+', '-']).then_some(())?;
+        let (sign, text) = text.split_at(1);
+
+        text.starts_with(['p', 's']).then_some(())?;
+        let (part, text) = text.split_at(1);
+
+        let (id, count) = text.split_once(':')?;
+
+        let id = Id::new(id.parse().ok()?);
+        dbg!("a");
+        let part = match part {
+            "p" => PartType::Playing,
+            "s" => PartType::Side,
+            _ => return None,
+        };
+        let count = count.parse().ok()?;
+        dbg!("a");
+
+        let result = match sign {
+            "+" => Self::Inc(id, part, count),
+            "-" => Self::Dec(id, part, count),
+            _ => return None,
+        };
+
+        Some(result)
     }
 }
 
@@ -197,6 +268,38 @@ impl Deck {
         self.entries()
             .map(move |entry| (entry.id(), entry.count(part.into())))
             .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
+    }
+}
+
+impl TextEncoding for Deck {
+    fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let mut entries = self.entries.iter();
+        if let Some(entry) = entries.next() {
+            entry.encode(writer)?;
+        }
+        for entry in entries {
+            writer.write_char(',')?;
+            entry.encode(writer)?;
+        }
+
+        writer.write_char(' ')?;
+        self.undo_redo.encode(writer)
+    }
+
+    fn decode(text: &str) -> Option<Self> {
+        let (entries, undo_redo) = text.split_once(' ')?;
+
+        let entries = if entries.is_empty() {
+            Vec::new()
+        } else {
+            entries
+                .split(',')
+                .map(DeckEntry::decode)
+                .collect::<Option<_>>()?
+        };
+        let undo_redo = TextEncoding::decode(undo_redo)?;
+
+        Some(Self { entries, undo_redo })
     }
 }
 
@@ -453,5 +556,48 @@ mod test {
         let mut side_cards = deck.iter_part(data, DeckPart::Side).collect::<Vec<_>>();
         side_cards.sort_by_key(|(id, _)| id.get());
         assert_eq!(side_cards, &[(MAIN_ID, 3), (EXTRA_ID, 5)]);
+    }
+
+    #[test]
+    fn encoding_empty() {
+        let deck = Deck::default();
+        assert!(Deck::decode(&deck.encode_string())
+            .unwrap()
+            .entries
+            .is_empty());
+    }
+
+    #[test]
+    fn encoding() {
+        const ID: Id = Id::new(1234);
+        const OTHER_ID: Id = Id::new(3456);
+        const AMOUNT: u32 = 4321;
+        const OTHER_AMOUNT: u32 = 6543;
+
+        for TestCase { current, other } in TestCase::iter() {
+            let mut deck = Deck::default();
+            deck.increment(ID, current, AMOUNT);
+            deck.increment(OTHER_ID, current, OTHER_AMOUNT);
+            deck.undo();
+            deck.undo();
+            deck.redo();
+
+            let mut deck = Deck::decode(&deck.encode_string()).unwrap();
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, other, []);
+
+            deck.undo();
+            assert_part_eq!(&deck, current, []);
+            assert_part_eq!(&deck, other, []);
+
+            deck.redo();
+            deck.redo();
+            assert_part_eq!(
+                &deck,
+                current,
+                &[(ID, AMOUNT as usize), (OTHER_ID, OTHER_AMOUNT as usize)]
+            );
+            assert_part_eq!(&deck, other, []);
+        }
     }
 }

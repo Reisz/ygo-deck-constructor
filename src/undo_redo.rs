@@ -1,3 +1,7 @@
+use std::fmt;
+
+use crate::text_encoding::TextEncoding;
+
 pub trait UndoRedoMessage: Copy {
     #[must_use]
     fn invert(self) -> Self;
@@ -48,6 +52,36 @@ impl<T: UndoRedoMessage> UndoRedo<T> {
     }
 }
 
+impl<T: TextEncoding> TextEncoding for UndoRedo<T> {
+    fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        write!(writer, "{};", self.offset)?;
+
+        let mut entries = self.entries.iter();
+        if let Some(item) = entries.next() {
+            item.encode(writer)?;
+        }
+        for item in entries {
+            writer.write_char(',')?;
+            item.encode(writer)?;
+        }
+
+        Ok(())
+    }
+
+    fn decode(text: &str) -> Option<Self> {
+        let (offset, text) = text.split_once(';')?;
+
+        let offset = offset.parse().ok()?;
+        let entries = if text.is_empty() {
+            Vec::new()
+        } else {
+            text.split(',').map(T::decode).collect::<Option<_>>()?
+        };
+
+        Some(Self { entries, offset })
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::assert_matches::assert_matches;
@@ -68,6 +102,32 @@ mod test {
                 Self::Apply(idx) => Self::Revert(idx),
                 Self::Revert(idx) => Self::Apply(idx),
             }
+        }
+    }
+
+    impl TextEncoding for TestMessage {
+        fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+            let sign = match self {
+                Self::Apply(_) => 'a',
+                Self::Revert(_) => 'r',
+            };
+
+            let (Self::Apply(value) | Self::Revert(value)) = self;
+            write!(writer, "{sign}{value}")
+        }
+
+        fn decode(text: &str) -> Option<Self> {
+            assert!(text.starts_with(['a', 'r']));
+            let (sign, text) = text.split_at(1);
+            let value = text.parse().unwrap();
+
+            let result = match sign {
+                "a" => Self::Apply(value),
+                "r" => Self::Revert(value),
+                _ => unreachable!(),
+            };
+
+            Some(result)
         }
     }
 
@@ -133,5 +193,24 @@ mod test {
         assert_matches!(ur.undo(), Some(TestMessage::Revert(2)));
         assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
         assert_matches!(ur.undo(), None);
+    }
+
+    #[test]
+    fn encoding() {
+        let mut ur = UR::default();
+        ur.push_action(TestMessage::Apply(0));
+        ur.push_action(TestMessage::Apply(1));
+
+        let mut ur = UR::decode(&ur.encode_string()).unwrap();
+        assert_matches!(ur.undo(), Some(TestMessage::Revert(1)));
+
+        let mut ur = UR::decode(&ur.encode_string()).unwrap();
+        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
+
+        let mut ur = UR::decode(&ur.encode_string()).unwrap();
+        assert_matches!(ur.redo(), Some(TestMessage::Apply(0)));
+
+        let mut ur = UR::decode(&ur.encode_string()).unwrap();
+        assert_matches!(ur.redo(), Some(TestMessage::Apply(1)));
     }
 }

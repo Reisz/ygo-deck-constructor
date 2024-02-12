@@ -3,13 +3,15 @@ use std::error::Error;
 use common::card_data::CardData;
 use gloo_file::{futures::read_as_text, Blob, File};
 use leptos::{
-    component, expect_context, html, provide_context, spawn_local, view, IntoView, NodeRef,
-    RwSignal, SignalSet, SignalUpdate, SignalWith,
+    component, create_effect, expect_context, html, logging, provide_context, spawn_local, view,
+    IntoView, NodeRef, RwSignal, SignalSet, SignalUpdate, SignalWith,
 };
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{KeyboardEvent, Url};
 
-use crate::{deck::Deck, error_handling::JsException, print_error, ydk};
+use crate::{
+    deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding, ydk,
+};
 
 async fn do_import(file: File, cards: &'static CardData) -> Result<Deck, Box<dyn Error>> {
     Ok(ydk::load(&read_as_text(&file.into()).await?, cards)?)
@@ -28,8 +30,7 @@ fn do_export(deck: &Deck, cards: &'static CardData) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-fn install_undo_redo_shortcuts() {
-    let deck = expect_context::<RwSignal<Deck>>();
+fn install_undo_redo_shortcuts(deck: RwSignal<Deck>) {
     let keyup = Closure::<dyn Fn(KeyboardEvent)>::new(move |ev: KeyboardEvent| {
         let key = if ev.shift_key() {
             ev.key().to_uppercase()
@@ -48,11 +49,29 @@ fn install_undo_redo_shortcuts() {
     leptos::document().set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
     keyup.forget();
 }
-
 /// Install the main deck instance as leptos context
 pub fn install_as_context() {
-    provide_context(RwSignal::new(Deck::default()));
-    install_undo_redo_shortcuts();
+    const KEY: &str = "deck";
+    let storage = leptos::window().local_storage().ok().flatten();
+    let deck = storage
+        .as_ref()
+        .and_then(|storage| storage.get_item(KEY).ok().flatten())
+        .as_deref()
+        .and_then(Deck::decode)
+        .unwrap_or_default();
+    let deck = RwSignal::new(deck);
+
+    if let Some(storage) = storage {
+        create_effect(move |_| {
+            let text = deck.with(TextEncoding::encode_string);
+            if storage.set_item(KEY, &text).is_err() {
+                logging::error!("Saving deck failed");
+            }
+        });
+    }
+
+    install_undo_redo_shortcuts(deck);
+    provide_context(deck);
 }
 
 #[component]
