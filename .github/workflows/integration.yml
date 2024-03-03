@@ -16,14 +16,10 @@ jobs:
                   toolchain: nightly
                   components: clippy, rustfmt
 
-            - name: Install just
-              uses: baptiste0928/cargo-install@v2
+            - name: Install tools
+              uses: taiki-e/install-action@v2
               with:
-                  crate: just
-            - name: Install leptosfmt
-              uses: baptiste0928/cargo-install@v2
-              with:
-                  crate: leptosfmt
+                  tool: just, leptosfmt
 
             - name: Run linter
               run: just lint
