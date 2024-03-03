@@ -21,7 +21,7 @@ jobs:
             - name: Install tools
               uses: taiki-e/install-action@v2
               with:
-                  tool: trunk@18
+                  tool: trunk@0.18
 
             - name: Build
               run: trunk build --release --public-url=ygo-deck-constructor
