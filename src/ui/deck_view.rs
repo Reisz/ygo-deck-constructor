@@ -11,7 +11,7 @@ use crate::{
     deck_part::DeckPart,
     ui::{
         card_view::CardView,
-        drag_drop::{get_dragged_card, set_drop_effect, DropEffect},
+        drag_drop::{get_drag_info, get_dropped_card, set_drop_effect, DragInfo, DropEffect},
     },
 };
 
@@ -28,11 +28,17 @@ fn PartView(part: DeckPart) -> impl IntoView {
     let delete = Rc::new(delete);
 
     let drag_over = move |ev| {
-        if let Some(id) = get_dragged_card(&ev) {
-            if part.can_contain(&cards[id]) {
-                set_drop_effect(&ev, DropEffect::Copy);
-                ev.prevent_default();
-            }
+        let drag_info = get_drag_info(&ev);
+
+        let ok = match part {
+            DeckPart::Main => matches!(drag_info, DragInfo::MainCard),
+            DeckPart::Extra => matches!(drag_info, DragInfo::ExtraCard),
+            DeckPart::Side => matches!(drag_info, DragInfo::MainCard | DragInfo::ExtraCard),
+        };
+
+        if ok {
+            set_drop_effect(&ev, DropEffect::Copy);
+            ev.prevent_default();
         }
     };
 
@@ -61,13 +67,10 @@ fn PartView(part: DeckPart) -> impl IntoView {
             on:dragenter=drag_over
             on:dragover=drag_over
             on:drop=move |ev| {
-                if let Some(id) = get_dragged_card(&ev) {
-                    if part.can_contain(&cards[id]) {
-                        deck.update(|deck| {
-                            deck.increment(id, part.into(), 1);
-                        });
-                    }
-                }
+                let id = get_dropped_card(&ev);
+                deck.update(|deck| {
+                    deck.increment(id, part.into(), 1);
+                });
             }
         >
 

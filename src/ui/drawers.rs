@@ -3,14 +3,14 @@ use std::rc::Rc;
 use common::{card::Id, card_data::CardData};
 use leptos::{
     component, create_rw_signal, create_signal, expect_context, view, For, IntoView, RwSignal,
-    SignalGet, SignalUpdate, WriteSignal,
+    SignalUpdate, SignalWith, WriteSignal,
 };
 
 use crate::{
     deck_order::deck_order,
     ui::{
         card_view::CardView,
-        drag_drop::{get_dragged_card, set_drop_effect, DropEffect},
+        drag_drop::{get_drag_info, get_dropped_card, set_drop_effect, DragInfo, DropEffect},
     },
 };
 
@@ -45,11 +45,9 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
     let delete: Rc<dyn Fn(Id)> = Rc::new(delete);
 
     let drag_over = move |ev| {
-        if let Some(id) = get_dragged_card(&ev) {
-            if !data.content.get().contains(&id) {
-                set_drop_effect(&ev, DropEffect::Copy);
-                ev.prevent_default();
-            }
+        if !matches!(get_drag_info(&ev), DragInfo::NotCard) {
+            set_drop_effect(&ev, DropEffect::Copy);
+            ev.prevent_default();
         }
     };
 
@@ -63,7 +61,8 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                 on:dragenter=drag_over
                 on:dragover=drag_over
                 on:drop=move |ev| {
-                    if let Some(id) = get_dragged_card(&ev) {
+                    let id = get_dropped_card(&ev);
+                    if !data.content.with(|content| content.contains(&id)) {
                         push(id);
                     }
                 }
