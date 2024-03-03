@@ -86,8 +86,6 @@ impl<T: TextEncoding> TextEncoding for UndoRedo<T> {
 mod test {
     use std::assert_matches::assert_matches;
 
-    use crate::undo_redo::UndoRedo;
-
     use super::*;
 
     #[derive(Debug, Clone, Copy)]

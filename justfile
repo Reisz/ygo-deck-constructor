@@ -4,12 +4,11 @@ run:
     -w Trunk.toml \
     -w Cargo.toml \
     -w Cargo.lock \
-    -w data \
     -w src \
     -w data-processor
 
 lint *FLAGS:
-    cargo clippy --workspace {{FLAGS}} -- \
+    cargo clippy --workspace --all-targets {{FLAGS}} -- \
     -W clippy::pedantic \
     -A clippy::empty-docs \
     -A clippy::missing-errors-doc \
@@ -22,7 +21,7 @@ test:
 
 check_fmt:
     cargo fmt --all -- --check
-    leptosfmt --check **/*.rs
+    leptosfmt -q --check **/*.rs
 
 all_checks: lint test check_fmt
 

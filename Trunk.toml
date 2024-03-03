@@ -2,8 +2,3 @@
 stage = "pre_build"
 command = "cargo"
 command_arguments = ["run", "-p", "data-processor"]
-
-[[hooks]]
-stage = "pre_build"
-command = "unzip"
-command_arguments = ["-qo", "data/images.zip", "-d", "dist/images"]

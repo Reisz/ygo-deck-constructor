@@ -229,9 +229,9 @@ mod test {
             data.insert(
                 Id::new(*id),
                 Card {
-                    name: "".to_string(),
+                    name: String::new(),
                     description: CardDescription::Regular(Vec::new()),
-                    search_text: "".to_string(),
+                    search_text: String::new(),
                     card_type: CardType::Spell(SpellType::Normal),
                     limit: CardLimit::Unlimited,
                     archetype: None,
@@ -239,13 +239,13 @@ mod test {
             );
         }
 
-        for id in IDS[1].iter() {
+        for id in &IDS[1] {
             data.insert(
                 Id::new(*id),
                 Card {
-                    name: "".to_string(),
+                    name: String::new(),
                     description: CardDescription::Regular(Vec::new()),
-                    search_text: "".to_string(),
+                    search_text: String::new(),
                     card_type: CardType::Monster {
                         race: Machine,
                         attribute: Dark,
