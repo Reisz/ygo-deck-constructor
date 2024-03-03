@@ -11,6 +11,7 @@ run:
 lint *FLAGS:
     cargo clippy --workspace {{FLAGS}} -- \
     -W clippy::pedantic \
+    -A clippy::empty-docs \
     -A clippy::missing-errors-doc \
     -A clippy::missing-panics-doc \
     -A clippy::module-name-repetitions \

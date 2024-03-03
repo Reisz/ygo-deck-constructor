@@ -13,11 +13,11 @@ gloo-dialogs = "0.2.0"
 gloo-file = { version = "0.3.0", features = ["futures"] }
 gloo-net = "0.5.0"
 itertools = "0.12.1"
-leptos = { version = "0.6.5", features = ["csr", "nightly"] }
-leptos-use = "0.10.2"
+leptos = { version = "0.6.8", features = ["csr", "nightly"] }
+leptos-use = "0.10.3"
 lzma-rs = "0.3.0"
 nom = "7.1.3"
-thiserror = "1.0.56"
+thiserror = "1.0.57"
 wasm-bindgen = "0.2.91"
 wasm-bindgen-futures = "0.4.41"
 web-sys = { version = "0.3.68", features = ["DataTransfer", "DragEvent", "DomRect"] }
@@ -32,4 +32,4 @@ edition = "2021"
 
 [workspace.dependencies]
 bincode = "1.3.3"
-serde = "1.0.196"
+serde = "1.0.197"
