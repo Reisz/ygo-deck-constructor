@@ -14,7 +14,7 @@ use std::{
 use anyhow::{anyhow, Result};
 use common::card::Id;
 use governor::{clock::Clock, Quota, RateLimiter};
-use image::{imageops::FilterType, DynamicImage, ImageOutputFormat};
+use image::{imageops::FilterType, DynamicImage, ImageFormat};
 use rayon::prelude::ParallelIterator;
 use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
@@ -27,7 +27,7 @@ use crate::{
 const IMAGE_ARCHIVE: &str = "data/images.zip";
 
 const FILE_ENDING: &str = ".webp";
-const IMAGE_FORMAT: ImageOutputFormat = ImageOutputFormat::WebP;
+const IMAGE_FORMAT: ImageFormat = ImageFormat::WebP;
 
 const OUTPUT_SIZE: u32 = 96;
 
