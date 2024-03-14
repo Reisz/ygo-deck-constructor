@@ -25,8 +25,5 @@ check_fmt:
 
 all_checks: lint test check_fmt
 
-load_images:
-    cargo run --release -p data-processor --bin load_images
-
 clean:
     trunk clean --cargo
