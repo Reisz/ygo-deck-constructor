@@ -6,31 +6,56 @@ use std::{
 };
 
 use anyhow::Result;
+use serde::Deserialize;
+use tokio::io::AsyncWriteExt;
 
-use crate::{step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE};
+use crate::{reqwest_indicatif::ProgressReader, step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE};
 
 const VERSION_CHECK_INTERVAL: Duration = Duration::from_secs(60 * 60 * 24); // 1 day
 
-#[derive(Debug, Clone)]
-pub enum CacheBehavior {
-    Download { online_version: String },
-    Process,
-    Nothing,
+pub enum CacheResult {
+    StillValid,
+    ProcessingRequired,
 }
 
-pub async fn get_behavior() -> Result<CacheBehavior> {
-    Ok(if let Some(online_version) = should_download().await? {
-        CacheBehavior::Download { online_version }
-    } else if should_process()? {
-        CacheBehavior::Process
-    } else {
-        CacheBehavior::Nothing
-    })
+pub async fn update_card_info_cache() -> Result<CacheResult> {
+    if let Some(version) = should_download().await? {
+        step("Downloading cards");
+
+        let response = reqwest::get(ygoprodeck::URL).await?.error_for_status()?;
+        let mut response = tokio::io::BufReader::new(ProgressReader::from_response(response));
+
+        let mut file = tokio::io::BufWriter::new(tokio::fs::File::create(CARD_INFO_LOCAL).await?);
+        file.write_all(version.as_bytes()).await?;
+        file.write_all("\n".as_bytes()).await?;
+
+        tokio::io::copy(&mut response, &mut file).await?;
+        return Ok(CacheResult::ProcessingRequired);
+    }
+
+    if !Path::new(OUTPUT_FILE).try_exists()? {
+        return Ok(CacheResult::ProcessingRequired);
+    }
+
+    let output_date = fs::metadata(OUTPUT_FILE)?.modified()?;
+    let executable_date = fs::metadata(std::env::current_exe()?)?.modified()?;
+    if executable_date > output_date {
+        return Ok(CacheResult::ProcessingRequired);
+    }
+
+    Ok(CacheResult::StillValid)
 }
 
 async fn get_online_version() -> Result<String> {
+    pub const VERSION_URL: &str = "https://db.ygoprodeck.com/api/v7/checkDBVer.php";
+
+    #[derive(Debug, Deserialize)]
+    pub struct VersionInfo {
+        pub database_version: String,
+    }
+
     step("Checking online database version");
-    let info: ygoprodeck::VersionInfo = reqwest::get(ygoprodeck::VERSION_URL)
+    let [info]: [VersionInfo; 1] = reqwest::get(VERSION_URL)
         .await?
         .error_for_status()?
         .json()
@@ -38,7 +63,7 @@ async fn get_online_version() -> Result<String> {
     Ok(info.database_version)
 }
 
-async fn should_download() -> Result<Option<String>> {
+pub async fn should_download() -> Result<Option<String>> {
     if !Path::new(CARD_INFO_LOCAL).try_exists()? {
         return Ok(Some(get_online_version().await?));
     }
@@ -62,19 +87,4 @@ async fn should_download() -> Result<Option<String>> {
     }
 
     Ok(None)
-}
-
-fn should_process() -> Result<bool> {
-    if !Path::new(OUTPUT_FILE).try_exists()? {
-        return Ok(true);
-    }
-
-    let output_date = fs::metadata(OUTPUT_FILE)?.modified()?;
-    let executable_date = fs::metadata(std::env::current_exe()?)?.modified()?;
-
-    if executable_date > output_date {
-        return Ok(true);
-    }
-
-    Ok(false)
 }

@@ -7,7 +7,7 @@ use std::{
 use anyhow::Result;
 use bincode::Options;
 use data_processor::{
-    cache::{self, CacheBehavior},
+    cache::{update_card_info_cache, CacheResult},
     extract::Extraction,
     iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
     refine::{self, CardDataProxy},
@@ -16,7 +16,6 @@ use data_processor::{
 };
 use indicatif::{DecimalBytes, HumanCount};
 use rayon::prelude::*;
-use tokio::io::{AsyncRead, AsyncWriteExt};
 use xz2::write::XzEncoder;
 
 fn filter(card: &ygoprodeck::Card) -> bool {
@@ -26,38 +25,20 @@ fn filter(card: &ygoprodeck::Card) -> bool {
     )
 }
 
-async fn get_card_info_download() -> Result<impl AsyncRead> {
-    step("Downloading cards");
-    let response = reqwest::get(ygoprodeck::URL).await?.error_for_status()?;
-    Ok(tokio::io::BufReader::new(ProgressReader::from_response(
-        response,
-    )))
-}
-
-async fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>> {
-    if let CacheBehavior::Download { online_version } = cache_behavior {
-        let mut local_file =
-            tokio::io::BufWriter::new(tokio::fs::File::create(CARD_INFO_LOCAL).await?);
-        local_file.write_all(online_version.as_bytes()).await?;
-        local_file.write_all("\n".as_bytes()).await?;
-        tokio::io::copy(&mut get_card_info_download().await?, &mut local_file).await?;
+#[tokio::main]
+async fn main() -> Result<()> {
+    match update_card_info_cache().await? {
+        CacheResult::StillValid => {
+            println!("Nothing to do");
+            return Ok(());
+        }
+        CacheResult::ProcessingRequired => { /* continue */ }
     }
 
     step("Loading cards");
     let mut reader = BufReader::new(ProgressReader::from_path(CARD_INFO_LOCAL)?);
     reader.read_line(&mut String::new())?;
-    ygoprodeck::parse(reader)
-}
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let cache = cache::get_behavior().await?;
-    if matches!(cache, CacheBehavior::Nothing) {
-        println!("Nothing to do");
-        return Ok(());
-    }
-
-    let cards = get_card_info(cache).await?;
+    let cards = ygoprodeck::parse(reader)?;
 
     step("Extractíng");
     let cards: Vec<Extraction> = cards

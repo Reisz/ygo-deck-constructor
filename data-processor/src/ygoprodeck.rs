@@ -11,11 +11,6 @@ pub const URL: &str = "https://db.ygoprodeck.com/api/v7/cardinfo.php";
 pub const ARTWORK_URL: &str = "https://images.ygoprodeck.com/images/cards_cropped/";
 
 #[derive(Debug, Deserialize)]
-pub struct VersionInfo {
-    pub database_version: String,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct Card {
     // All Cards
     pub id: u64,
