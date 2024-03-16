@@ -9,9 +9,7 @@ use bincode::Options;
 use data_processor::{
     cache::{self, CacheBehavior},
     extract::Extraction,
-    image::{self, save_missing_ids},
     iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
-    print_err,
     refine::{self, CardDataProxy},
     reqwest_indicatif::ProgressReader,
     step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
@@ -73,20 +71,6 @@ async fn main() -> Result<()> {
         .into_par_progress_iter()
         .map(refine::refine)
         .collect_without_errors();
-
-    step("Checking images");
-    let images = image::available_ids()?;
-    let missing_images = cards
-        .entries()
-        .par_iter()
-        .map(|(&id, _)| id)
-        .filter(|id| !images.contains(id))
-        .collect::<Vec<_>>();
-
-    if !missing_images.is_empty() {
-        print_err!("Missing images for {} cards", missing_images.len());
-        save_missing_ids(&missing_images)?;
-    }
 
     step("Saving");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
