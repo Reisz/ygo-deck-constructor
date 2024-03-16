@@ -11,7 +11,7 @@ pub const URL: &str = "https://db.ygoprodeck.com/api/v7/cardinfo.php";
 pub const ARTWORK_URL: &str = "https://images.ygoprodeck.com/images/cards_cropped/";
 
 #[derive(Debug, Deserialize)]
-struct VersionInfo {
+pub struct VersionInfo {
     pub database_version: String,
 }
 
@@ -218,11 +218,6 @@ pub struct ImageInfo {
 #[derive(Debug, Deserialize)]
 struct Wrapper {
     data: Vec<Card>,
-}
-
-pub fn get_version<R: Read>(reader: R) -> Result<String> {
-    let [result]: [VersionInfo; 1] = serde_json::from_reader(reader)?;
-    Ok(result.database_version)
 }
 
 pub fn parse<R: Read>(reader: R) -> Result<Vec<Card>> {

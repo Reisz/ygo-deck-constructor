@@ -13,6 +13,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use common::card::Id;
+use futures::executor::block_on;
 use governor::{clock::Clock, Quota, RateLimiter};
 use image::{imageops::FilterType, DynamicImage, ImageFormat};
 use rayon::prelude::ParallelIterator;
@@ -59,13 +60,13 @@ fn load_missing_ids() -> Result<Vec<Id>> {
     Ok(result)
 }
 
-fn download(id: Id) -> Result<DynamicImage> {
+async fn download(id: Id) -> Result<DynamicImage> {
     let url = format!("{}{}.jpg", ARTWORK_URL, id.get());
-    let image = reqwest::blocking::get(&url)?;
+    let image = reqwest::get(&url).await?;
     if !image.status().is_success() {
         return Err(anyhow!("Server returned '{}' for {}", image.status(), &url));
     }
-    let image = image::load(Cursor::new(image.bytes()?), image::ImageFormat::Jpeg)?;
+    let image = image::load(Cursor::new(image.bytes().await?), image::ImageFormat::Jpeg)?;
 
     Ok(image)
 }
@@ -79,8 +80,8 @@ fn make_square(image: &DynamicImage) -> DynamicImage {
     image.crop_imm(x, y, size, size)
 }
 
-fn load_image(id: Id) -> Result<Vec<u8>> {
-    let image = download(id)?;
+async fn load_image(id: Id) -> Result<Vec<u8>> {
+    let image = download(id).await?;
     let image = make_square(&image);
     let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
 
@@ -135,7 +136,7 @@ pub fn load_missing_images() -> Result<()> {
             }
 
             let result = || -> Result<()> {
-                let data = load_image(id)?;
+                let data = block_on(load_image(id))?;
                 write_image(id, &data, &mut writer.lock().unwrap())
             }();
 

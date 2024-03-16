@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::{self, BufRead, BufReader, BufWriter, Read, Write},
+    io::{BufRead, BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
 };
 
@@ -18,6 +18,7 @@ use data_processor::{
 };
 use indicatif::{DecimalBytes, HumanCount};
 use rayon::prelude::*;
+use tokio::io::{AsyncRead, AsyncWriteExt};
 use xz2::write::XzEncoder;
 
 fn filter(card: &ygoprodeck::Card) -> bool {
@@ -27,17 +28,21 @@ fn filter(card: &ygoprodeck::Card) -> bool {
     )
 }
 
-fn get_card_info_download() -> Result<impl Read> {
+async fn get_card_info_download() -> Result<impl AsyncRead> {
     step("Downloading cards");
-    let response = reqwest::blocking::get(ygoprodeck::URL)?;
-    Ok(BufReader::new(ProgressReader::from_response(response)))
+    let response = reqwest::get(ygoprodeck::URL).await?.error_for_status()?;
+    Ok(tokio::io::BufReader::new(ProgressReader::from_response(
+        response,
+    )))
 }
 
-fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>> {
+async fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>> {
     if let CacheBehavior::Download { online_version } = cache_behavior {
-        let mut local_file = BufWriter::new(File::create(CARD_INFO_LOCAL)?);
-        writeln!(local_file, "{online_version}")?;
-        io::copy(&mut get_card_info_download()?, &mut local_file)?;
+        let mut local_file =
+            tokio::io::BufWriter::new(tokio::fs::File::create(CARD_INFO_LOCAL).await?);
+        local_file.write_all(online_version.as_bytes()).await?;
+        local_file.write_all("\n".as_bytes()).await?;
+        tokio::io::copy(&mut get_card_info_download().await?, &mut local_file).await?;
     }
 
     step("Loading cards");
@@ -46,14 +51,15 @@ fn get_card_info(cache_behavior: CacheBehavior) -> Result<Vec<ygoprodeck::Card>>
     ygoprodeck::parse(reader)
 }
 
-fn main() -> Result<()> {
-    let cache = cache::get_behavior()?;
+#[tokio::main]
+async fn main() -> Result<()> {
+    let cache = cache::get_behavior().await?;
     if matches!(cache, CacheBehavior::Nothing) {
         println!("Nothing to do");
         return Ok(());
     }
 
-    let cards = get_card_info(cache)?;
+    let cards = get_card_info(cache).await?;
 
     step("Extractíng");
     let cards: Vec<Extraction> = cards

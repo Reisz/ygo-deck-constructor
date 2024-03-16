@@ -18,8 +18,8 @@ pub enum CacheBehavior {
     Nothing,
 }
 
-pub fn get_behavior() -> Result<CacheBehavior> {
-    Ok(if let Some(online_version) = should_download()? {
+pub async fn get_behavior() -> Result<CacheBehavior> {
+    Ok(if let Some(online_version) = should_download().await? {
         CacheBehavior::Download { online_version }
     } else if should_process()? {
         CacheBehavior::Process
@@ -28,14 +28,19 @@ pub fn get_behavior() -> Result<CacheBehavior> {
     })
 }
 
-fn get_online_version() -> Result<String> {
+async fn get_online_version() -> Result<String> {
     step("Checking online database version");
-    ygoprodeck::get_version(reqwest::blocking::get(ygoprodeck::VERSION_URL)?)
+    let info: ygoprodeck::VersionInfo = reqwest::get(ygoprodeck::VERSION_URL)
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    Ok(info.database_version)
 }
 
-fn should_download() -> Result<Option<String>> {
+async fn should_download() -> Result<Option<String>> {
     if !Path::new(CARD_INFO_LOCAL).try_exists()? {
-        return Ok(Some(get_online_version()?));
+        return Ok(Some(get_online_version().await?));
     }
 
     let cache_date = fs::metadata(CARD_INFO_LOCAL)?.modified()?;
@@ -43,7 +48,7 @@ fn should_download() -> Result<Option<String>> {
         // Reset interval
         File::open(CARD_INFO_LOCAL)?.set_modified(SystemTime::now())?;
 
-        let online_version = get_online_version()?;
+        let online_version = get_online_version().await?;
         let local_version = {
             let mut tmp = String::new();
             BufReader::new(File::open(CARD_INFO_LOCAL)?).read_line(&mut tmp)?;
