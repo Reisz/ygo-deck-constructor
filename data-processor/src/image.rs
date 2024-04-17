@@ -17,7 +17,7 @@ use futures::executor::block_on;
 use governor::{clock::Clock, Quota, RateLimiter};
 use image::{imageops::FilterType, DynamicImage, ImageFormat};
 use rayon::prelude::ParallelIterator;
-use zip::{write::FileOptions, CompressionMethod, ZipArchive, ZipWriter};
+use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
 use crate::{
     iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
@@ -93,7 +93,7 @@ async fn load_image(id: Id) -> Result<Vec<u8>> {
 fn write_image<W: Write + Seek>(id: Id, data: &[u8], writer: &mut ZipWriter<W>) -> Result<()> {
     writer.start_file(
         format!("{}{FILE_ENDING}", id.get()),
-        FileOptions::default().compression_method(CompressionMethod::Stored),
+        SimpleFileOptions::default().compression_method(CompressionMethod::Stored),
     )?;
     writer.write_all(data)?;
     Ok(())
@@ -147,7 +147,7 @@ pub fn load_missing_images() -> Result<()> {
         })
         .collect_without_errors();
 
-    writer.lock().unwrap().finish()?;
+    writer.into_inner().unwrap().finish()?;
 
     if remaining_ids.is_empty() {
         fs::remove_file(MISSING_IMAGES)?;

@@ -32,6 +32,7 @@ impl<R> ProgressReader<R> {
 }
 
 impl ProgressReader<Pin<Box<dyn AsyncRead>>> {
+    #[must_use]
     pub fn from_response(response: Response) -> Self {
         let progress = if let Some(length) = response.content_length() {
             ProgressBar::new(length)
