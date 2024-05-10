@@ -4,19 +4,34 @@ use std::{
 };
 
 use anyhow::Result;
+use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::{
     fs::{self, File},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     try_join,
 };
+use zip::ZipWriter;
 
-use crate::{reqwest_indicatif::ProgressReader, step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE};
+use crate::{
+    reqwest_indicatif::ProgressReader, step, ygoprodeck, CARD_INFO_LOCAL, IMAGE_CACHE,
+    IMAGE_CACHE_URL, OUTPUT_FILE,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum CacheResult {
     StillValid,
     ProcessingRequired,
+}
+
+impl CacheResult {
+    #[must_use]
+    pub fn merge(self, other: CacheResult) -> CacheResult {
+        match (self, other) {
+            (Self::StillValid, Self::StillValid) => Self::StillValid,
+            _ => Self::ProcessingRequired,
+        }
+    }
 }
 
 async fn get_modification_time(path: impl AsRef<Path>) -> Result<SystemTime> {
@@ -66,6 +81,29 @@ pub async fn update_card_info_cache() -> Result<CacheResult> {
 
     // Otherwise the output file should be up-to-date.
     Ok(CacheResult::StillValid)
+}
+
+/// Make sure the image cache exists.
+pub async fn ensure_image_cache() -> Result<CacheResult> {
+    if Path::new(IMAGE_CACHE).try_exists()? {
+        return Ok(CacheResult::StillValid);
+    }
+
+    let response = reqwest::get(IMAGE_CACHE_URL).await?;
+
+    // Bootstrap using empty zip in case of 404
+    if response.status() == StatusCode::NOT_FOUND {
+        let _ = ZipWriter::new(std::fs::File::create(IMAGE_CACHE)?);
+        return Ok(CacheResult::ProcessingRequired);
+    }
+
+    step("Downloading images");
+    let response = response.error_for_status()?;
+    let mut response = BufReader::new(ProgressReader::from_response(response));
+    let mut file = BufWriter::new(File::create(IMAGE_CACHE).await?);
+    tokio::io::copy(&mut response, &mut file).await?;
+
+    Ok(CacheResult::ProcessingRequired)
 }
 
 /// Determine whether a new version of the card info cache needs to be downloaded.

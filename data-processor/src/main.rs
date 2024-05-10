@@ -7,7 +7,7 @@ use std::{
 use anyhow::Result;
 use bincode::Options;
 use data_processor::{
-    cache::{update_card_info_cache, CacheResult},
+    cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     extract::Extraction,
     iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
     refine::{self, CardDataProxy},
@@ -16,6 +16,7 @@ use data_processor::{
 };
 use indicatif::{DecimalBytes, HumanCount};
 use rayon::prelude::*;
+use tokio::try_join;
 use xz2::write::XzEncoder;
 
 fn filter(card: &ygoprodeck::Card) -> bool {
@@ -27,7 +28,8 @@ fn filter(card: &ygoprodeck::Card) -> bool {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    match update_card_info_cache().await? {
+    let (data_result, image_result) = try_join!(update_card_info_cache(), ensure_image_cache())?;
+    match data_result.merge(image_result) {
         CacheResult::StillValid => {
             println!("Nothing to do");
             return Ok(());
