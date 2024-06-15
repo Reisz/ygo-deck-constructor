@@ -4,7 +4,6 @@ use common::{
     card::{Card, CardDescription, CardDescriptionPart, Id},
     card_data::CardData,
 };
-use rayon::iter::{FromParallelIterator, IntoParallelIterator, ParallelIterator};
 
 use crate::{error::ProcessingError, extract::Extraction};
 
@@ -26,13 +25,13 @@ pub fn refine(card: Extraction) -> Result<(Vec<Id>, Card), ProcessingError> {
 
 pub struct CardDataProxy(pub CardData);
 
-impl FromParallelIterator<(Vec<Id>, Card)> for CardDataProxy {
-    fn from_par_iter<T: IntoParallelIterator<Item = (Vec<Id>, Card)>>(iter: T) -> Self {
+impl FromIterator<(Vec<Id>, Card)> for CardDataProxy {
+    fn from_iter<T: IntoIterator<Item = (Vec<Id>, Card)>>(iter: T) -> Self {
         type Entries = HashMap<Id, Card>;
         type Ids = Vec<(Id, Vec<Id>)>;
 
         let (entries, ids): (Entries, Ids) = iter
-            .into_par_iter()
+            .into_iter()
             .map(|(mut ids, card)| {
                 let id = ids.remove(0);
                 ((id, card), (id, ids))

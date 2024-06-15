@@ -1,161 +1,137 @@
 use std::{
     collections::HashSet,
     fs::{self, File, OpenOptions},
-    io::{BufReader, BufWriter, Cursor, Seek, Write},
-    num::NonZeroU32,
+    io::{self, BufReader, BufWriter},
     path::Path,
-    sync::{
-        atomic::{AtomicBool, Ordering::Relaxed},
-        Arc, Mutex,
-    },
-    thread,
+    time::Duration,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use common::card::Id;
-use futures::executor::block_on;
-use governor::{clock::Clock, Quota, RateLimiter};
-use image::{imageops::FilterType, DynamicImage, ImageFormat};
-use rayon::prelude::ParallelIterator;
+use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
+use image::{imageops::FilterType, DynamicImage};
+use nonzero_ext::nonzero;
+use tokio::{sync::Mutex, task::spawn_blocking};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
-use crate::{
-    iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
-    ygoprodeck::ARTWORK_URL,
-    MISSING_IMAGES,
-};
-
-const IMAGE_ARCHIVE: &str = "data/images.zip";
+use crate::{ygoprodeck::ARTWORK_URL, IMAGE_CACHE, IMAGE_DIRECTORY};
 
 const FILE_ENDING: &str = ".webp";
-const IMAGE_FORMAT: ImageFormat = ImageFormat::WebP;
 
 const OUTPUT_SIZE: u32 = 96;
 
-pub fn available_ids() -> Result<HashSet<Id>> {
-    if !Path::new(IMAGE_ARCHIVE).try_exists()? {
-        return Ok(HashSet::new());
+const DOWNLOAD_LIMIT: Quota = Quota::per_second(nonzero!(15_u32));
+const DOWNLOAD_JITTER_MAX: Duration = Duration::from_millis(100);
+
+macro_rules! output_file {
+    ($id: expr) => {
+        Path::new(&format!("{IMAGE_DIRECTORY}/{}{FILE_ENDING}", $id.get()))
     };
-
-    let archive = ZipArchive::new(File::open(IMAGE_ARCHIVE)?)?;
-    let result = archive
-        .file_names()
-        .filter_map(|name| Some(Id::new(name.strip_suffix(FILE_ENDING)?.parse().ok()?)))
-        .collect();
-    Ok(result)
 }
 
-pub fn save_missing_ids(ids: &[Id]) -> Result<()> {
-    let mut file = BufWriter::new(File::create(MISSING_IMAGES)?);
-    bincode::serialize_into(&mut file, ids)?;
-    Ok(())
+fn zip_file(id: Id) -> String {
+    format!("{}{FILE_ENDING}", id.get())
 }
 
-fn load_missing_ids() -> Result<Vec<Id>> {
-    if !Path::new(MISSING_IMAGES).try_exists()? {
-        return Ok(Vec::new());
+pub struct ImageLoader {
+    cache_contents: HashSet<Id>,
+    new_images: Mutex<Vec<Id>>,
+    rate_limiter: DefaultDirectRateLimiter,
+}
+
+impl ImageLoader {
+    pub fn new() -> Result<Self> {
+        if !Path::new(IMAGE_DIRECTORY).try_exists()? {
+            fs::create_dir(Path::new(IMAGE_DIRECTORY))?;
+        }
+
+        let mut cache_contents = HashSet::new();
+
+        let cache = BufReader::new(File::open(IMAGE_CACHE)?);
+        let mut cache = ZipArchive::new(cache)?;
+
+        for file_name in cache.file_names() {
+            let id = file_name
+                .strip_suffix(FILE_ENDING)
+                .and_then(|id| id.parse().ok())
+                .ok_or_else(|| anyhow!("Unexpected file in image cache: {file_name}"))?;
+            let id = Id::new(id);
+
+            cache_contents.insert(id);
+        }
+
+        for id in &cache_contents {
+            if !output_file!(id).try_exists()? {
+                io::copy(
+                    &mut cache.by_name(&zip_file(*id))?,
+                    &mut BufWriter::new(File::create_new(output_file!(id))?),
+                )?;
+            }
+        }
+
+        Ok(Self {
+            cache_contents,
+            new_images: Mutex::default(),
+            rate_limiter: RateLimiter::direct(DOWNLOAD_LIMIT),
+        })
     }
 
-    let result = bincode::deserialize_from(BufReader::new(File::open(MISSING_IMAGES)?))?;
-    Ok(result)
+    pub async fn ensure_image(&self, id: Id) -> Result<()> {
+        if self.cache_contents.contains(&id) {
+            return Ok(());
+        }
+
+        // Download
+        self.rate_limiter
+            .until_ready_with_jitter(Jitter::up_to(DOWNLOAD_JITTER_MAX))
+            .await;
+        let image = download(id).await?;
+
+        // Process and save
+        spawn_blocking(move || process_image(&image).save(output_file!(id))).await??;
+
+        // Register for caching
+        self.new_images.lock().await.push(id);
+        Ok(())
+    }
+
+    pub async fn finish(&self) -> Result<()> {
+        let cache = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(IMAGE_CACHE)
+            .context(IMAGE_CACHE)?;
+        let mut cache = ZipWriter::new_append(cache)?;
+
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
+        for id in self.new_images.lock().await.iter().copied() {
+            let mut input = BufReader::new(File::open(output_file!(id))?);
+            cache.start_file(zip_file(id), options)?;
+            io::copy(&mut input, &mut cache)?;
+        }
+
+        cache.finish()?;
+        Ok(())
+    }
 }
 
 async fn download(id: Id) -> Result<DynamicImage> {
     let url = format!("{}{}.jpg", ARTWORK_URL, id.get());
-    let image = reqwest::get(&url).await?;
-    if !image.status().is_success() {
-        return Err(anyhow!("Server returned '{}' for {}", image.status(), &url));
-    }
-    let image = image::load(Cursor::new(image.bytes().await?), image::ImageFormat::Jpeg)?;
+    let image = reqwest::get(&url).await?.error_for_status()?;
+    let image = image::load_from_memory(&image.bytes().await?)
+        .with_context(|| format!("Failed to load image at {url}"))?;
 
     Ok(image)
 }
 
-fn make_square(image: &DynamicImage) -> DynamicImage {
+fn process_image(image: &DynamicImage) -> DynamicImage {
     let size = image.width().min(image.height());
     // Center horizontally for wide artworks
     let x = (image.width() - size) / 2;
     // Align at top for full card artworks
     let y = 0;
-    image.crop_imm(x, y, size, size)
-}
 
-async fn load_image(id: Id) -> Result<Vec<u8>> {
-    let image = download(id).await?;
-    let image = make_square(&image);
-    let image = image.resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3);
-
-    let mut data = Vec::new();
-    image.write_to(&mut Cursor::new(&mut data), IMAGE_FORMAT)?;
-    Ok(data)
-}
-
-fn write_image<W: Write + Seek>(id: Id, data: &[u8], writer: &mut ZipWriter<W>) -> Result<()> {
-    writer.start_file(
-        format!("{}{FILE_ENDING}", id.get()),
-        SimpleFileOptions::default().compression_method(CompressionMethod::Stored),
-    )?;
-    writer.write_all(data)?;
-    Ok(())
-}
-
-pub fn load_missing_images() -> Result<()> {
-    let exit_requested = Arc::new(AtomicBool::new(false));
-    ctrlc::set_handler({
-        let exit_requested = exit_requested.clone();
-        move || exit_requested.store(true, Relaxed)
-    })
-    .expect("error setting Ctrl-C handler");
-
-    let writer = if Path::new(IMAGE_ARCHIVE).try_exists()? {
-        ZipWriter::new_append(
-            OpenOptions::new()
-                .read(true)
-                .write(true)
-                .open(IMAGE_ARCHIVE)?,
-        )?
-    } else {
-        ZipWriter::new(File::create(IMAGE_ARCHIVE)?)
-    };
-    let writer = Mutex::new(writer);
-
-    let clock = governor::clock::DefaultClock::default();
-    let rate_limit =
-        RateLimiter::direct_with_clock(Quota::per_second(NonZeroU32::new(15).unwrap()), &clock);
-
-    let ids = load_missing_ids()?;
-    let remaining_ids: Vec<_> = ids
-        .into_par_progress_iter()
-        .flat_map(|id| {
-            if exit_requested.load(Relaxed) {
-                return vec![Ok(id)];
-            }
-
-            while let Err(time) = rate_limit.check() {
-                thread::sleep(time.wait_time_from(clock.now()));
-            }
-
-            let result = || -> Result<()> {
-                let data = block_on(load_image(id))?;
-                write_image(id, &data, &mut writer.lock().unwrap())
-            }();
-
-            match result {
-                Ok(()) => vec![],
-                Err(err) => vec![Ok(id), Err(err)],
-            }
-        })
-        .collect_without_errors();
-
-    writer.into_inner().unwrap().finish()?;
-
-    if remaining_ids.is_empty() {
-        fs::remove_file(MISSING_IMAGES)?;
-        println!("All images loaded");
-    } else {
-        save_missing_ids(&remaining_ids)?;
-        println!("{} images unprocessed", remaining_ids.len());
-    }
-
-    Ok(())
+    image
+        .crop_imm(x, y, size, size)
+        .resize(OUTPUT_SIZE, OUTPUT_SIZE, FilterType::Lanczos3)
 }

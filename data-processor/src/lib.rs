@@ -18,6 +18,9 @@ pub const OUTPUT_FILE: &str = "dist/cards.bin.xz";
 /// This needs to be synced with the url below.
 pub const IMAGE_CACHE: &str = "dist/images.zip";
 
+/// Location of final images.
+pub const IMAGE_DIRECTORY: &str = "dist/images";
+
 /// Url of the image cache.
 ///
 /// This needs to be synced with the synced with the file name above.
@@ -25,24 +28,20 @@ pub const IMAGE_CACHE_URL: &str = "https://reisz.github.io/ygo-deck-constructor/
 
 // Location of the cached card data download.
 pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
-pub const MISSING_IMAGES: &str = "target/missing_images.bin";
 
 pub fn step(text: &str) {
     println!("{} {text}...", console::style(">").bold().blue());
 }
 
-#[macro_export]
-macro_rules! print_err {
-    ($($t: tt)*) => {
-        let message = format!($($t)*);
-        let mut lines = message.lines();
+pub fn print_err(err: &anyhow::Error) {
+    let message = format!("{err:?}");
+    let mut lines = message.lines();
 
-        if let Some(line) = lines.next() {
-            println!("{} {line}", console::style("!").bold().red());
-        }
+    if let Some(line) = lines.next() {
+        println!("{} {line}", console::style("!").bold().red());
+    }
 
-        for line in lines {
-            println!("  {line}");
-        }
+    for line in lines {
+        println!("  {line}");
     }
 }

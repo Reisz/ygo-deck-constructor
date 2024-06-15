@@ -2,6 +2,7 @@ use std::{
     fs::{self, File},
     io::{BufRead, BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
+    sync::Arc,
 };
 
 use anyhow::Result;
@@ -9,14 +10,15 @@ use bincode::Options;
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     extract::Extraction,
-    iter_utils::{CollectParallelWithoutErrors, IntoParProgressIterator},
+    image::ImageLoader,
+    iter_utils::CollectWithoutErrors,
+    print_err,
     refine::{self, CardDataProxy},
     reqwest_indicatif::ProgressReader,
     step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
-use indicatif::{DecimalBytes, HumanCount};
-use rayon::prelude::*;
-use tokio::try_join;
+use indicatif::{DecimalBytes, HumanCount, ProgressBar, ProgressStyle};
+use tokio::{task::JoinSet, try_join};
 use xz2::write::XzEncoder;
 
 fn filter(card: &ygoprodeck::Card) -> bool {
@@ -42,20 +44,43 @@ async fn main() -> Result<()> {
     reader.read_line(&mut String::new())?;
     let cards = ygoprodeck::parse(reader)?;
 
-    step("Extractíng");
-    let cards: Vec<Extraction> = cards
-        .into_par_progress_iter()
-        .filter(filter)
-        .map(Extraction::try_from)
-        .collect_without_errors();
+    step("Checking images");
+    let loader = Arc::new(ImageLoader::new()?);
 
-    step("Refining");
+    step("Processing cards");
+    let mut downloads = JoinSet::new();
+    let progress = ProgressBar::new(cards.len().try_into()?).with_style(
+        ProgressStyle::with_template("{bar} {human_pos}/{human_len} ({eta} remaining)").unwrap(),
+    );
     let CardDataProxy(cards) = cards
-        .into_par_progress_iter()
-        .map(refine::refine)
+        .into_iter()
+        .filter(filter)
+        .map(|card| {
+            let extraction = Extraction::try_from(card)?;
+
+            let id = *extraction.ids.first().unwrap();
+            let loader = Arc::clone(&loader);
+            downloads.spawn(async move { loader.ensure_image(id).await });
+
+            refine::refine(extraction)
+        })
         .collect_without_errors();
 
-    step("Saving");
+    let mut errors = Vec::new();
+    while let Some(result) = downloads.join_next().await {
+        progress.inc(1);
+        if let Err(err) = result? {
+            errors.push(err);
+        }
+    }
+    for err in errors {
+        print_err(&err);
+    }
+
+    step("Processing images");
+    loader.finish().await?;
+
+    step("Saving cards");
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
     common::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
 
