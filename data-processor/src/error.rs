@@ -1,4 +1,6 @@
-use std::fmt;
+use std::{error::Error, fmt};
+
+use crate::ygoprodeck;
 
 #[derive(Debug, Clone)]
 pub struct ProcessingError {
@@ -35,15 +37,18 @@ impl ProcessingError {
 
 impl fmt::Display for ProcessingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
+        writeln!(f, "Error projecting field \"{}\"", self.field)?;
+        writeln!(
             f,
-            "Error projecting field \"{}\"\nCard id {id} (https://db.ygoprodeck.com/api/v7/cardinfo.php?id={id})\n{}",
-            self.field,
-            self.error,
+            "Card id {id} <{}?id={id}>",
+            ygoprodeck::URL,
             id = self.card_id
-        )
+        )?;
+        write!(f, "{}", self.error)
     }
 }
+
+impl Error for ProcessingError {}
 
 #[derive(Debug, Clone)]
 pub enum ProjectionErrorKind {
