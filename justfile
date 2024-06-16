@@ -8,20 +8,15 @@ run:
     -w data-processor
 
 lint *FLAGS:
-    cargo clippy --workspace --all-targets {{FLAGS}} -- \
-    -W clippy::pedantic \
-    -A clippy::empty-docs \
-    -A clippy::missing-errors-doc \
-    -A clippy::missing-panics-doc \
-    -A clippy::module-name-repetitions \
-    -D warnings
+    cargo clippy --workspace --all-targets {{FLAGS}} -- -D warnings
+    cargo machete
 
 test:
     cargo test --workspace
 
 check_fmt:
     cargo fmt --all -- --check
-    leptosfmt -q --check **/*.rs
+    leptosfmt -q --check .
 
 all_checks: lint test check_fmt
 

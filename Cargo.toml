@@ -1,9 +1,23 @@
 [package]
 name = "ygo-deck-constructor"
-version.workspace = true
 edition.workspace = true
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[workspace]
+members = ["common", "data-processor"]
+
+[workspace.package]
+edition = "2021"
+
+[workspace.dependencies]
+bincode = "1.3.3"
+serde = "1.0.203"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+empty_docs = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
 
 [dependencies]
 bincode.workspace = true
@@ -19,17 +33,8 @@ lzma-rs = "0.3.0"
 nom = "7.1.3"
 thiserror = "1.0.61"
 wasm-bindgen = "0.2.92"
-wasm-bindgen-futures = "0.4.42"
-web-sys = { version = "0.3.69", features = ["DataTransfer", "DragEvent", "DomRect"] }
-
-
-[workspace]
-members = ["common", "data-processor"]
-
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-
-[workspace.dependencies]
-bincode = "1.3.3"
-serde = "1.0.203"
+web-sys = { version = "0.3.69", features = [
+    "DataTransfer",
+    "DragEvent",
+    "DomRect",
+] }

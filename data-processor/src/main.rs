@@ -31,12 +31,9 @@ fn filter(card: &ygoprodeck::Card) -> bool {
 #[tokio::main]
 async fn main() -> Result<()> {
     let (data_result, image_result) = try_join!(update_card_info_cache(), ensure_image_cache())?;
-    match data_result.merge(image_result) {
-        CacheResult::StillValid => {
-            println!("Nothing to do");
-            return Ok(());
-        }
-        CacheResult::ProcessingRequired => { /* continue */ }
+    if let CacheResult::StillValid = data_result.merge(image_result) {
+        println!("Nothing to do");
+        return Ok(());
     }
 
     step("Loading cards");

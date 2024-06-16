@@ -124,7 +124,7 @@ async fn should_download_card_info() -> Result<Option<String>> {
             return Ok(Some(online_version));
         }
 
-        // The check succeded. Update modification time so we do not keep bugging the database.
+        // The check succeeded. Update modification time so we do not keep bugging the database.
         std::fs::File::open(CARD_INFO_LOCAL)?.set_modified(SystemTime::now())?;
     }
 

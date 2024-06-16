@@ -1,7 +1,2 @@
 /target
 /dist
-/.vscode/
-
-# Cache
-/data/card_info.json
-/data/missing_images.bin
