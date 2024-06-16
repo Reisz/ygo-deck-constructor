@@ -24,7 +24,7 @@ jobs:
                   tool: trunk@0.19
 
             - name: Build
-              run: trunk build --release --public-url=ygo-deck-constructor
+              run: trunk build --release
 
             - name: Upload GitHub Pages artifact
               uses: actions/upload-pages-artifact@v3
