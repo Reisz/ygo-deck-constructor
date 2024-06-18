@@ -3,6 +3,7 @@ use std::{
     io::{BufRead, BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
     sync::Arc,
+    time::Instant,
 };
 
 use anyhow::Result;
@@ -11,13 +12,12 @@ use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     extract::Extraction,
     image::ImageLoader,
-    iter_utils::CollectWithoutErrors,
-    print_err,
     refine::{self, CardDataProxy},
-    reqwest_indicatif::ProgressReader,
-    step, ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
+    ui::UiManager,
+    ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
-use indicatif::{DecimalBytes, HumanCount, ProgressBar, ProgressStyle};
+use indicatif::{HumanBytes, HumanCount, HumanDuration};
+use log::{info, warn};
 use tokio::{task::JoinSet, try_join};
 use xz2::write::XzEncoder;
 
@@ -30,25 +30,26 @@ fn filter(card: &ygoprodeck::Card) -> bool {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let (data_result, image_result) = try_join!(update_card_info_cache(), ensure_image_cache())?;
+    let ui = UiManager::new();
+
+    let (data_result, image_result) =
+        try_join!(update_card_info_cache(&ui), ensure_image_cache(&ui))?;
     if let CacheResult::StillValid = data_result.merge(image_result) {
         println!("Nothing to do");
         return Ok(());
     }
 
-    step("Loading cards");
-    let mut reader = BufReader::new(ProgressReader::from_path(CARD_INFO_LOCAL)?);
+    info!("Loading cards");
+    let mut reader = BufReader::new(File::open(CARD_INFO_LOCAL)?);
     reader.read_line(&mut String::new())?;
     let cards = ygoprodeck::parse(reader)?;
 
-    step("Checking images");
+    info!("Checking images");
     let loader = Arc::new(ImageLoader::new()?);
 
-    step("Processing cards");
+    info!("Processing cards");
     let mut downloads = JoinSet::new();
-    let progress = ProgressBar::new(cards.len().try_into()?).with_style(
-        ProgressStyle::with_template("{bar} {human_pos}/{human_len} ({eta} remaining)").unwrap(),
-    );
+    let progress = ui.make_progress(cards.len().try_into()?);
     let CardDataProxy(cards) = cards
         .into_iter()
         .filter(filter)
@@ -61,30 +62,34 @@ async fn main() -> Result<()> {
 
             refine::refine(extraction)
         })
-        .collect_without_errors();
+        .filter_map(|result| {
+            result
+                .map_err(|err| warn!("{:?}", anyhow::Error::from(err)))
+                .ok()
+        })
+        .collect();
 
-    let mut errors = Vec::new();
     while let Some(result) = downloads.join_next().await {
         progress.inc(1);
         if let Err(err) = result? {
-            errors.push(err);
+            warn!("{err:?}");
         }
     }
-    for err in errors {
-        print_err(&err);
-    }
+    progress.finish_and_clear();
 
-    step("Processing images");
+    info!("Processing images");
     loader.finish().await?;
 
-    step("Saving cards");
+    info!("Saving cards");
+    let saving_start = Instant::now();
     let file = BufWriter::new(File::create(OUTPUT_FILE)?);
     common::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
 
-    println!(
-        "  Saved {} cards in {}.",
+    info!(
+        "Saved {} cards ({} in {}).",
         HumanCount(cards.entries().len().try_into()?),
-        DecimalBytes(fs::metadata(OUTPUT_FILE)?.size())
+        HumanBytes(fs::metadata(OUTPUT_FILE)?.size()),
+        HumanDuration(saving_start.elapsed())
     );
 
     Ok(())

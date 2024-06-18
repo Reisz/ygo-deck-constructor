@@ -2,9 +2,8 @@ pub mod cache;
 pub mod error;
 pub mod extract;
 pub mod image;
-pub mod iter_utils;
 pub mod refine;
-pub mod reqwest_indicatif;
+pub mod ui;
 pub mod ygoprodeck;
 
 /// Location of the data used by the app.
@@ -28,20 +27,3 @@ pub const IMAGE_CACHE_URL: &str = "https://reisz.github.io/ygo-deck-constructor/
 
 // Location of the cached card data download.
 pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
-
-pub fn step(text: &str) {
-    println!("{} {text}...", console::style(">").bold().blue());
-}
-
-pub fn print_err(err: &anyhow::Error) {
-    let message = format!("{err:?}");
-    let mut lines = message.lines();
-
-    if let Some(line) = lines.next() {
-        println!("{} {line}", console::style("!").bold().red());
-    }
-
-    for line in lines {
-        println!("  {line}");
-    }
-}

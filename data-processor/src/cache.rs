@@ -4,6 +4,7 @@ use std::{
 };
 
 use anyhow::Result;
+use log::info;
 use serde::Deserialize;
 use tokio::{
     fs::{self, File},
@@ -12,8 +13,7 @@ use tokio::{
 };
 
 use crate::{
-    reqwest_indicatif::ProgressReader, step, ygoprodeck, CARD_INFO_LOCAL, IMAGE_CACHE,
-    IMAGE_CACHE_URL, OUTPUT_FILE,
+    ui::UiManager, ygoprodeck, CARD_INFO_LOCAL, IMAGE_CACHE, IMAGE_CACHE_URL, OUTPUT_FILE,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -39,14 +39,13 @@ async fn get_modification_time(path: impl AsRef<Path>) -> Result<SystemTime> {
 /// Ensure that the cached card info is up to date.
 ///
 /// This function also determines based on the state of the card info cache file and output file whether processing is required.
-pub async fn update_card_info_cache() -> Result<CacheResult> {
+pub async fn update_card_info_cache(ui: &UiManager) -> Result<CacheResult> {
     // Download a new version if required. Request processing in that case.
     if let Some(version) = should_download_card_info().await? {
-        step("Downloading cards");
-
         let database_download = async {
-            let response = reqwest::get(ygoprodeck::URL).await?.error_for_status()?;
-            Ok::<_, anyhow::Error>(BufReader::new(ProgressReader::from_response(response)))
+            Ok(BufReader::new(
+                ui.get("Card Database", ygoprodeck::URL).await?,
+            ))
         };
 
         let database_cache_writer = async {
@@ -82,15 +81,13 @@ pub async fn update_card_info_cache() -> Result<CacheResult> {
 }
 
 /// Make sure the image cache exists.
-pub async fn ensure_image_cache() -> Result<CacheResult> {
+pub async fn ensure_image_cache(ui: &UiManager) -> Result<CacheResult> {
     if Path::new(IMAGE_CACHE).try_exists()? {
         return Ok(CacheResult::StillValid);
     }
 
-    step("Downloading images");
-    let response = reqwest::get(IMAGE_CACHE_URL).await?;
-    let response = response.error_for_status()?;
-    let mut response = BufReader::new(ProgressReader::from_response(response));
+    let response = ui.get("Image Cache", IMAGE_CACHE_URL).await?;
+    let mut response = BufReader::new(response);
     let mut file = BufWriter::new(File::create(IMAGE_CACHE).await?);
     tokio::io::copy(&mut response, &mut file).await?;
 
@@ -131,7 +128,7 @@ async fn get_online_version() -> Result<String> {
         pub database_version: String,
     }
 
-    step("Checking online database version");
+    info!("Checking online database version");
     let [info]: [VersionInfo; 1] = reqwest::get(VERSION_URL)
         .await?
         .error_for_status()?
