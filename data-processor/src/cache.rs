@@ -4,14 +4,12 @@ use std::{
 };
 
 use anyhow::Result;
-use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::{
     fs::{self, File},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
     try_join,
 };
-use zip::ZipWriter;
 
 use crate::{
     reqwest_indicatif::ProgressReader, step, ygoprodeck, CARD_INFO_LOCAL, IMAGE_CACHE,
@@ -89,15 +87,8 @@ pub async fn ensure_image_cache() -> Result<CacheResult> {
         return Ok(CacheResult::StillValid);
     }
 
-    let response = reqwest::get(IMAGE_CACHE_URL).await?;
-
-    // Bootstrap using empty zip in case of 404
-    if response.status() == StatusCode::NOT_FOUND {
-        let _ = ZipWriter::new(std::fs::File::create(IMAGE_CACHE)?);
-        return Ok(CacheResult::ProcessingRequired);
-    }
-
     step("Downloading images");
+    let response = reqwest::get(IMAGE_CACHE_URL).await?;
     let response = response.error_for_status()?;
     let mut response = BufReader::new(ProgressReader::from_response(response));
     let mut file = BufWriter::new(File::create(IMAGE_CACHE).await?);
