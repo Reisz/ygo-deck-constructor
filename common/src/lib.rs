@@ -3,6 +3,8 @@ pub mod card_data;
 
 use bincode::Options;
 
+pub type Cards = Vec<card::Card>;
+
 #[must_use]
 pub fn bincode_options() -> impl bincode::Options {
     bincode::DefaultOptions::new()

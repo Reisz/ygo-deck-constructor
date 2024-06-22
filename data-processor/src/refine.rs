@@ -1,50 +1,19 @@
-use std::collections::HashMap;
-
-use common::{
-    card::{Card, CardDescription, CardDescriptionPart, Id},
-    card_data::CardData,
-};
+use common::card::{Card, CardDescription, CardDescriptionPart};
 
 use crate::{error::ProcessingError, extract::Extraction};
 
-pub fn refine(card: Extraction) -> Result<(Vec<Id>, Card), ProcessingError> {
+pub fn refine(card: Extraction) -> Result<Card, ProcessingError> {
     let description = (&card).try_into()?;
 
-    Ok((
-        card.ids,
-        Card {
-            name: card.name,
-            description,
-            search_text: card.description.to_lowercase(),
-            card_type: card.card_type,
-            limit: card.limit,
-            archetype: card.archetype,
-        },
-    ))
-}
-
-pub struct CardDataProxy(pub CardData);
-
-impl FromIterator<(Vec<Id>, Card)> for CardDataProxy {
-    fn from_iter<T: IntoIterator<Item = (Vec<Id>, Card)>>(iter: T) -> Self {
-        type Entries = HashMap<Id, Card>;
-        type Ids = Vec<(Id, Vec<Id>)>;
-
-        let (entries, ids): (Entries, Ids) = iter
-            .into_iter()
-            .map(|(mut ids, card)| {
-                let id = ids.remove(0);
-                ((id, card), (id, ids))
-            })
-            .unzip();
-
-        let alternatives = ids
-            .into_iter()
-            .flat_map(|(id, ids)| ids.into_iter().map(move |src| (src, id)))
-            .collect();
-
-        CardDataProxy(CardData::new(entries, alternatives))
-    }
+    Ok(Card {
+        name: card.name,
+        ids: card.ids,
+        description,
+        search_text: card.description.to_lowercase(),
+        card_type: card.card_type,
+        limit: card.limit,
+        archetype: card.archetype,
+    })
 }
 
 impl TryFrom<&Extraction> for CardDescription {

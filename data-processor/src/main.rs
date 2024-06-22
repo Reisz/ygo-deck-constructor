@@ -8,11 +8,12 @@ use std::{
 
 use anyhow::Result;
 use bincode::Options;
+use common::Cards;
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     extract::Extraction,
     image::ImageLoader,
-    refine::{self, CardDataProxy},
+    refine::{self},
     ui::UiManager,
     ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
@@ -50,7 +51,7 @@ async fn main() -> Result<()> {
     info!("Processing cards");
     let mut downloads = JoinSet::new();
     let progress = ui.make_progress(cards.len().try_into()?);
-    let CardDataProxy(cards) = cards
+    let cards: Cards = cards
         .into_iter()
         .filter(filter)
         .map(|card| {
@@ -87,7 +88,7 @@ async fn main() -> Result<()> {
 
     info!(
         "Saved {} cards ({} in {}).",
-        HumanCount(cards.entries().len().try_into()?),
+        HumanCount(cards.len().try_into()?),
         HumanBytes(fs::metadata(OUTPUT_FILE)?.size()),
         HumanDuration(saving_start.elapsed())
     );

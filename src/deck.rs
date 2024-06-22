@@ -305,10 +305,7 @@ impl TextEncoding for Deck {
 
 #[cfg(test)]
 mod test {
-    use std::{
-        collections::HashMap,
-        mem::{align_of, size_of},
-    };
+    use std::mem::{align_of, size_of};
 
     use common::card::{Card, CardDescription, MonsterType};
 
@@ -497,24 +494,19 @@ mod test {
         const EXTRA_ID: Id = Id::new(2345);
 
         let data = {
-            let mut data = HashMap::new();
-
-            data.insert(
-                MAIN_ID,
+            let cards = vec![
                 Card {
                     name: String::new(),
+                    ids: vec![MAIN_ID],
                     description: CardDescription::Regular(Vec::new()),
                     search_text: String::new(),
                     card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
                     limit: common::card::CardLimit::Unlimited,
                     archetype: None,
                 },
-            );
-
-            data.insert(
-                EXTRA_ID,
                 Card {
                     name: String::new(),
+                    ids: vec![EXTRA_ID],
                     description: CardDescription::Regular(Vec::new()),
                     search_text: String::new(),
                     card_type: common::card::CardType::Monster {
@@ -533,9 +525,9 @@ mod test {
                     limit: common::card::CardLimit::Unlimited,
                     archetype: None,
                 },
-            );
+            ];
 
-            Box::leak(Box::new(CardData::new(data, HashMap::new())))
+            Box::leak(Box::new(CardData::new(cards)))
         };
 
         let mut deck = Deck::default();

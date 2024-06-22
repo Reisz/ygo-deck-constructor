@@ -156,8 +156,6 @@ mod parse {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
-
     use common::card::{
         Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
         Race::Machine, SpellType,
@@ -223,47 +221,43 @@ mod test {
     }
 
     fn card_data() -> &'static CardData {
-        let mut data = HashMap::new();
+        let mut data = Vec::new();
 
         for id in IDS[0].iter().chain(IDS[2].iter()) {
-            data.insert(
-                Id::new(*id),
-                Card {
-                    name: String::new(),
-                    description: CardDescription::Regular(Vec::new()),
-                    search_text: String::new(),
-                    card_type: CardType::Spell(SpellType::Normal),
-                    limit: CardLimit::Unlimited,
-                    archetype: None,
-                },
-            );
+            data.push(Card {
+                name: String::new(),
+                ids: vec![Id::new(*id)],
+                description: CardDescription::Regular(Vec::new()),
+                search_text: String::new(),
+                card_type: CardType::Spell(SpellType::Normal),
+                limit: CardLimit::Unlimited,
+                archetype: None,
+            });
         }
 
         for id in &IDS[1] {
-            data.insert(
-                Id::new(*id),
-                Card {
-                    name: String::new(),
-                    description: CardDescription::Regular(Vec::new()),
-                    search_text: String::new(),
-                    card_type: CardType::Monster {
-                        race: Machine,
-                        attribute: Dark,
-                        stats: common::card::MonsterStats::Link {
-                            atk: 0,
-                            link_value: 0,
-                            link_markers: LinkMarkers::default(),
-                        },
-                        effect: MonsterEffect::Normal,
-                        is_tuner: false,
+            data.push(Card {
+                name: String::new(),
+                ids: vec![Id::new(*id)],
+                description: CardDescription::Regular(Vec::new()),
+                search_text: String::new(),
+                card_type: CardType::Monster {
+                    race: Machine,
+                    attribute: Dark,
+                    stats: common::card::MonsterStats::Link {
+                        atk: 0,
+                        link_value: 0,
+                        link_markers: LinkMarkers::default(),
                     },
-                    limit: CardLimit::Unlimited,
-                    archetype: None,
+                    effect: MonsterEffect::Normal,
+                    is_tuner: false,
                 },
-            );
+                limit: CardLimit::Unlimited,
+                archetype: None,
+            });
         }
 
-        Box::leak(Box::new(CardData::new(data, HashMap::new())))
+        Box::leak(Box::new(CardData::new(data)))
     }
 
     #[test]

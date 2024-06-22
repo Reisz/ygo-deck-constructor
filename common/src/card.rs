@@ -18,6 +18,7 @@ impl Id {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Card {
     pub name: String,
+    pub ids: Vec<Id>,
     pub description: CardDescription,
     pub search_text: String,
     pub card_type: CardType,

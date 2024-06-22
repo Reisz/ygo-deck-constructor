@@ -1,5 +1,5 @@
 use bincode::Options;
-use common::card_data::CardData;
+use common::{card_data::CardData, Cards};
 use gloo_net::http::Request;
 use leptos::{component, create_local_resource, provide_context, view, IntoView, Suspense};
 use lzma_rs::xz_decompress;
@@ -16,11 +16,10 @@ async fn load_cards() -> &'static CardData {
 
     let mut decompressed = Vec::new();
     xz_decompress(&mut bytes.as_slice(), &mut decompressed).unwrap();
-    Box::leak(Box::new(
-        common::bincode_options()
-            .deserialize(&decompressed)
-            .unwrap(),
-    ))
+    let cards = common::bincode_options()
+        .deserialize::<Cards>(&decompressed)
+        .unwrap();
+    Box::leak(Box::new(CardData::new(cards)))
 }
 
 #[component]
