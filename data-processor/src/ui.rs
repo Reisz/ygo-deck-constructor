@@ -1,6 +1,6 @@
 use std::{fmt::Display, pin::Pin, time::Instant};
 
-use futures::TryStreamExt;
+use futures::{stream::FuturesUnordered, Future, Stream, TryStreamExt};
 use indicatif::{
     HumanBytes, HumanDuration, MultiProgress, ProgressBar, ProgressBarIter, ProgressStyle,
 };
@@ -76,9 +76,13 @@ impl UiManager {
         Ok(DownloadFinishLogger::new(progress.wrap_async_read(reader)))
     }
 
-    pub fn make_progress(&self, len: u64) -> ProgressBar {
-        let progress_bar = ProgressBar::new(len).with_style(self.iterator_style.clone());
-        self.progress_bars.add(progress_bar)
+    pub fn stream<T>(
+        &self,
+        stream: FuturesUnordered<impl Future<Output = T>>,
+    ) -> impl Stream<Item = T> {
+        let progress_bar = ProgressBar::new(stream.len().try_into().unwrap())
+            .with_style(self.iterator_style.clone());
+        self.progress_bars.add(progress_bar).wrap_stream(stream)
     }
 }
 

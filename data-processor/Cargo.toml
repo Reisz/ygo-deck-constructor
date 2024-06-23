@@ -9,7 +9,7 @@ common.path = "../common"
 console = "0.15.8"
 futures = "0.3.30"
 governor = "0.6.3"
-indicatif = { version = "0.17.8", features = ["tokio"] }
+indicatif = { version = "0.17.8", features = ["tokio", "futures"] }
 log = "0.4.21"
 nonzero_ext = "0.3.0"
 reqwest = { version = "0.12.5", features = ["json", "stream"] }

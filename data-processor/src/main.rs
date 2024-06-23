@@ -1,31 +1,28 @@
 use std::{
     fs::{self, File},
+    future,
     io::{BufRead, BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
-    sync::Arc,
     time::Instant,
 };
 
 use anyhow::Result;
 use bincode::Options;
-use common::{card::Card, Cards};
+use common::{
+    card::{Card, Id},
+    Cards,
+};
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     image::ImageLoader,
     ui::UiManager,
     ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
+use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
 use indicatif::{HumanBytes, HumanCount, HumanDuration};
 use log::{info, warn};
-use tokio::{task::JoinSet, try_join};
+use tokio::{task::spawn_blocking, try_join};
 use xz2::write::XzEncoder;
-
-fn filter(card: &ygoprodeck::Card) -> bool {
-    !matches!(
-        card.card_type,
-        ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
-    )
-}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -44,35 +41,36 @@ async fn main() -> Result<()> {
     let cards = ygoprodeck::parse(reader)?;
 
     info!("Checking images");
-    let loader = Arc::new(ImageLoader::new()?);
+    let loader = ImageLoader::new()?;
 
     info!("Processing cards");
-    let mut downloads = JoinSet::new();
-    let progress = ui.make_progress(cards.len().try_into()?);
-    let cards: Cards = cards
+    let stream: FuturesUnordered<_> = cards
         .into_iter()
-        .filter(filter)
-        .map(|card| {
-            let card = Card::try_from(card)?;
-
-            let id = *card.ids.first().unwrap();
-            let loader = Arc::clone(&loader);
-            downloads.spawn(async move { loader.ensure_image(id).await });
-
-            Ok::<_, anyhow::Error>(card)
+        .filter(|card| {
+            !matches!(
+                card.card_type,
+                ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
+            )
         })
-        .filter_map(|result| result.map_err(|err| warn!("{:?}", err)).ok())
+        .map(|card| async {
+            let id = Id::new(card.id);
+            let (card, ()) = try_join!(
+                spawn_blocking(|| Card::try_from(card)).map_err(anyhow::Error::from),
+                loader.ensure_image(id)
+            )?;
+
+            Ok(card?)
+        })
         .collect();
+    let cards: Cards = ui
+        .stream(stream)
+        .filter_map(|card| {
+            future::ready(card.map_err(|err: anyhow::Error| warn!("{:?}", err)).ok())
+        })
+        .collect()
+        .await;
 
-    while let Some(result) = downloads.join_next().await {
-        progress.inc(1);
-        if let Err(err) = result? {
-            warn!("{err:?}");
-        }
-    }
-    progress.finish_and_clear();
-
-    info!("Processing images");
+    info!("Saving images");
     loader.finish().await?;
 
     info!("Saving cards");
