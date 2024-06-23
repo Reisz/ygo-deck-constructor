@@ -1,6 +1,6 @@
 use common::card::{
-    Attribute, CardLimit, CardType, Id, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats,
-    MonsterType, Race, SpellType, TrapType,
+    Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardType, Id, LinkMarker,
+    LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
 };
 
 use crate::{
@@ -8,21 +8,13 @@ use crate::{
     ygoprodeck::{self, BanStatus},
 };
 
-pub struct Extraction {
-    pub ids: Vec<Id>,
-    pub name: String,
-    pub description: String,
-    pub card_type: CardType,
-    pub limit: CardLimit,
-    pub archetype: Option<String>,
-}
-
-impl TryFrom<ygoprodeck::Card> for Extraction {
+impl TryFrom<ygoprodeck::Card> for Card {
     type Error = ProcessingError;
 
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
         let card_type = CardType::try_from(&value)?;
         let limit = CardLimit::from(&value);
+        let description = CardDescription::try_from(&value)?;
 
         let mut ids = value
             .card_images
@@ -35,12 +27,66 @@ impl TryFrom<ygoprodeck::Card> for Extraction {
         ids.sort_unstable();
 
         Ok(Self {
-            ids,
             name: value.name,
-            description: value.desc,
+            ids,
+            description,
+            search_text: value.desc.to_lowercase(),
             card_type,
             limit,
             archetype: value.archetype,
+        })
+    }
+}
+
+impl TryFrom<&ygoprodeck::Card> for CardDescription {
+    type Error = ProcessingError;
+
+    fn try_from(card: &ygoprodeck::Card) -> Result<Self, Self::Error> {
+        let mut spell_effect = None;
+        let mut monster_effect = Vec::new();
+        let mut current_list = None;
+
+        for paragraph in card.desc.lines() {
+            if let Some(paragraph) = paragraph.strip_prefix('●') {
+                current_list
+                    .get_or_insert(Vec::default())
+                    .push(paragraph.to_owned());
+                continue;
+            }
+
+            if let Some(list) = current_list.take() {
+                monster_effect.push(CardDescriptionPart::List(list));
+            }
+
+            match paragraph.trim() {
+                "[ Pendulum Effect ]" => {
+                    if !is_pendulum(card) {
+                        return Err(ProcessingError::new_unexpected(
+                            card.id,
+                            "description",
+                            "pendulum header on non-pendulum card",
+                        ));
+                    }
+
+                    continue;
+                }
+                "[ Monster Effect ]" => {
+                    spell_effect = Some(monster_effect.split_off(0));
+                    continue;
+                }
+                _ => {}
+            }
+
+            monster_effect.push(CardDescriptionPart::Paragraph(paragraph.to_owned()));
+        }
+
+        Ok(if let Some(spell_effect) = spell_effect {
+            CardDescription::Pendulum {
+                spell_effect,
+                monster_effect,
+            }
+        } else {
+            CardDescription::Regular(monster_effect)
         })
     }
 }

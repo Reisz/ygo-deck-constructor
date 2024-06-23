@@ -8,12 +8,10 @@ use std::{
 
 use anyhow::Result;
 use bincode::Options;
-use common::Cards;
+use common::{card::Card, Cards};
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
-    extract::Extraction,
     image::ImageLoader,
-    refine::{self},
     ui::UiManager,
     ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
@@ -55,19 +53,15 @@ async fn main() -> Result<()> {
         .into_iter()
         .filter(filter)
         .map(|card| {
-            let extraction = Extraction::try_from(card)?;
+            let card = Card::try_from(card)?;
 
-            let id = *extraction.ids.first().unwrap();
+            let id = *card.ids.first().unwrap();
             let loader = Arc::clone(&loader);
             downloads.spawn(async move { loader.ensure_image(id).await });
 
-            refine::refine(extraction)
+            Ok::<_, anyhow::Error>(card)
         })
-        .filter_map(|result| {
-            result
-                .map_err(|err| warn!("{:?}", anyhow::Error::from(err)))
-                .ok()
-        })
+        .filter_map(|result| result.map_err(|err| warn!("{:?}", err)).ok())
         .collect();
 
     while let Some(result) = downloads.join_next().await {
