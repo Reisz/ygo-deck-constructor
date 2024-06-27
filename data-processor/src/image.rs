@@ -1,8 +1,8 @@
 use std::{
     collections::HashSet,
     fs::{self, File, OpenOptions},
-    io::{self, BufReader, BufWriter},
-    path::Path,
+    io::{self, BufReader, BufWriter, Read, Write},
+    path::{Path, PathBuf},
     time::Duration,
 };
 
@@ -10,6 +10,7 @@ use anyhow::{anyhow, Context, Result};
 use common::{card::Id, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
 use image::{imageops::FilterType, DynamicImage};
+use log::info;
 use nonzero_ext::nonzero;
 use tokio::{sync::Mutex, task::spawn_blocking};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
@@ -23,6 +24,12 @@ pub const IMAGE_CACHE_URL: &str = "https://reisz.github.io/ygo-deck-constructor/
 ///
 /// This is part of the deployment, so it can be used in clean builds instead of re-processing.
 pub const IMAGE_CACHE: &str = "dist/images.zip";
+
+/// Name of the version file inside the image cache.
+pub const VERSION_FILE: &str = "version.txt";
+
+/// Current version of the image process.
+pub const VERSION: u32 = 0;
 
 const OUTPUT_SIZE: u32 = 96;
 
@@ -55,28 +62,55 @@ impl ImageLoader {
             fs::create_dir(output_path)?;
         }
 
+        let open_for_reading = || {
+            let cache = BufReader::new(File::open(IMAGE_CACHE)?);
+            Ok::<_, anyhow::Error>(ZipArchive::new(cache)?)
+        };
+
+        let version = || -> Result<_> {
+            let mut cache = open_for_reading()?;
+            let mut output = String::new();
+            cache.by_name(VERSION_FILE)?.read_to_string(&mut output)?;
+            Ok(output.parse()?)
+        }()
+        .unwrap_or(0);
+
         let mut cache_contents = HashSet::new();
+        if version != VERSION {
+            info!("Image cache out of date. All images will be processed.");
+            let cache = BufWriter::new(File::create(IMAGE_CACHE)?);
+            let mut cache = ZipWriter::new(cache);
+            cache.start_file(
+                VERSION_FILE,
+                SimpleFileOptions::default().compression_method(CompressionMethod::Stored),
+            )?;
+            write!(&mut cache, "{VERSION}")?;
+            cache.finish()?;
+        } else {
+            let mut cache = open_for_reading()?;
 
-        let cache = BufReader::new(File::open(IMAGE_CACHE)?);
-        let mut cache = ZipArchive::new(cache)?;
+            let suffix = format!(".{IMAGE_FILE_ENDING}");
+            for file_name in cache.file_names() {
+                if file_name == VERSION_FILE {
+                    continue;
+                }
 
-        let suffix = format!(".{IMAGE_FILE_ENDING}");
-        for file_name in cache.file_names() {
-            let id = file_name
-                .strip_suffix(&suffix)
-                .and_then(|id| id.parse().ok())
-                .ok_or_else(|| anyhow!("Unexpected file in image cache: {file_name}"))?;
-            let id = Id::new(id);
+                let id = file_name
+                    .strip_suffix(&suffix)
+                    .and_then(|id| id.parse().ok())
+                    .ok_or_else(|| anyhow!("Unexpected file in image cache: {file_name}"))?;
+                let id = Id::new(id);
 
-            cache_contents.insert(id);
-        }
+                cache_contents.insert(id);
+            }
 
-        for id in &cache_contents {
-            if !output_file!(id).try_exists()? {
-                io::copy(
-                    &mut cache.by_name(&zip_file(*id))?,
-                    &mut BufWriter::new(File::create_new(output_file!(id))?),
-                )?;
+            for id in &cache_contents {
+                if !output_file!(id).try_exists()? {
+                    io::copy(
+                        &mut cache.by_name(&zip_file(*id))?,
+                        &mut BufWriter::new(File::create_new(output_file!(id))?),
+                    )?;
+                }
             }
         }
 
