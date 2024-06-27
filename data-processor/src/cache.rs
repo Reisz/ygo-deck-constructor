@@ -13,7 +13,9 @@ use tokio::{
 };
 
 use crate::{
-    ui::UiManager, ygoprodeck, CARD_INFO_LOCAL, IMAGE_CACHE, IMAGE_CACHE_URL, OUTPUT_FILE,
+    image::{IMAGE_CACHE, IMAGE_CACHE_URL},
+    ui::UiManager,
+    ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
 };
 
 #[derive(Debug, Clone, Copy)]

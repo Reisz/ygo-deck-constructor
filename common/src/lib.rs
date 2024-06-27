@@ -3,6 +3,12 @@ pub mod card_data;
 
 use bincode::Options;
 
+/// Directory for individual images in deployment.
+pub const IMAGE_DIRECTORY: &str = "images";
+
+/// File ending used by image files.
+pub const IMAGE_FILE_ENDING: &str = "webp";
+
 pub type Cards = Vec<card::Card>;
 
 #[must_use]

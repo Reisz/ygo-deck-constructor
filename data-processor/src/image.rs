@@ -7,16 +7,22 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Result};
-use common::card::Id;
+use common::{card::Id, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
 use image::{imageops::FilterType, DynamicImage};
 use nonzero_ext::nonzero;
 use tokio::{sync::Mutex, task::spawn_blocking};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
-use crate::{ygoprodeck::ARTWORK_URL, IMAGE_CACHE, IMAGE_DIRECTORY};
+use crate::ygoprodeck::ARTWORK_URL;
 
-const FILE_ENDING: &str = ".webp";
+/// URL of the deployed image cache.
+pub const IMAGE_CACHE_URL: &str = "https://reisz.github.io/ygo-deck-constructor/images.zip";
+
+/// Deployment location of the image cache.
+///
+/// This is part of the deployment, so it can be used in clean builds instead of re-processing.
+pub const IMAGE_CACHE: &str = "dist/images.zip";
 
 const OUTPUT_SIZE: u32 = 96;
 
@@ -25,12 +31,15 @@ const DOWNLOAD_JITTER_MAX: Duration = Duration::from_millis(100);
 
 macro_rules! output_file {
     ($id: expr) => {
-        Path::new(&format!("{IMAGE_DIRECTORY}/{}{FILE_ENDING}", $id.get()))
+        Path::new(&format!(
+            "dist/{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}",
+            $id.get()
+        ))
     };
 }
 
 fn zip_file(id: Id) -> String {
-    format!("{}{FILE_ENDING}", id.get())
+    format!("{}.{IMAGE_FILE_ENDING}", id.get())
 }
 
 pub struct ImageLoader {
@@ -41,8 +50,9 @@ pub struct ImageLoader {
 
 impl ImageLoader {
     pub fn new() -> Result<Self> {
-        if !Path::new(IMAGE_DIRECTORY).try_exists()? {
-            fs::create_dir(Path::new(IMAGE_DIRECTORY))?;
+        let output_path = PathBuf::from(format!("dist/{IMAGE_DIRECTORY}"));
+        if !output_path.try_exists()? {
+            fs::create_dir(output_path)?;
         }
 
         let mut cache_contents = HashSet::new();
@@ -50,9 +60,10 @@ impl ImageLoader {
         let cache = BufReader::new(File::open(IMAGE_CACHE)?);
         let mut cache = ZipArchive::new(cache)?;
 
+        let suffix = format!(".{IMAGE_FILE_ENDING}");
         for file_name in cache.file_names() {
             let id = file_name
-                .strip_suffix(FILE_ENDING)
+                .strip_suffix(&suffix)
                 .and_then(|id| id.parse().ok())
                 .ok_or_else(|| anyhow!("Unexpected file in image cache: {file_name}"))?;
             let id = Id::new(id);

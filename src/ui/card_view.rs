@@ -6,6 +6,7 @@ use common::{
         MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
     },
     card_data::CardData,
+    IMAGE_DIRECTORY, IMAGE_FILE_ENDING,
 };
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
@@ -314,7 +315,7 @@ pub fn CardView(
             on:mouseup=on_click
             on:contextmenu=|ev| ev.prevent_default()
         >
-            <img src=format!("images/{}.webp", id.get())/>
+            <img src=format!("{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}", id.get())/>
             {(count > 1)
                 .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
         </div>
