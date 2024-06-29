@@ -24,5 +24,5 @@ zip = { version = "2.1.3", default-features = false }
 [dependencies.image]
 # TODO https://github.com/etemesi254/zune-image/issues/184
 version = "0.24.7"
-features = ["jpeg", "webp"]
+features = ["jpeg", "avif"]
 default-features = false

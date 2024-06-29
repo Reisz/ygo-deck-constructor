@@ -9,7 +9,7 @@ use std::{
 use anyhow::{anyhow, Context, Result};
 use common::{card::Id, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
-use image::{imageops::FilterType, DynamicImage};
+use image::{codecs::avif::AvifEncoder, imageops::FilterType, DynamicImage};
 use log::info;
 use nonzero_ext::nonzero;
 use tokio::{sync::Mutex, task::spawn_blocking};
@@ -29,7 +29,7 @@ pub const IMAGE_CACHE: &str = "dist/images.zip";
 pub const VERSION_FILE: &str = "version.txt";
 
 /// Current version of the image process.
-pub const VERSION: u32 = 0;
+pub const VERSION: u32 = 1;
 
 const OUTPUT_SIZE: u32 = 96;
 
@@ -133,7 +133,14 @@ impl ImageLoader {
         let image = download(id).await?;
 
         // Process and save
-        spawn_blocking(move || process_image(&image).save(output_file!(id))).await??;
+        spawn_blocking(move || {
+            let image = process_image(&image);
+            let writer = BufWriter::new(File::create(output_file!(id))?);
+            let encoder = AvifEncoder::new_with_speed_quality(writer, 1, 30);
+            image.write_with_encoder(encoder)?;
+            Ok::<_, anyhow::Error>(())
+        })
+        .await??;
 
         // Register for caching
         self.new_images.lock().await.push(id);

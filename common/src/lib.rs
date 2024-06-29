@@ -7,7 +7,7 @@ use bincode::Options;
 pub const IMAGE_DIRECTORY: &str = "images";
 
 /// File ending used by image files.
-pub const IMAGE_FILE_ENDING: &str = "webp";
+pub const IMAGE_FILE_ENDING: &str = "avif";
 
 pub type Cards = Vec<card::Card>;
 
