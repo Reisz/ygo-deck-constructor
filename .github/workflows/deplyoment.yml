@@ -18,6 +18,9 @@ jobs:
                   toolchain: nightly
                   target: wasm32-unknown-unknown
 
+            - name: Install nasm
+              uses: ilammy/setup-nasm@v1
+
             - name: Install tools
               uses: taiki-e/install-action@v2
               with:

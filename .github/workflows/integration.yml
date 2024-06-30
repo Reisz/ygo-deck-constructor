@@ -16,6 +16,9 @@ jobs:
                   toolchain: nightly
                   components: clippy, rustfmt
 
+            - name: Install nasm
+              uses: ilammy/setup-nasm@v1
+
             - name: Install tools
               uses: taiki-e/install-action@v2
               with:
