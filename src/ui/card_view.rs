@@ -238,16 +238,16 @@ fn DescriptionParts(parts: &'static [CardDescriptionPart]) -> impl IntoView {
 fn Description(description: &'static CardDescription) -> impl IntoView {
     match description {
         CardDescription::Regular(elements) => {
-            view! { <DescriptionParts parts=elements.as_slice()/> }.into_view()
+            view! { <DescriptionParts parts=elements.as_slice() /> }.into_view()
         }
         CardDescription::Pendulum {
             spell_effect,
             monster_effect,
         } => view! {
             <h2>"Spell Effect"</h2>
-            <DescriptionParts parts=spell_effect.as_slice()/>
+            <DescriptionParts parts=spell_effect.as_slice() />
             <h2>"Monster Effect"</h2>
-            <DescriptionParts parts=monster_effect/>
+            <DescriptionParts parts=monster_effect />
         }
         .into_view(),
     }
@@ -272,8 +272,8 @@ pub fn CardTooltip() -> impl IntoView {
                 >
                     <h1>{&data.card.name}</h1>
                     <ul class="tags">{get_tags(&data.card.card_type)}</ul>
-                    <Stats card_type=&data.card.card_type/>
-                    <Description description=&data.card.description/>
+                    <Stats card_type=&data.card.card_type />
+                    <Description description=&data.card.description />
                 </div>
             }
         })
@@ -315,7 +315,7 @@ pub fn CardView(
             on:mouseup=on_click
             on:contextmenu=|ev| ev.prevent_default()
         >
-            <img src=format!("{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}", id.get())/>
+            <img src=format!("{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}", id.get()) />
             {(count > 1)
                 .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
         </div>

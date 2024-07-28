@@ -54,7 +54,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
     // TODO: propagate input updates back to name signal
     view! {
         <div class="drawer">
-            <input type="text" value=data.name/>
+            <input type="text" value=data.name />
             <button on:click=move |_| close()>"X"</button>
             <div
                 class="card-list"
@@ -73,7 +73,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                     key=|id| *id
                     children=move |id| {
                         let delete = delete.clone();
-                        view! { <CardView id=id on_delete=delete/> }
+                        view! { <CardView id=id on_delete=delete /> }
                     }
                 />
 
@@ -105,7 +105,7 @@ pub fn Drawers() -> impl IntoView {
                 each=drawers
                 key=|data| data.id
                 children=move |data| {
-                    view! { <Drawer data=data set_drawers=set_drawers/> }
+                    view! { <Drawer data=data set_drawers=set_drawers /> }
                 }
             />
 

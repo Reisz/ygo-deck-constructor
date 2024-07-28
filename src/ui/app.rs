@@ -34,14 +34,14 @@ pub fn App() -> impl IntoView {
             crate::ui::deck::install_as_context();
 
             view! {
-                <CardTooltip/>
+                <CardTooltip />
                 <div class="deck-builder">
-                    <CardSearch/>
-                    <Drawers/>
-                    <DeckView/>
+                    <CardSearch />
+                    <Drawers />
+                    <DeckView />
                     <div class="extras">
-                        <Menu/>
-                        <Tools/>
+                        <Menu />
+                        <Tools />
                     </div>
                 </div>
             }

@@ -133,7 +133,7 @@ impl Tool for TypeGraph {
         view! {
             <div>
                 <h3>"Card Types"</h3>
-                <Graph extent=40 bars=&bars/>
+                <Graph extent=40 bars=&bars />
             </div>
         }
     }
@@ -186,7 +186,7 @@ impl Tool for ExtraTypeGraph {
         view! {
             <div>
                 <h3>"Extra Deck Card Types"</h3>
-                <Graph extent=15 spacing=5 bars=&bars/>
+                <Graph extent=15 spacing=5 bars=&bars />
             </div>
         }
     }
@@ -246,7 +246,7 @@ impl Tool for LevelGraph {
         view! {
             <div>
                 <h3>"Monster Levels"</h3>
-                <Graph extent=30 bars=&bars/>
+                <Graph extent=30 bars=&bars />
             </div>
         }
     }

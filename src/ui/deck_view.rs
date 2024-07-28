@@ -79,7 +79,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
                 key=|el: &(Id, usize)| *el
                 children=move |(id, count)| {
                     let delete = delete.clone();
-                    view! { <CardView id=id count=count on_delete=delete/> }
+                    view! { <CardView id=id count=count on_delete=delete /> }
                 }
             />
 
@@ -92,9 +92,9 @@ fn PartView(part: DeckPart) -> impl IntoView {
 pub fn DeckView() -> impl IntoView {
     view! {
         <div class="deck-view">
-            <PartView part=DeckPart::Main/>
-            <PartView part=DeckPart::Extra/>
-            <PartView part=DeckPart::Side/>
+            <PartView part=DeckPart::Main />
+            <PartView part=DeckPart::Extra />
+            <PartView part=DeckPart::Side />
         </div>
     }
 }

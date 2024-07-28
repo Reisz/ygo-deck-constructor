@@ -118,7 +118,7 @@ pub fn CardSearch() -> impl IntoView {
     view! {
         <div class="card-search">
             <div class="card-search-params">
-                <FilterInput placeholder="Name" map=|s| s.to_ascii_lowercase() filter=filter.name/>
+                <FilterInput placeholder="Name" map=|s| s.to_ascii_lowercase() filter=filter.name />
                 <FilterInput
                     placeholder="Description"
                     map=|s| s.to_ascii_lowercase()
@@ -131,7 +131,7 @@ pub fn CardSearch() -> impl IntoView {
                     each=paginated_cards
                     key=|id| *id
                     children=move |id| {
-                        view! { <CardView id=id/> }
+                        view! { <CardView id=id /> }
                     }
                 />
 

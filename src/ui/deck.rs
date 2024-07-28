@@ -107,7 +107,7 @@ pub fn Menu() -> impl IntoView {
                 input_ref.get().unwrap().click();
             }>"Import..."</button>
             <button on:click=export>"Export..."</button>
-            <input type="file" accept=".ydk" ref=input_ref on:change=import style="display: none"/>
+            <input type="file" accept=".ydk" ref=input_ref on:change=import style="display: none" />
         </div>
     }
 }
