@@ -24,11 +24,5 @@ jobs:
               with:
                   tool: just, leptosfmt@0.1.30, cargo-machete, cargo-nextest
 
-            - name: Run linter
-              run: just lint
-
-            - name: Run tests
-              run: just test
-
-            - name: Check formatting
-              run: just check_fmt
+            - name: Run checks
+              run: just check
