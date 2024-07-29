@@ -22,7 +22,7 @@ jobs:
             - name: Install tools
               uses: taiki-e/install-action@v2
               with:
-                  tool: just, leptosfmt@0.1.30, cargo-machete
+                  tool: just, leptosfmt@0.1.30, cargo-machete, cargo-nextest
 
             - name: Run linter
               run: just lint

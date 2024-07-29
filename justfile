@@ -14,7 +14,7 @@ lint *FLAGS:
     cargo machete
 
 test:
-    cargo test --workspace
+    cargo nextest run --workspace
 
 check_fmt:
     cargo fmt --all -- --check
