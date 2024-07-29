@@ -1,10 +1,12 @@
-run:
-    trunk serve --open \
+# NOTE: Using the additive list here, because ignoring is too slow 
+serve *FLAGS:
+    trunk serve {{FLAGS}} \
     -w index.html \
     -w Trunk.toml \
     -w Cargo.toml \
     -w Cargo.lock \
     -w src \
+    -w common \
     -w data-processor
 
 lint *FLAGS:
