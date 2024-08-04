@@ -18,7 +18,7 @@ fn set_data(transfer: &DataTransfer, format: &str, data: &str) {
 pub fn start_drag(ev: &DragEvent, id: Id, card: &Card) {
     let transfer = data_transfer(ev);
 
-    set_data(&transfer, CARD_ID_TYPE, &id.get().to_string());
+    set_data(&transfer, CARD_ID_TYPE, &id.to_string());
     if card.card_type.is_extra_deck_monster() {
         // Marker for dragover, so content does not matter
         set_data(&transfer, CARD_IS_EXTRA, "");

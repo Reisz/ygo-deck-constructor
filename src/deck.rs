@@ -68,9 +68,8 @@ pub struct DeckEntry {
 
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
-        let id = self.id.get();
         let [playing, side] = self.counts;
-        write!(writer, "{id}:{}:{}", playing.get(), side.get())
+        write!(writer, "{}:{}:{}", self.id, playing.get(), side.get())
     }
 
     fn decode(text: &str) -> Option<Self> {
@@ -145,7 +144,6 @@ impl TextEncoding for DeckMessage {
         };
 
         let (Self::Inc(id, part, count) | Self::Dec(id, part, count)) = self;
-        let id = id.get();
         let part = match part {
             PartType::Playing => 'p',
             PartType::Side => 's',
@@ -546,7 +544,7 @@ mod test {
         );
 
         let mut side_cards = deck.iter_part(data, DeckPart::Side).collect::<Vec<_>>();
-        side_cards.sort_by_key(|(id, _)| id.get());
+        side_cards.sort_by_key(|(id, _)| *id);
         assert_eq!(side_cards, &[(MAIN_ID, 3), (EXTRA_ID, 5)]);
     }
 

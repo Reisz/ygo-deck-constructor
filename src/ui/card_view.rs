@@ -315,7 +315,7 @@ pub fn CardView(
             on:mouseup=on_click
             on:contextmenu=|ev| ev.prevent_default()
         >
-            <img src=format!("{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}", id.get()) />
+            <img src=format!("{IMAGE_DIRECTORY}/{id}.{IMAGE_FILE_ENDING}") />
             {(count > 1)
                 .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
         </div>

@@ -1,3 +1,5 @@
+use std::{fmt::Display, num::ParseIntError, str::FromStr};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -8,10 +10,19 @@ impl Id {
     pub const fn new(id: u64) -> Self {
         Self(id)
     }
+}
 
-    #[must_use]
-    pub const fn get(&self) -> u64 {
-        self.0
+impl Display for Id {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl FromStr for Id {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(s.parse()?))
     }
 }
 

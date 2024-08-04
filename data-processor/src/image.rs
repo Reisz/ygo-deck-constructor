@@ -40,13 +40,13 @@ macro_rules! output_file {
     ($id: expr) => {
         Path::new(&format!(
             "dist/{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}",
-            $id.get()
+            $id
         ))
     };
 }
 
 fn zip_file(id: Id) -> String {
-    format!("{}.{IMAGE_FILE_ENDING}", id.get())
+    format!("{id}.{IMAGE_FILE_ENDING}")
 }
 
 pub struct ImageLoader {
@@ -168,7 +168,7 @@ impl ImageLoader {
 }
 
 async fn download(id: Id) -> Result<DynamicImage> {
-    let url = format!("{}{}.jpg", ARTWORK_URL, id.get());
+    let url = format!("{ARTWORK_URL}{id}.jpg");
     let image = reqwest::get(&url).await?.error_for_status()?;
     let image = image::load_from_memory(&image.bytes().await?)
         .with_context(|| format!("Failed to load image at {url}"))?;

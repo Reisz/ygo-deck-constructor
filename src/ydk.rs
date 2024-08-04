@@ -73,7 +73,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 
         for (id, count) in deck.iter_part(cards, part) {
             for _ in 0..count {
-                writeln!(writer, "{}", id.get())?;
+                writeln!(writer, "{id}")?;
             }
         }
     }
