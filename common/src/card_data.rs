@@ -1,5 +1,6 @@
-use std::{collections::HashMap, iter, ops::Index};
+use std::{iter, ops::Index};
 
+use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -9,14 +10,14 @@ use crate::{
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CardData {
-    entries: HashMap<Id, Card>,
-    alternatives: HashMap<Id, Id>,
+    entries: FxHashMap<Id, Card>,
+    alternatives: FxHashMap<Id, Id>,
 }
 
 impl CardData {
     #[must_use]
     pub fn new(cards: Cards) -> Self {
-        let mut alternatives = HashMap::new();
+        let mut alternatives = FxHashMap::default();
         let entries = cards
             .into_iter()
             .map(|card| {
@@ -32,7 +33,7 @@ impl CardData {
     }
 
     #[must_use]
-    pub fn entries(&self) -> &HashMap<Id, Card> {
+    pub fn entries(&self) -> &FxHashMap<Id, Card> {
         &self.entries
     }
 
