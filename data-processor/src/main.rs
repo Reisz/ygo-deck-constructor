@@ -8,10 +8,7 @@ use std::{
 
 use anyhow::Result;
 use bincode::Options;
-use common::{
-    card::{Card, Id},
-    Cards,
-};
+use common::{card::Card, Cards};
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult},
     image::ImageLoader,
@@ -53,10 +50,10 @@ async fn main() -> Result<()> {
             )
         })
         .map(|card| async {
-            let id = Id::new(card.id);
+            let password = card.id;
             let (card, ()) = try_join!(
                 spawn_blocking(|| Card::try_from(card)).map_err(anyhow::Error::from),
-                loader.ensure_image(id)
+                loader.ensure_image(password)
             )?;
 
             Ok(card?)

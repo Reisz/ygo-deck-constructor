@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use common::{card::Id, card_data::CardData};
+use common::card_data::{CardData, Id};
 use leptos::{
     component, create_rw_signal, create_signal, expect_context, view, For, IntoView, RwSignal,
     SignalUpdate, SignalWith, WriteSignal,
@@ -61,7 +61,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                 on:dragenter=drag_over
                 on:dragover=drag_over
                 on:drop=move |ev| {
-                    let id = get_dropped_card(&ev);
+                    let id = get_dropped_card(&ev, cards);
                     if !data.content.with(|content| content.contains(&id)) {
                         push(id);
                     }

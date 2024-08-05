@@ -1,6 +1,7 @@
 use std::fmt;
 
-use common::{card::Id, card_data::CardData};
+use common::card_data::{CardData, Id};
+use leptos::expect_context;
 
 use crate::{
     deck_part::DeckPart,
@@ -68,15 +69,26 @@ pub struct DeckEntry {
 
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let cards = expect_context::<&'static CardData>();
+
         let [playing, side] = self.counts;
-        write!(writer, "{}:{}:{}", self.id, playing.get(), side.get())
+
+        write!(
+            writer,
+            "{}:{}:{}",
+            cards[self.id].passwords[0],
+            playing.get(),
+            side.get()
+        )
     }
 
     fn decode(text: &str) -> Option<Self> {
-        let (id, text) = text.split_once(':')?;
+        let cards = expect_context::<&'static CardData>();
+
+        let (password, text) = text.split_once(':')?;
         let (playing, side) = text.split_once(':')?;
 
-        let id = Id::new(id.parse().ok()?);
+        let id = cards.id_for_password(password.parse().ok()?)?;
         let playing = ReversibleSaturatingCounter(playing.parse().ok()?);
         let side = ReversibleSaturatingCounter(side.parse().ok()?);
 
@@ -138,6 +150,8 @@ impl UndoRedoMessage for DeckMessage {
 
 impl TextEncoding for DeckMessage {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
+        let cards = expect_context::<&'static CardData>();
+
         let sign = match self {
             Self::Inc(..) => '+',
             Self::Dec(..) => '-',
@@ -149,19 +163,21 @@ impl TextEncoding for DeckMessage {
             PartType::Side => 's',
         };
 
-        write!(writer, "{sign}{part}{id}:{count}")
+        write!(writer, "{sign}{part}{}:{count}", cards[*id].passwords[0])
     }
 
     fn decode(text: &str) -> Option<Self> {
+        let cards = expect_context::<&'static CardData>();
+
         text.starts_with(['+', '-']).then_some(())?;
         let (sign, text) = text.split_at(1);
 
         text.starts_with(['p', 's']).then_some(())?;
         let (part, text) = text.split_at(1);
 
-        let (id, count) = text.split_once(':')?;
+        let (password, count) = text.split_once(':')?;
 
-        let id = Id::new(id.parse().ok()?);
+        let id = cards.id_for_password(password.parse().ok()?)?;
         dbg!("a");
         let part = match part {
             "p" => PartType::Playing,
@@ -305,7 +321,10 @@ impl TextEncoding for Deck {
 mod test {
     use std::mem::{align_of, size_of};
 
-    use common::card::{Card, CardDescription, MonsterType};
+    use common::card::{
+        Card, CardDescription, CardLimit, CardPassword, CardType, MonsterType, TrapType,
+    };
+    use leptos::provide_context;
 
     use super::*;
 
@@ -488,14 +507,17 @@ mod test {
 
     #[test]
     fn iter_part() {
-        const MAIN_ID: Id = Id::new(1234);
-        const EXTRA_ID: Id = Id::new(2345);
+        const MAIN_PASSWD: CardPassword = 1234;
+        const EXTRA_PASSWD: CardPassword = 2345;
+
+        const MAIN_ID: Id = Id::new(0);
+        const EXTRA_ID: Id = Id::new(1);
 
         let data = {
             let cards = vec![
                 Card {
                     name: String::new(),
-                    ids: vec![MAIN_ID],
+                    passwords: vec![MAIN_PASSWD],
                     description: CardDescription::Regular(Vec::new()),
                     search_text: String::new(),
                     card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
@@ -504,7 +526,7 @@ mod test {
                 },
                 Card {
                     name: String::new(),
-                    ids: vec![EXTRA_ID],
+                    passwords: vec![EXTRA_PASSWD],
                     description: CardDescription::Regular(Vec::new()),
                     search_text: String::new(),
                     card_type: common::card::CardType::Monster {
@@ -559,10 +581,33 @@ mod test {
 
     #[test]
     fn encoding() {
-        const ID: Id = Id::new(1234);
-        const OTHER_ID: Id = Id::new(3456);
+        const ID: Id = Id::new(0);
+        const OTHER_ID: Id = Id::new(1);
         const AMOUNT: u32 = 4321;
         const OTHER_AMOUNT: u32 = 6543;
+
+        let card_data = CardData::new(vec![
+            Card {
+                name: String::new(),
+                passwords: vec![1234],
+                description: CardDescription::Regular(Vec::new()),
+                search_text: String::new(),
+                card_type: CardType::Trap(TrapType::Normal),
+                limit: CardLimit::Unlimited,
+                archetype: None,
+            },
+            Card {
+                name: String::new(),
+                passwords: vec![9876],
+                description: CardDescription::Regular(Vec::new()),
+                search_text: String::new(),
+                card_type: CardType::Trap(TrapType::Normal),
+                limit: CardLimit::Unlimited,
+                archetype: None,
+            },
+        ]);
+        let card_data: &'static CardData = Box::leak(Box::new(card_data));
+        provide_context(card_data);
 
         for TestCase { current, other } in TestCase::iter() {
             let mut deck = Deck::default();

@@ -1,34 +1,36 @@
 use std::{error::Error, fmt};
 
+use common::card::CardPassword;
+
 use crate::ygoprodeck;
 
 #[derive(Debug, Clone)]
 pub struct ProcessingError {
-    card_id: u64,
+    password: CardPassword,
     field: &'static str,
     error: ProjectionErrorKind,
 }
 
 impl ProcessingError {
     pub fn new_unexpected(
-        card_id: u64,
+        password: CardPassword,
         field: &'static str,
         value: &(impl fmt::Debug + ?Sized),
     ) -> Self {
         Self {
-            card_id,
+            password,
             field,
             error: ProjectionErrorKind::UnexpectedValue(format!("{value:?}")),
         }
     }
 
     pub fn new_unknown(
-        card_id: u64,
+        password: CardPassword,
         field: &'static str,
         value: &(impl fmt::Debug + ?Sized),
     ) -> Self {
         Self {
-            card_id,
+            password,
             field,
             error: ProjectionErrorKind::UnknownValue(format!("{value:?}")),
         }
@@ -40,9 +42,9 @@ impl fmt::Display for ProcessingError {
         writeln!(f, "Error projecting field \"{}\"", self.field)?;
         writeln!(
             f,
-            "Card id {id} <{}?id={id}>",
+            "Card password {password} <{}?id={password}>",
             ygoprodeck::URL,
-            id = self.card_id
+            password = self.password
         )?;
         write!(f, "{}", self.error)
     }
@@ -68,13 +70,21 @@ impl fmt::Display for ProjectionErrorKind {
 }
 
 pub trait TryUnwrapField<T> {
-    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProcessingError>;
+    fn try_unwrap_field(
+        self,
+        password: CardPassword,
+        field: &'static str,
+    ) -> Result<T, ProcessingError>;
 }
 
 impl<T> TryUnwrapField<T> for Option<T> {
-    fn try_unwrap_field(self, card_id: u64, field: &'static str) -> Result<T, ProcessingError> {
+    fn try_unwrap_field(
+        self,
+        password: CardPassword,
+        field: &'static str,
+    ) -> Result<T, ProcessingError> {
         self.ok_or(ProcessingError {
-            card_id,
+            password,
             field,
             error: ProjectionErrorKind::MissingField,
         })

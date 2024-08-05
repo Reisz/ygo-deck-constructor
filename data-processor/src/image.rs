@@ -2,12 +2,12 @@ use std::{
     collections::HashSet,
     fs::{self, File, OpenOptions},
     io::{self, BufReader, BufWriter, Read, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
     time::Duration,
 };
 
 use anyhow::{anyhow, Context, Result};
-use common::{card::Id, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
+use common::{card::CardPassword, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
 use image::{codecs::avif::AvifEncoder, imageops::FilterType, DynamicImage};
 use log::info;
@@ -36,22 +36,19 @@ const OUTPUT_SIZE: u32 = 96;
 const DOWNLOAD_LIMIT: Quota = Quota::per_second(nonzero!(15_u32));
 const DOWNLOAD_JITTER_MAX: Duration = Duration::from_millis(100);
 
-macro_rules! output_file {
-    ($id: expr) => {
-        Path::new(&format!(
-            "dist/{IMAGE_DIRECTORY}/{}.{IMAGE_FILE_ENDING}",
-            $id
-        ))
-    };
+fn output_file(password: CardPassword) -> PathBuf {
+    PathBuf::from(format!(
+        "dist/{IMAGE_DIRECTORY}/{password}.{IMAGE_FILE_ENDING}"
+    ))
 }
 
-fn zip_file(id: Id) -> String {
-    format!("{id}.{IMAGE_FILE_ENDING}")
+fn zip_file(password: CardPassword) -> String {
+    format!("{password}.{IMAGE_FILE_ENDING}")
 }
 
 pub struct ImageLoader {
-    cache_contents: HashSet<Id>,
-    new_images: Mutex<Vec<Id>>,
+    cache_contents: HashSet<CardPassword>,
+    new_images: Mutex<Vec<CardPassword>>,
     rate_limiter: DefaultDirectRateLimiter,
 }
 
@@ -95,20 +92,19 @@ impl ImageLoader {
                     continue;
                 }
 
-                let id = file_name
+                let password = file_name
                     .strip_suffix(&suffix)
-                    .and_then(|id| id.parse().ok())
+                    .and_then(|password| password.parse().ok())
                     .ok_or_else(|| anyhow!("Unexpected file in image cache: {file_name}"))?;
-                let id = Id::new(id);
 
-                cache_contents.insert(id);
+                cache_contents.insert(password);
             }
 
-            for id in &cache_contents {
-                if !output_file!(id).try_exists()? {
+            for &password in &cache_contents {
+                if !output_file(password).try_exists()? {
                     io::copy(
-                        &mut cache.by_name(&zip_file(*id))?,
-                        &mut BufWriter::new(File::create_new(output_file!(id))?),
+                        &mut cache.by_name(&zip_file(password))?,
+                        &mut BufWriter::new(File::create_new(output_file(password))?),
                     )?;
                 }
             }
@@ -121,8 +117,8 @@ impl ImageLoader {
         })
     }
 
-    pub async fn ensure_image(&self, id: Id) -> Result<()> {
-        if self.cache_contents.contains(&id) {
+    pub async fn ensure_image(&self, password: CardPassword) -> Result<()> {
+        if self.cache_contents.contains(&password) {
             return Ok(());
         }
 
@@ -130,12 +126,12 @@ impl ImageLoader {
         self.rate_limiter
             .until_ready_with_jitter(Jitter::up_to(DOWNLOAD_JITTER_MAX))
             .await;
-        let image = download(id).await?;
+        let image = download(password).await?;
 
         // Process and save
         spawn_blocking(move || {
             let image = process_image(&image);
-            let writer = BufWriter::new(File::create(output_file!(id))?);
+            let writer = BufWriter::new(File::create(output_file(password))?);
             let encoder = AvifEncoder::new_with_speed_quality(writer, 1, 30);
             image.write_with_encoder(encoder)?;
             Ok::<_, anyhow::Error>(())
@@ -143,7 +139,7 @@ impl ImageLoader {
         .await??;
 
         // Register for caching
-        self.new_images.lock().await.push(id);
+        self.new_images.lock().await.push(password);
         Ok(())
     }
 
@@ -156,9 +152,9 @@ impl ImageLoader {
         let mut cache = ZipWriter::new_append(cache)?;
 
         let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);
-        for id in self.new_images.lock().await.iter().copied() {
-            let mut input = BufReader::new(File::open(output_file!(id))?);
-            cache.start_file(zip_file(id), options)?;
+        for password in self.new_images.lock().await.iter().copied() {
+            let mut input = BufReader::new(File::open(output_file(password))?);
+            cache.start_file(zip_file(password), options)?;
             io::copy(&mut input, &mut cache)?;
         }
 
@@ -167,8 +163,8 @@ impl ImageLoader {
     }
 }
 
-async fn download(id: Id) -> Result<DynamicImage> {
-    let url = format!("{ARTWORK_URL}{id}.jpg");
+async fn download(password: CardPassword) -> Result<DynamicImage> {
+    let url = format!("{ARTWORK_URL}{password}.jpg");
     let image = reqwest::get(&url).await?.error_for_status()?;
     let image = image::load_from_memory(&image.bytes().await?)
         .with_context(|| format!("Failed to load image at {url}"))?;

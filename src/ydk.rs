@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use common::{card::Id, card_data::CardData};
+use common::{card::CardPassword, card_data::CardData};
 use thiserror::Error;
 
 use crate::{deck::Deck, deck_part::DeckPart};
@@ -32,7 +32,7 @@ pub enum Error {
     #[error("could not parse input")]
     Parser(#[from] parse::Error),
     #[error("unknown id: {0:?}")]
-    UnknownId(Id),
+    UnknownPassword(CardPassword),
 }
 
 /// Deserialize a deck from the YDK format used by `YGOPRODeck`.
@@ -47,12 +47,10 @@ pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
 
     let mut deck = Deck::default();
     for part in DeckPart::iter() {
-        for id in &result[part as usize] {
-            let id = cards.normalize(*id);
-
-            if !cards.contains(id) {
-                return Err(Error::UnknownId(id));
-            }
+        for &password in &result[part as usize] {
+            let id = cards
+                .id_for_password(password)
+                .ok_or(Error::UnknownPassword(password))?;
 
             deck.increment(id, part.into(), 1);
         }
@@ -73,7 +71,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 
         for (id, count) in deck.iter_part(cards, part) {
             for _ in 0..count {
-                writeln!(writer, "{id}")?;
+                writeln!(writer, "{}", cards[id].passwords[0])?;
             }
         }
     }
@@ -82,7 +80,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 }
 
 mod parse {
-    use common::card::Id;
+    use common::card::CardPassword;
     use nom::{
         branch::alt,
         bytes::complete::tag,
@@ -104,11 +102,11 @@ mod parse {
     trait IParser<'a, T>: Parser<&'a str, T, nom::error::Error<&'a str>> {}
     impl<'a, T, U: Parser<&'a str, T, nom::error::Error<&'a str>>> IParser<'a, T> for U {}
 
-    fn id(input: &str) -> IResult<Id> {
-        character::u64.map(Id::new).parse(input)
+    fn id(input: &str) -> IResult<CardPassword> {
+        character::u32.parse(input)
     }
 
-    fn ids(input: &str) -> IResult<Vec<Id>> {
+    fn ids(input: &str) -> IResult<Vec<CardPassword>> {
         separated_list1(multispace1, id)(input)
     }
 
@@ -124,13 +122,13 @@ mod parse {
         ))(input)
     }
 
-    fn section(input: &str) -> IResult<(DeckPart, Vec<Id>)> {
+    fn section(input: &str) -> IResult<(DeckPart, Vec<CardPassword>)> {
         pair(header, opt(preceded(multispace1, ids)))
             .map(|(part, ids)| (part, ids.unwrap_or_default()))
             .parse(input)
     }
 
-    fn deck(input: &str) -> IResult<[Vec<Id>; 3]> {
+    fn deck(input: &str) -> IResult<[Vec<CardPassword>; 3]> {
         separated_list1(multispace1, section)
             .map(|parts| {
                 let mut deck = [vec![], vec![], vec![]];
@@ -142,7 +140,7 @@ mod parse {
             .parse(input)
     }
 
-    pub fn parse(input: &str) -> Result<[Vec<Id>; 3]> {
+    pub fn parse(input: &str) -> Result<[Vec<CardPassword>; 3]> {
         delimited(multispace0, deck, multispace0)
             .parse(input)
             .finish()
@@ -156,9 +154,12 @@ mod parse {
 
 #[cfg(test)]
 mod test {
-    use common::card::{
-        Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
-        Race::Machine, SpellType,
+    use common::{
+        card::{
+            Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers,
+            MonsterEffect, Race::Machine, SpellType,
+        },
+        card_data::Id,
     };
     use itertools::iproduct;
 
@@ -169,7 +170,11 @@ mod test {
         ydk: String,
     }
 
-    const IDS: [[u64; 4]; 3] = [[1, 23, 456, 7890], [2, 24, 457, 7891], [3, 25, 458, 7892]];
+    const PASSWDS: [[(u16, u32); 4]; 3] = [
+        [(0, 1), (1, 23), (2, 456), (3, 7890)],
+        [(8, 2), (9, 24), (10, 457), (11, 7891)],
+        [(4, 3), (5, 25), (6, 458), (7, 7892)],
+    ];
 
     impl YdkData {
         fn get() -> Vec<Self> {
@@ -178,9 +183,9 @@ mod test {
             let mut result = Vec::new();
 
             let mut numbers = [
-                IDS[0].iter().copied().cycle(),
-                IDS[1].iter().copied().cycle(),
-                IDS[2].iter().copied().cycle(),
+                PASSWDS[0].iter().copied().cycle(),
+                PASSWDS[1].iter().copied().cycle(),
+                PASSWDS[2].iter().copied().cycle(),
             ];
 
             for (main_count, extra_count, side_count) in iproduct!(0..=MAX, 0..=MAX, 0..=MAX) {
@@ -202,8 +207,8 @@ mod test {
 
                     for _ in 0..count {
                         let number = numbers[part as usize].next().unwrap();
-                        deck.increment(Id::new(number), part.into(), 1);
-                        ids.push(number);
+                        deck.increment(Id::new(number.0), part.into(), 1);
+                        ids.push(number.1);
                     }
 
                     ids.sort_unstable();
@@ -223,10 +228,10 @@ mod test {
     fn card_data() -> &'static CardData {
         let mut data = Vec::new();
 
-        for id in IDS[0].iter().chain(IDS[2].iter()) {
+        for password in PASSWDS[0].iter().chain(PASSWDS[2].iter()) {
             data.push(Card {
                 name: String::new(),
-                ids: vec![Id::new(*id)],
+                passwords: vec![password.1],
                 description: CardDescription::Regular(Vec::new()),
                 search_text: String::new(),
                 card_type: CardType::Spell(SpellType::Normal),
@@ -235,10 +240,10 @@ mod test {
             });
         }
 
-        for id in &IDS[1] {
+        for password in &PASSWDS[1] {
             data.push(Card {
                 name: String::new(),
-                ids: vec![Id::new(*id)],
+                passwords: vec![password.1],
                 description: CardDescription::Regular(Vec::new()),
                 search_text: String::new(),
                 card_type: CardType::Monster {

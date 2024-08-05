@@ -1,6 +1,6 @@
 use common::card::{
-    Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardType, Id, LinkMarker,
-    LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+    Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType,
+    LinkMarker, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
 };
 
 use crate::{
@@ -16,19 +16,19 @@ impl TryFrom<ygoprodeck::Card> for Card {
         let limit = CardLimit::from(&value);
         let description = CardDescription::try_from(&value)?;
 
-        let mut ids = value
+        let mut passwords = value
             .card_images
             .into_iter()
-            .map(|info| Id::new(info.id))
-            .collect::<Vec<Id>>();
-        if !ids.contains(&Id::new(value.id)) {
-            ids.push(Id::new(value.id));
+            .map(|info| info.id)
+            .collect::<Vec<CardPassword>>();
+        if !passwords.contains(&value.id) {
+            passwords.push(value.id);
         }
-        ids.sort_unstable();
+        passwords.sort_unstable();
 
         Ok(Self {
             name: value.name,
-            ids,
+            passwords,
             description,
             search_text: value.desc.to_lowercase(),
             card_type,

@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use common::{card::Id, card_data::CardData};
+use common::card_data::{CardData, Id};
 use leptos::{
     component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalUpdate, SignalWith,
 };
@@ -67,7 +67,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             on:dragenter=drag_over
             on:dragover=drag_over
             on:drop=move |ev| {
-                let id = get_dropped_card(&ev);
+                let id = get_dropped_card(&ev, cards);
                 deck.update(|deck| {
                     deck.increment(id, part.into(), 1);
                 });

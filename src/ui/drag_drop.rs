@@ -1,8 +1,11 @@
-use common::card::{Card, Id};
+use common::{
+    card::Card,
+    card_data::{CardData, Id},
+};
 use wasm_bindgen::intern;
 use web_sys::{js_sys::JsString, DataTransfer, DragEvent};
 
-const CARD_ID_TYPE: &str = "card_id";
+const CARD_PASSWORD_TYPE: &str = "card_password";
 const CARD_IS_EXTRA: &str = "card_is_extra";
 
 fn data_transfer(ev: &DragEvent) -> DataTransfer {
@@ -15,10 +18,14 @@ fn set_data(transfer: &DataTransfer, format: &str, data: &str) {
         .expect("failed setting drag data");
 }
 
-pub fn start_drag(ev: &DragEvent, id: Id, card: &Card) {
+pub fn start_drag(ev: &DragEvent, card: &Card) {
     let transfer = data_transfer(ev);
 
-    set_data(&transfer, CARD_ID_TYPE, &id.to_string());
+    set_data(
+        &transfer,
+        CARD_PASSWORD_TYPE,
+        &card.passwords[0].to_string(),
+    );
     if card.card_type.is_extra_deck_monster() {
         // Marker for dragover, so content does not matter
         set_data(&transfer, CARD_IS_EXTRA, "");
@@ -46,7 +53,7 @@ pub fn get_drag_info(ev: &DragEvent) -> DragInfo {
 
     let types = data_transfer(ev).types();
 
-    if !types.includes(&JsString::from(intern(CARD_ID_TYPE)), 0) {
+    if !types.includes(&JsString::from(intern(CARD_PASSWORD_TYPE)), 0) {
         return DragInfo::NotCard;
     }
 
@@ -57,14 +64,19 @@ pub fn get_drag_info(ev: &DragEvent) -> DragInfo {
     }
 }
 
-/// Get the id of the dropped card.
+/// Get the password of the dropped card.
 ///
 /// Only available in the `drop` event.
 #[must_use]
-pub fn get_dropped_card(ev: &DragEvent) -> Id {
+pub fn get_dropped_card(ev: &DragEvent, cards: &CardData) -> Id {
     let data = data_transfer(ev);
-    let data = data.get_data(CARD_ID_TYPE).expect("failed getting card id");
-    Id::new(data.parse().expect("failed parsing card id"))
+    let data = data
+        .get_data(CARD_PASSWORD_TYPE)
+        .expect("failed getting card password");
+    let password = data.parse().expect("failed parsing card password");
+    cards
+        .id_for_password(password)
+        .expect("unknown card password")
 }
 
 #[derive(Debug, Copy, Clone)]

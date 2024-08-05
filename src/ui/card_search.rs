@@ -82,9 +82,8 @@ pub fn CardSearch() -> impl IntoView {
     let filtered_cards = create_memo(move |_| {
         cards
             .entries()
-            .iter()
             .filter(move |(_, card)| filter.matches(card))
-            .map(|(id, _)| *id)
+            .map(|(id, _)| id)
             .collect::<Vec<_>>()
     });
 

@@ -3,6 +3,7 @@
 use std::io::Read;
 
 use anyhow::Result;
+use common::card::CardPassword;
 use serde::Deserialize;
 use serde_enum_str::Deserialize_enum_str;
 
@@ -13,7 +14,7 @@ pub const ARTWORK_URL: &str = "https://images.ygoprodeck.com/images/cards_croppe
 #[derive(Debug, Deserialize)]
 pub struct Card {
     // All Cards
-    pub id: u64,
+    pub id: CardPassword,
     pub name: String,
     #[serde(rename = "type")]
     pub card_type: CardType,
@@ -207,7 +208,7 @@ pub enum BanStatus {
 
 #[derive(Debug, Deserialize)]
 pub struct ImageInfo {
-    pub id: u64,
+    pub id: CardPassword,
 }
 
 #[derive(Debug, Deserialize)]

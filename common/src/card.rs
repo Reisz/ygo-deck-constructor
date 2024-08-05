@@ -1,41 +1,20 @@
-use std::{fmt::Display, num::ParseIntError, str::FromStr};
-
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Id(u64);
-
-impl Id {
-    #[must_use]
-    pub const fn new(id: u64) -> Self {
-        Self(id)
-    }
-}
-
-impl Display for Id {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl FromStr for Id {
-    type Err = ParseIntError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Self(s.parse()?))
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct Card {
     pub name: String,
-    pub ids: Vec<Id>,
+    pub passwords: Vec<CardPassword>,
     pub description: CardDescription,
     pub search_text: String,
     pub card_type: CardType,
     pub limit: CardLimit,
     pub archetype: Option<String>,
 }
+
+/// Type used for [Passwords](https://yugipedia.com/wiki/Password).
+///
+/// Uses [`u32`] as it is the smallest integer type which can fit all eight-digit numbers.
+pub type CardPassword = u32;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub enum CardDescription {

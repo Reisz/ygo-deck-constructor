@@ -2,10 +2,10 @@ use std::rc::Rc;
 
 use common::{
     card::{
-        Attribute, Card, CardDescription, CardDescriptionPart, CardType, Id, LinkMarker,
-        MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+        Attribute, Card, CardDescription, CardDescriptionPart, CardType, LinkMarker, MonsterEffect,
+        MonsterStats, MonsterType, Race, SpellType, TrapType,
     },
-    card_data::CardData,
+    card_data::{CardData, Id},
     IMAGE_DIRECTORY, IMAGE_FILE_ENDING,
 };
 use leptos::{
@@ -290,6 +290,7 @@ pub fn CardView(
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
     let card = &use_context::<&'static CardData>().unwrap()[id];
+    let password = card.passwords[0];
 
     let on_click: Box<dyn FnMut(MouseEvent)> = if let Some(on_delete) = on_delete {
         Box::new(move |ev: MouseEvent| {
@@ -309,13 +310,13 @@ pub fn CardView(
             class=get_class(&card.card_type)
             ref=node
             draggable="true"
-            on:dragstart=move |ev| start_drag(&ev, id, card)
+            on:dragstart=move |ev| start_drag(&ev, card)
             on:mouseover=move |_| set_tooltip_data.set(Some(TooltipData { card, node }))
             on:mouseout=move |_| set_tooltip_data.set(None)
             on:mouseup=on_click
             on:contextmenu=|ev| ev.prevent_default()
         >
-            <img src=format!("{IMAGE_DIRECTORY}/{id}.{IMAGE_FILE_ENDING}") />
+            <img src=format!("{IMAGE_DIRECTORY}/{password}.{IMAGE_FILE_ENDING}") />
             {(count > 1)
                 .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
         </div>
