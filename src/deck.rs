@@ -131,14 +131,12 @@ impl TextEncoding for DeckMessage {
         let (password, count) = text.split_once(':')?;
 
         let id = cards.id_for_password(password.parse().ok()?)?;
-        dbg!("a");
         let part = match part {
             "p" => PartType::Playing,
             "s" => PartType::Side,
             _ => return None,
         };
         let count = count.parse().ok()?;
-        dbg!("a");
 
         let result = match sign {
             "+" => Self::Inc(id, part, count),
