@@ -27,35 +27,12 @@ impl From<DeckPart> for PartType {
     }
 }
 
-/// Counter with saturating value, which returns the actual change for repeatable message-based undo-redo.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ReversibleSaturatingCounter(u32);
-
-impl ReversibleSaturatingCounter {
-    fn increment(&mut self, amount: u32) -> u32 {
-        if let Some(new_val) = self.0.checked_add(amount) {
-            self.0 = new_val;
-            return amount;
+impl PartType {
+    fn idx(self) -> usize {
+        match self {
+            Self::Playing => 0,
+            Self::Side => 1,
         }
-
-        let ret = u32::MAX - self.0;
-        self.0 = u32::MAX;
-        ret
-    }
-
-    fn decrement(&mut self, amount: u32) -> u32 {
-        if let Some(new_val) = self.0.checked_sub(amount) {
-            self.0 = new_val;
-            return amount;
-        }
-
-        let ret = u32::MIN + self.0;
-        self.0 = u32::MIN;
-        ret
-    }
-
-    fn get(self) -> u32 {
-        self.0
     }
 }
 
@@ -64,22 +41,16 @@ pub struct DeckEntry {
     /// The card id of this entry
     id: Id,
     /// Counts for the two part types
-    counts: [ReversibleSaturatingCounter; 2],
+    counts: [u32; 2],
 }
 
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
         let cards = expect_context::<&'static CardData>();
 
+        let password = cards[self.id].passwords[0];
         let [playing, side] = self.counts;
-
-        write!(
-            writer,
-            "{}:{}:{}",
-            cards[self.id].passwords[0],
-            playing.get(),
-            side.get()
-        )
+        write!(writer, "{password}:{playing}:{side}")
     }
 
     fn decode(text: &str) -> Option<Self> {
@@ -89,8 +60,8 @@ impl TextEncoding for DeckEntry {
         let (playing, side) = text.split_once(':')?;
 
         let id = cards.id_for_password(password.parse().ok()?)?;
-        let playing = ReversibleSaturatingCounter(playing.parse().ok()?);
-        let side = ReversibleSaturatingCounter(side.parse().ok()?);
+        let playing = playing.parse().ok()?;
+        let side = side.parse().ok()?;
 
         Some(Self {
             id,
@@ -101,10 +72,7 @@ impl TextEncoding for DeckEntry {
 
 impl DeckEntry {
     fn new(id: Id) -> Self {
-        Self {
-            id,
-            counts: [ReversibleSaturatingCounter(0); 2],
-        }
+        Self { id, counts: [0; 2] }
     }
 
     #[must_use]
@@ -112,24 +80,9 @@ impl DeckEntry {
         self.id
     }
 
-    fn idx(part_type: PartType) -> usize {
-        match part_type {
-            PartType::Playing => 0,
-            PartType::Side => 1,
-        }
-    }
-
-    fn count_mut(&mut self, part_type: PartType) -> &mut ReversibleSaturatingCounter {
-        &mut self.counts[Self::idx(part_type)]
-    }
-
     #[must_use]
     pub fn count(&self, part_type: PartType) -> usize {
-        self.counts[Self::idx(part_type)].get().try_into().unwrap()
-    }
-
-    fn empty(&self) -> bool {
-        self.counts[0].get() == 0 && self.counts[1].get() == 0
+        self.counts[part_type.idx()].try_into().unwrap()
     }
 }
 
@@ -255,15 +208,36 @@ impl Deck {
                 self.entries.insert(idx, DeckEntry::new(id));
                 idx
             });
-        self.entries[idx].count_mut(part_type).increment(amount)
+
+        let entry = &mut self.entries[idx].counts[part_type.idx()];
+
+        if let Some(new_val) = entry.checked_add(amount) {
+            *entry = new_val;
+            return amount;
+        }
+
+        let ret = u32::MAX - *entry;
+        *entry = u32::MAX;
+        ret
     }
 
     fn decrement_internal(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
         if let Ok(idx) = self.entries.binary_search_by_key(&id, DeckEntry::id) {
-            let ret = self.entries[idx].count_mut(part_type).decrement(amount);
-            if self.entries[idx].empty() {
+            let entry = &mut self.entries[idx].counts[part_type.idx()];
+
+            let ret = if let Some(new_val) = entry.checked_sub(amount) {
+                *entry = new_val;
+                amount
+            } else {
+                let ret = *entry;
+                *entry = 0;
+                ret
+            };
+
+            if self.entries[idx].counts.iter().all(|count| *count == 0) {
                 self.entries.remove(idx);
             }
+
             ret
         } else {
             0
