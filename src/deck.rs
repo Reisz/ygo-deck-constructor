@@ -275,7 +275,7 @@ impl TextEncoding for Deck {
     fn decode(text: &str) -> Option<Self> {
         let (entries, undo_redo) = text.split_once(' ')?;
 
-        let entries = if entries.is_empty() {
+        let mut entries = if entries.is_empty() {
             Vec::new()
         } else {
             entries
@@ -283,6 +283,8 @@ impl TextEncoding for Deck {
                 .map(DeckEntry::decode)
                 .collect::<Option<_>>()?
         };
+        entries.sort_unstable_by_key(DeckEntry::id);
+
         let undo_redo = TextEncoding::decode(undo_redo)?;
 
         Some(Self { entries, undo_redo })
