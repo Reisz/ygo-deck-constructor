@@ -41,7 +41,7 @@ pub struct DeckEntry {
     /// The card id of this entry
     id: Id,
     /// Counts for the two part types
-    counts: [u32; 2],
+    counts: [u8; 2],
 }
 
 impl TextEncoding for DeckEntry {
@@ -82,14 +82,14 @@ impl DeckEntry {
 
     #[must_use]
     pub fn count(&self, part_type: PartType) -> usize {
-        self.counts[part_type.idx()].try_into().unwrap()
+        self.counts[part_type.idx()].into()
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 enum DeckMessage {
-    Inc(Id, PartType, u32),
-    Dec(Id, PartType, u32),
+    Inc(Id, PartType, u8),
+    Dec(Id, PartType, u8),
 }
 
 impl UndoRedoMessage for DeckMessage {
@@ -157,7 +157,7 @@ pub struct Deck {
 }
 
 impl Deck {
-    pub fn increment(&mut self, id: Id, part_type: PartType, amount: u32) {
+    pub fn increment(&mut self, id: Id, part_type: PartType, amount: u8) {
         let amount = self.increment_internal(id, part_type, amount);
         if amount > 0 {
             self.undo_redo
@@ -165,7 +165,7 @@ impl Deck {
         }
     }
 
-    pub fn decrement(&mut self, id: Id, part_type: PartType, amount: u32) {
+    pub fn decrement(&mut self, id: Id, part_type: PartType, amount: u8) {
         let amount = self.decrement_internal(id, part_type, amount);
         if amount > 0 {
             self.undo_redo
@@ -200,7 +200,7 @@ impl Deck {
         }
     }
 
-    fn increment_internal(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
+    fn increment_internal(&mut self, id: Id, part_type: PartType, amount: u8) -> u8 {
         let idx = self
             .entries
             .binary_search_by_key(&id, DeckEntry::id)
@@ -216,12 +216,12 @@ impl Deck {
             return amount;
         }
 
-        let ret = u32::MAX - *entry;
-        *entry = u32::MAX;
+        let ret = u8::MAX - *entry;
+        *entry = u8::MAX;
         ret
     }
 
-    fn decrement_internal(&mut self, id: Id, part_type: PartType, amount: u32) -> u32 {
+    fn decrement_internal(&mut self, id: Id, part_type: PartType, amount: u8) -> u8 {
         if let Ok(idx) = self.entries.binary_search_by_key(&id, DeckEntry::id) {
             let entry = &mut self.entries[idx].counts[part_type.idx()];
 
@@ -341,8 +341,8 @@ mod test {
 
     #[test]
     fn entry_memory_usage() {
-        assert!(size_of::<DeckEntry>() <= 16);
-        assert!(align_of::<DeckEntry>() <= 16);
+        assert!(size_of::<DeckEntry>() <= 4);
+        assert!(align_of::<DeckEntry>() <= 4);
     }
 
     #[test]
@@ -364,7 +364,7 @@ mod test {
     #[test]
     fn add_remove() {
         const ID: Id = Id::new(1234);
-        const AMOUNT: u32 = 4321;
+        const AMOUNT: u8 = 43;
 
         for TestCase { current, other } in TestCase::iter() {
             let mut deck = Deck::default();
@@ -398,7 +398,7 @@ mod test {
     #[test]
     fn remove_on_empty() {
         const ID: Id = Id::new(1234);
-        const AMOUNT: u32 = 4321;
+        const AMOUNT: u8 = 43;
 
         let mut deck = Deck::default();
         deck.decrement(ID, PartType::Playing, AMOUNT);
@@ -419,8 +419,8 @@ mod test {
     #[test]
     fn remove_too_many() {
         const ID: Id = Id::new(1234);
-        const AMOUNT: u32 = 4321;
-        const REMOVE_AMOUNT: u32 = 9876;
+        const AMOUNT: u8 = 43;
+        const REMOVE_AMOUNT: u8 = 98;
 
         for TestCase { current, other } in TestCase::iter() {
             let mut deck = Deck::default();
@@ -451,18 +451,18 @@ mod test {
     #[test]
     fn add_too_many() {
         const ID: Id = Id::new(1234);
-        const AMOUNT: u32 = 4321;
+        const AMOUNT: u8 = 43;
 
         for TestCase { current, other } in TestCase::iter() {
             let mut deck = Deck::default();
-            deck.increment(ID, current, u32::MAX - 1);
+            deck.increment(ID, current, u8::MAX - 1);
             deck.increment(ID, current, AMOUNT);
 
-            assert_part_eq!(&deck, current, &[(ID, u32::MAX as usize)]);
+            assert_part_eq!(&deck, current, &[(ID, u8::MAX as usize)]);
             assert_part_eq!(&deck, other, &[]);
 
             deck.undo();
-            assert_part_eq!(&deck, current, &[(ID, (u32::MAX - 1) as usize)]);
+            assert_part_eq!(&deck, current, &[(ID, (u8::MAX - 1) as usize)]);
             assert_part_eq!(&deck, other, &[]);
 
             deck.undo();
@@ -470,11 +470,11 @@ mod test {
             assert_part_eq!(&deck, other, &[]);
 
             deck.redo();
-            assert_part_eq!(&deck, current, &[(ID, (u32::MAX - 1) as usize)]);
+            assert_part_eq!(&deck, current, &[(ID, (u8::MAX - 1) as usize)]);
             assert_part_eq!(&deck, other, &[]);
 
             deck.redo();
-            assert_part_eq!(&deck, current, &[(ID, u32::MAX as usize)]);
+            assert_part_eq!(&deck, current, &[(ID, u8::MAX as usize)]);
             assert_part_eq!(&deck, other, &[]);
         }
     }
@@ -557,8 +557,8 @@ mod test {
     fn encoding() {
         const ID: Id = Id::new(0);
         const OTHER_ID: Id = Id::new(1);
-        const AMOUNT: u32 = 4321;
-        const OTHER_AMOUNT: u32 = 6543;
+        const AMOUNT: u8 = 43;
+        const OTHER_AMOUNT: u8 = 65;
 
         let card_data = CardData::new(vec![
             Card {
