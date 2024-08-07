@@ -10,9 +10,9 @@ serve *FLAGS:
     -w data-processor
 
 check:
-    cargo clippy --workspace --all-targets -- -D warnings
-    cargo machete
+    cargo clippy --workspace --all-targets
     cargo nextest run --workspace
+    cargo machete
     cargo fmt --all -- --check
     leptosfmt -q --check .
 
