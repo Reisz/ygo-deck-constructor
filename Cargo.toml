@@ -19,7 +19,7 @@ common.path = "common"
 console_error_panic_hook = "0.1.7"
 gloo-dialogs = "0.2.0"
 gloo-file = { version = "0.3.0", features = ["futures"] }
-gloo-net = "0.5.0"
+gloo-net = "0.6.0"
 itertools = "0.13.0"
 leptos = { version = "0.6.12", features = ["csr", "nightly"] }
 leptos-use = "0.10.10"
