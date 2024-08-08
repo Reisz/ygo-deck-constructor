@@ -36,7 +36,7 @@ impl GraphBar {
 
 #[must_use]
 #[component]
-#[allow(clippy::needless_lifetimes)] // falso positive
+#[allow(clippy::needless_lifetimes)] // false positive
 fn Graph<'a, const N: usize>(
     extent: usize,
     #[prop(optional)] spacing: Option<usize>,
