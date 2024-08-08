@@ -8,6 +8,7 @@ use common::{
     card_data::{CardData, Id},
     IMAGE_DIRECTORY, IMAGE_FILE_ENDING,
 };
+use itertools::intersperse_with;
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
@@ -144,10 +145,10 @@ fn get_tags(card_type: &CardType) -> Vec<View> {
         }
     }
 
-    tags.into_iter()
-        .map(IntoView::into_view)
-        .intersperse_with(|| html::li().child("•").into_view())
-        .collect()
+    intersperse_with(tags.into_iter().map(IntoView::into_view), || {
+        html::li().child("•").into_view()
+    })
+    .collect()
 }
 
 fn link_marker_path(link_marker: LinkMarker) -> &'static str {

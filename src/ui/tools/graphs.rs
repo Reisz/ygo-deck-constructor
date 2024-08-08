@@ -1,6 +1,7 @@
 use std::fmt::Write;
 
 use common::card::{CardType, MonsterStats, MonsterType};
+use itertools::intersperse;
 use leptos::{component, view, CollectView, IntoSignal, IntoView, Signal, SignalWith};
 
 use super::{CardDeckEntry, Tool};
@@ -51,7 +52,7 @@ fn Graph<'a, const N: usize>(
         .take_while(|pos| *pos < extent);
 
     let mut helper_path = String::new();
-    for elem in helper_positions.map(Some).intersperse(None) {
+    for elem in intersperse(helper_positions.map(Some), None) {
         match elem {
             Some(pos) => write!(helper_path, "M{pos} 0 V{height}").unwrap(),
             None => helper_path.push(' '),

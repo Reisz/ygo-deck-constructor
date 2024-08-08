@@ -1,4 +1,4 @@
-#![feature(iter_intersperse, macro_metavar_expr)]
+#![feature(macro_metavar_expr)]
 
 pub mod deck;
 pub mod deck_order;
