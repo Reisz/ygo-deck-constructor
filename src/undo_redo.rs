@@ -84,11 +84,9 @@ impl<T: TextEncoding> TextEncoding for UndoRedo<T> {
 
 #[cfg(test)]
 mod test {
-    use std::assert_matches::assert_matches;
-
     use super::*;
 
-    #[derive(Debug, Clone, Copy)]
+    #[derive(Debug, Clone, Copy, PartialEq)]
     enum TestMessage {
         Apply(usize),
         Revert(usize),
@@ -134,8 +132,8 @@ mod test {
     #[test]
     fn empty() {
         let mut ur = UR::default();
-        assert_matches!(ur.undo(), None);
-        assert_matches!(ur.redo(), None);
+        assert!(ur.undo().is_none());
+        assert!(ur.redo().is_none());
     }
 
     #[test]
@@ -143,8 +141,8 @@ mod test {
         let mut ur = UR::default();
         ur.push_action(TestMessage::Apply(0));
 
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(0)));
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert!(ur.redo() == Some(TestMessage::Apply(0)));
     }
 
     #[test]
@@ -153,10 +151,10 @@ mod test {
         ur.push_action(TestMessage::Apply(0));
         ur.push_action(TestMessage::Apply(1));
 
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(1)));
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(0)));
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(1)));
+        assert!(ur.undo() == Some(TestMessage::Revert(1)));
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert!(ur.redo() == Some(TestMessage::Apply(0)));
+        assert!(ur.redo() == Some(TestMessage::Apply(1)));
     }
 
     #[test]
@@ -164,9 +162,9 @@ mod test {
         let mut ur = UR::default();
         ur.push_action(TestMessage::Apply(0));
 
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
-        assert_matches!(ur.undo(), None);
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(0)));
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert!(ur.undo().is_none());
+        assert!(ur.redo() == Some(TestMessage::Apply(0)));
     }
 
     #[test]
@@ -174,8 +172,8 @@ mod test {
         let mut ur = UR::default();
         ur.push_action(TestMessage::Apply(0));
 
-        assert_matches!(ur.redo(), None);
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
+        assert!(ur.redo().is_none());
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
     }
 
     #[test]
@@ -184,13 +182,13 @@ mod test {
         ur.push_action(TestMessage::Apply(0));
         ur.push_action(TestMessage::Apply(1));
 
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(1)));
+        assert!(ur.undo() == Some(TestMessage::Revert(1)));
         ur.push_action(TestMessage::Apply(2));
 
-        assert_matches!(ur.redo(), None);
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(2)));
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
-        assert_matches!(ur.undo(), None);
+        assert!(ur.redo().is_none());
+        assert!(ur.undo() == Some(TestMessage::Revert(2)));
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert!(ur.undo().is_none());
     }
 
     #[test]
@@ -200,15 +198,15 @@ mod test {
         ur.push_action(TestMessage::Apply(1));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(1)));
+        assert!(ur.undo() == Some(TestMessage::Revert(1)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert_matches!(ur.undo(), Some(TestMessage::Revert(0)));
+        assert!(ur.undo() == Some(TestMessage::Revert(0)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(0)));
+        assert!(ur.redo() == Some(TestMessage::Apply(0)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert_matches!(ur.redo(), Some(TestMessage::Apply(1)));
+        assert!(ur.redo() == Some(TestMessage::Apply(1)));
     }
 }
