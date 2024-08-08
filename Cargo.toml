@@ -21,7 +21,7 @@ gloo-dialogs = "0.2.0"
 gloo-file = { version = "0.3.0", features = ["futures"] }
 gloo-net = "0.6.0"
 itertools = "0.13.0"
-leptos = { version = "0.6.12", features = ["csr", "nightly"] }
+leptos = { version = "0.6.12", features = ["csr"] }
 leptos-use = "0.10.10"
 lzma-rs = "0.3.0"
 nom = "7.1.3"

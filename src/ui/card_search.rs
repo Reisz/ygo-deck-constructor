@@ -1,7 +1,7 @@
 use common::{card::Card, card_data::CardData};
 use leptos::{
     component, create_memo, create_node_ref, create_signal, expect_context, html, provide_context,
-    view, For, IntoView, NodeRef, RwSignal, SignalGetUntracked, SignalSet, SignalWith,
+    view, For, IntoView, NodeRef, RwSignal, SignalGet, SignalGetUntracked, SignalSet, SignalWith,
     SignalWithUntracked, WriteSignal,
 };
 use leptos_use::use_intersection_observer;
@@ -93,7 +93,7 @@ pub fn CardSearch() -> impl IntoView {
             cards
                 .iter()
                 .copied()
-                .take(pages() * PAGE_SIZE)
+                .take(pages.get() * PAGE_SIZE)
                 .collect::<Vec<_>>()
         })
     };
@@ -104,7 +104,7 @@ pub fn CardSearch() -> impl IntoView {
         let filtered_count = filtered_cards.with_untracked(Vec::len);
         let current_capacity = pages.get_untracked() * PAGE_SIZE;
         if entries[0].is_intersecting() && filtered_count > current_capacity {
-            set_pages(pages.get_untracked() + 1);
+            set_pages.set(pages.get_untracked() + 1);
         }
     });
 

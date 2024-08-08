@@ -3,7 +3,7 @@ use std::rc::Rc;
 use common::card_data::{CardData, Id};
 use leptos::{
     component, create_rw_signal, create_signal, expect_context, view, For, IntoView, RwSignal,
-    SignalUpdate, SignalWith, WriteSignal,
+    SignalGet, SignalUpdate, SignalWith, WriteSignal,
 };
 
 use crate::{
@@ -69,7 +69,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
             >
 
                 <For
-                    each=data.content
+                    each=move || data.content.get()
                     key=|id| *id
                     children=move |id| {
                         let delete = delete.clone();
@@ -91,7 +91,7 @@ pub fn Drawers() -> impl IntoView {
     let new_drawer = move || {
         set_drawers.update(|drawers| {
             drawers.push(DrawerData {
-                id: next_drawer_id(),
+                id: next_drawer_id.get(),
                 name: create_rw_signal("New Drawer".to_owned()),
                 content: create_rw_signal(Vec::new()),
             });
@@ -102,7 +102,7 @@ pub fn Drawers() -> impl IntoView {
     view! {
         <div class="drawers">
             <For
-                each=drawers
+                each=move || drawers.get()
                 key=|data| data.id
                 children=move |data| {
                     view! { <Drawer data=data set_drawers=set_drawers /> }

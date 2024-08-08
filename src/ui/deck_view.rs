@@ -2,7 +2,8 @@ use std::rc::Rc;
 
 use common::card_data::{CardData, Id};
 use leptos::{
-    component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalUpdate, SignalWith,
+    component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalGet, SignalUpdate,
+    SignalWith,
 };
 
 use crate::{
@@ -75,7 +76,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
         >
 
             <For
-                each=entries
+                each=move || entries.get()
                 key=|el: &(Id, usize)| *el
                 children=move |(id, count)| {
                     let delete = delete.clone();
