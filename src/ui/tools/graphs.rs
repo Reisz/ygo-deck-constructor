@@ -1,10 +1,18 @@
 use std::fmt::Write;
 
-use common::card::{CardType, MonsterStats, MonsterType};
+use common::{
+    card::{CardType, MonsterStats, MonsterType},
+    card_data::CardData,
+};
 use itertools::intersperse;
-use leptos::{component, view, CollectView, IntoSignal, IntoView, Signal, SignalWith};
+use leptos::{
+    component, expect_context, view, CollectView, IntoSignal, IntoView, Memo, Signal, SignalWith,
+    View,
+};
 
-use super::{CardDeckEntry, Tool};
+use crate::deck::{Deck, PartType};
+
+use super::Tool;
 
 #[derive(Debug, Clone)]
 struct GraphBar {
@@ -97,8 +105,10 @@ fn Graph<'a, const N: usize>(
     }
 }
 
-#[derive(Debug, Default)]
-pub struct TypeGraph {
+pub struct TypeGraph;
+
+#[derive(Default, PartialEq, Eq)]
+struct TypeCounts {
     monster: usize,
     spell: usize,
     trap: usize,
@@ -106,29 +116,43 @@ pub struct TypeGraph {
 
 impl Tool for TypeGraph {
     fn init() -> Self {
-        Self::default()
+        Self
     }
 
-    fn fold(&mut self, entry: &CardDeckEntry) {
-        let counter = match entry.card.card_type {
-            CardType::Monster { .. } => {
-                if entry.card.card_type.is_extra_deck_monster() {
-                    return;
+    fn view(&self, deck: Signal<Deck>) -> View {
+        let cards = expect_context::<&'static CardData>();
+
+        let counts = Memo::new(move |_| {
+            let mut counts = TypeCounts::default();
+
+            deck.with(|deck| {
+                for entry in deck.entries() {
+                    let card = &cards[entry.id()];
+                    let counter = match card.card_type {
+                        CardType::Monster { .. } => {
+                            if card.card_type.is_extra_deck_monster() {
+                                continue;
+                            }
+
+                            &mut counts.monster
+                        }
+                        CardType::Spell(_) => &mut counts.spell,
+                        CardType::Trap(_) => &mut counts.trap,
+                    };
+                    *counter += entry.count(PartType::Playing);
                 }
+            });
 
-                &mut self.monster
-            }
-            CardType::Spell(_) => &mut self.spell,
-            CardType::Trap(_) => &mut self.trap,
-        };
-        *counter += entry.playing;
-    }
+            counts
+        });
 
-    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
         let bars = [
-            GraphBar::new(move || data.with(|data| data.monster), "monster effect"),
-            GraphBar::new(move || data.with(|data| data.spell), "spell"),
-            GraphBar::new(move || data.with(|data| data.trap), "trap"),
+            GraphBar::new(
+                move || counts.with(|counts| counts.monster),
+                "monster effect",
+            ),
+            GraphBar::new(move || counts.with(|counts| counts.spell), "spell"),
+            GraphBar::new(move || counts.with(|counts| counts.trap), "trap"),
         ];
 
         view! {
@@ -137,11 +161,14 @@ impl Tool for TypeGraph {
                 <Graph extent=40 bars=&bars />
             </div>
         }
+        .into_view()
     }
 }
 
-#[derive(Debug, Default)]
-pub struct ExtraTypeGraph {
+pub struct ExtraTypeGraph;
+
+#[derive(Default, PartialEq, Eq)]
+struct ExtraTypeCounts {
     fusion: usize,
     synchro: usize,
     xyz: usize,
@@ -150,38 +177,55 @@ pub struct ExtraTypeGraph {
 
 impl Tool for ExtraTypeGraph {
     fn init() -> Self {
-        Self::default()
+        Self
     }
 
-    fn fold(&mut self, entry: &CardDeckEntry) {
-        if let CardType::Monster { stats, .. } = &entry.card.card_type {
-            let counter = match stats {
-                MonsterStats::Normal {
-                    monster_type: Some(MonsterType::Fusion),
-                    ..
-                } => &mut self.fusion,
-                MonsterStats::Normal {
-                    monster_type: Some(MonsterType::Synchro),
-                    ..
-                } => &mut self.synchro,
-                MonsterStats::Normal {
-                    monster_type: Some(MonsterType::Xyz),
-                    ..
-                } => &mut self.xyz,
-                MonsterStats::Normal { .. } => return,
-                MonsterStats::Link { .. } => &mut self.link,
-            };
+    fn view(&self, deck: Signal<Deck>) -> View {
+        let cards = expect_context::<&'static CardData>();
 
-            *counter += entry.playing;
-        }
-    }
+        let counts = Memo::new(move |_| {
+            let mut counts = ExtraTypeCounts::default();
 
-    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+            deck.with(|deck| {
+                for entry in deck.entries() {
+                    let card = &cards[entry.id()];
+                    if let CardType::Monster { stats, .. } = &card.card_type {
+                        let counter = match stats {
+                            MonsterStats::Normal {
+                                monster_type: Some(MonsterType::Fusion),
+                                ..
+                            } => &mut counts.fusion,
+                            MonsterStats::Normal {
+                                monster_type: Some(MonsterType::Synchro),
+                                ..
+                            } => &mut counts.synchro,
+                            MonsterStats::Normal {
+                                monster_type: Some(MonsterType::Xyz),
+                                ..
+                            } => &mut counts.xyz,
+                            MonsterStats::Normal { .. } => continue,
+                            MonsterStats::Link { .. } => &mut counts.link,
+                        };
+
+                        *counter += entry.count(PartType::Playing);
+                    }
+                }
+            });
+
+            counts
+        });
+
         let bars = [
-            GraphBar::new(move || data.with(|data| data.fusion), "monster fusion"),
-            GraphBar::new(move || data.with(|data| data.synchro), "monster synchro"),
-            GraphBar::new(move || data.with(|data| data.xyz), "monster xyz"),
-            GraphBar::new(move || data.with(|data| data.link), "monster link"),
+            GraphBar::new(
+                move || counts.with(|counts| counts.fusion),
+                "monster fusion",
+            ),
+            GraphBar::new(
+                move || counts.with(|counts| counts.synchro),
+                "monster synchro",
+            ),
+            GraphBar::new(move || counts.with(|counts| counts.xyz), "monster xyz"),
+            GraphBar::new(move || counts.with(|counts| counts.link), "monster link"),
         ];
 
         view! {
@@ -190,11 +234,14 @@ impl Tool for ExtraTypeGraph {
                 <Graph extent=15 spacing=5 bars=&bars />
             </div>
         }
+        .into_view()
     }
 }
 
-#[derive(Debug, Default)]
-pub struct LevelGraph {
+pub struct LevelGraph;
+
+#[derive(Default, PartialEq, Eq)]
+struct LevelCounts {
     no_tribute: usize,
     one_tribute: usize,
     two_tributes: usize,
@@ -202,46 +249,60 @@ pub struct LevelGraph {
 
 impl Tool for LevelGraph {
     fn init() -> Self {
-        Self::default()
+        Self
     }
 
-    fn fold(&mut self, entry: &CardDeckEntry) {
-        if let CardType::Monster {
-            stats:
-                MonsterStats::Normal {
-                    level,
-                    monster_type,
-                    ..
-                },
-            ..
-        } = &entry.card.card_type
-        {
-            if monster_type.is_some() {
-                return;
-            }
+    fn view(&self, deck: Signal<Deck>) -> View {
+        let cards = expect_context::<&'static CardData>();
 
-            let counter = match level {
-                0..=4 => &mut self.no_tribute,
-                5..=6 => &mut self.one_tribute,
-                7.. => &mut self.two_tributes,
-            };
-            *counter += entry.playing;
-        }
-    }
+        let counts = Memo::new(move |_| {
+            let mut counts = LevelCounts::default();
 
-    fn view(data: impl SignalWith<Value = Self> + Copy + 'static) -> impl IntoView {
+            deck.with(|deck| {
+                for entry in deck.entries() {
+                    let card = &cards[entry.id()];
+                    if let CardType::Monster {
+                        stats:
+                            MonsterStats::Normal {
+                                level,
+                                monster_type,
+                                ..
+                            },
+                        ..
+                    } = &card.card_type
+                    {
+                        if monster_type.is_some() {
+                            continue;
+                        }
+
+                        let counter = match level {
+                            0..=4 => &mut counts.no_tribute,
+                            5..=6 => &mut counts.one_tribute,
+                            7.. => &mut counts.two_tributes,
+                        };
+                        *counter += entry.count(PartType::Playing);
+                    }
+                }
+            });
+
+            counts
+        });
         let bars = [
             GraphBar::with_label(
-                move || data.with(|data| data.no_tribute),
+                move || counts.with(|counts| counts.no_tribute),
                 "monster",
                 "0 - 4",
             ),
             GraphBar::with_label(
-                move || data.with(|data| data.one_tribute),
+                move || counts.with(|counts| counts.one_tribute),
                 "monster",
                 "5 - 6",
             ),
-            GraphBar::with_label(move || data.with(|data| data.two_tributes), "monster", "7+"),
+            GraphBar::with_label(
+                move || counts.with(|counts| counts.two_tributes),
+                "monster",
+                "7+",
+            ),
         ];
 
         view! {
@@ -250,5 +311,6 @@ impl Tool for LevelGraph {
                 <Graph extent=30 bars=&bars />
             </div>
         }
+        .into_view()
     }
 }

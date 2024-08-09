@@ -1,5 +1,3 @@
-#![feature(macro_metavar_expr)]
-
 pub mod deck;
 pub mod deck_order;
 pub mod deck_part;
