@@ -7,7 +7,10 @@ use std::{
 };
 
 use anyhow::{anyhow, Context, Result};
-use common::{card::CardPassword, IMAGE_DIRECTORY, IMAGE_FILE_ENDING};
+use common::{
+    card::CardPassword,
+    transfer::{self, IMAGE_DIRECTORY, IMAGE_FILE_ENDING},
+};
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
 use image::{codecs::avif::AvifEncoder, imageops::FilterType, DynamicImage};
 use log::info;
@@ -15,15 +18,13 @@ use nonzero_ext::nonzero;
 use tokio::{sync::Mutex, task::spawn_blocking};
 use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
 
-use crate::ygoprodeck::ARTWORK_URL;
+use crate::{ygoprodeck::ARTWORK_URL, OUTPUT_DIRECTORY};
 
-/// URL of the deployed image cache.
-pub const IMAGE_CACHE_URL: &str = "https://reisz.github.io/ygo-deck-constructor/images.zip";
-
-/// Deployment location of the image cache.
+/// Name of the image cache file.
 ///
-/// This is part of the deployment, so it can be used in clean builds instead of re-processing.
-pub const IMAGE_CACHE: &str = "dist/images.zip";
+/// This is part of the deployment, so it can be used in clean builds to avoid re-processing all
+/// images.
+pub const CACHE_FILENAME: &str = "images.zip";
 
 /// Name of the version file inside the image cache.
 pub const VERSION_FILE: &str = "version.txt";
@@ -37,9 +38,11 @@ const DOWNLOAD_LIMIT: Quota = Quota::per_second(nonzero!(15_u32));
 const DOWNLOAD_JITTER_MAX: Duration = Duration::from_millis(100);
 
 fn output_file(password: CardPassword) -> PathBuf {
-    PathBuf::from(format!(
-        "dist/{IMAGE_DIRECTORY}/{password}.{IMAGE_FILE_ENDING}"
-    ))
+    let mut path = PathBuf::from(OUTPUT_DIRECTORY);
+    path.push(transfer::IMAGE_DIRECTORY);
+    path.push(password.to_string());
+    path.set_extension(transfer::IMAGE_FILE_ENDING);
+    path
 }
 
 fn zip_file(password: CardPassword) -> String {
@@ -54,13 +57,14 @@ pub struct ImageLoader {
 
 impl ImageLoader {
     pub fn new() -> Result<Self> {
-        let output_path = PathBuf::from(format!("dist/{IMAGE_DIRECTORY}"));
+        let output_path = &PathBuf::from(OUTPUT_DIRECTORY).join(IMAGE_DIRECTORY);
         if !output_path.try_exists()? {
             fs::create_dir(output_path)?;
         }
 
+        let cache_path = &PathBuf::from(OUTPUT_DIRECTORY).join(CACHE_FILENAME);
         let open_for_reading = || {
-            let cache = BufReader::new(File::open(IMAGE_CACHE)?);
+            let cache = BufReader::new(File::open(cache_path)?);
             Ok::<_, anyhow::Error>(ZipArchive::new(cache)?)
         };
 
@@ -75,7 +79,7 @@ impl ImageLoader {
         let mut cache_contents = HashSet::new();
         if version != VERSION {
             info!("Image cache out of date. All images will be processed.");
-            let cache = BufWriter::new(File::create(IMAGE_CACHE)?);
+            let cache = BufWriter::new(File::create(cache_path)?);
             let mut cache = ZipWriter::new(cache);
             cache.start_file(
                 VERSION_FILE,
@@ -144,11 +148,12 @@ impl ImageLoader {
     }
 
     pub async fn finish(&self) -> Result<()> {
+        let path = &PathBuf::from(OUTPUT_DIRECTORY).join(CACHE_FILENAME);
         let cache = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(IMAGE_CACHE)
-            .context(IMAGE_CACHE)?;
+            .open(path)
+            .context(path.display().to_string())?;
         let mut cache = ZipWriter::new_append(cache)?;
 
         let options = SimpleFileOptions::default().compression_method(CompressionMethod::Stored);

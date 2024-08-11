@@ -5,8 +5,8 @@ pub mod image;
 pub mod ui;
 pub mod ygoprodeck;
 
-/// Location of the data used by the app.
-pub const OUTPUT_FILE: &str = "dist/cards.bin.xz";
+/// Output location for app data.
+pub const OUTPUT_DIRECTORY: &str = "dist";
 
-// Location of the cached card data download.
-pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
+/// Deployment URL.
+pub const URL: &str = "https://reisz.github.io/ygo-deck-constructor";

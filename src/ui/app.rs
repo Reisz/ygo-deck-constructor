@@ -1,5 +1,5 @@
 use bincode::Options;
-use common::{card_data::CardData, Cards};
+use common::{card_data::CardData, transfer};
 use gloo_net::http::Request;
 use leptos::{component, create_local_resource, provide_context, view, IntoView, Suspense};
 use lzma_rs::xz_decompress;
@@ -10,14 +10,14 @@ use crate::ui::{
 };
 
 async fn load_cards() -> &'static CardData {
-    let request = Request::get("cards.bin.xz");
+    let request = Request::get(transfer::DATA_FILENAME);
     let response = request.send().await.unwrap();
     let bytes = response.binary().await.unwrap();
 
     let mut decompressed = Vec::new();
     xz_decompress(&mut bytes.as_slice(), &mut decompressed).unwrap();
-    let cards = common::bincode_options()
-        .deserialize::<Cards>(&decompressed)
+    let cards = transfer::bincode_options()
+        .deserialize(&decompressed)
         .unwrap();
     Box::leak(Box::new(CardData::new(cards)))
 }

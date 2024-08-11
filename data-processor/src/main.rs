@@ -3,17 +3,18 @@ use std::{
     future,
     io::{BufRead, BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
+    path::PathBuf,
     time::Instant,
 };
 
 use anyhow::Result;
 use bincode::Options;
-use common::{card::Card, Cards};
+use common::{card::Card, transfer};
 use data_processor::{
-    cache::{ensure_image_cache, update_card_info_cache, CacheResult},
+    cache::{ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL},
     image::ImageLoader,
     ui::UiManager,
-    ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
+    ygoprodeck, OUTPUT_DIRECTORY,
 };
 use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
 use indicatif::{HumanBytes, HumanCount, HumanDuration};
@@ -59,26 +60,27 @@ async fn main() -> Result<()> {
             Ok(card?)
         })
         .collect();
-    let cards: Cards = ui
+    let cards = ui
         .stream(stream)
         .filter_map(|card| {
             future::ready(card.map_err(|err: anyhow::Error| warn!("{:?}", err)).ok())
         })
-        .collect()
+        .collect::<Vec<_>>()
         .await;
 
     info!("Saving images");
     loader.finish().await?;
 
     info!("Saving cards");
+    let path = &PathBuf::from(OUTPUT_DIRECTORY).join(transfer::DATA_FILENAME);
     let saving_start = Instant::now();
-    let file = BufWriter::new(File::create(OUTPUT_FILE)?);
-    common::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
+    let file = BufWriter::new(File::create(path)?);
+    transfer::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
 
     info!(
         "Saved {} cards ({} in {}).",
         HumanCount(cards.len().try_into()?),
-        HumanBytes(fs::metadata(OUTPUT_FILE)?.size()),
+        HumanBytes(fs::metadata(path)?.size()),
         HumanDuration(saving_start.elapsed())
     );
 

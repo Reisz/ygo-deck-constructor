@@ -3,10 +3,7 @@ use std::ops::Index;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    card::{Card, CardPassword},
-    Cards,
-};
+use crate::card::{Card, CardPassword};
 
 /// Internal id for cards.
 ///
@@ -31,7 +28,7 @@ pub struct CardData {
 
 impl CardData {
     #[must_use]
-    pub fn new(cards: Cards) -> Self {
+    pub fn new(cards: Vec<Card>) -> Self {
         let passwords = cards
             .iter()
             .enumerate()

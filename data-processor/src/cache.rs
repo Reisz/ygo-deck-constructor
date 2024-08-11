@@ -1,9 +1,10 @@
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
 
 use anyhow::Result;
+use common::transfer;
 use log::info;
 use serde::Deserialize;
 use tokio::{
@@ -12,11 +13,10 @@ use tokio::{
     try_join,
 };
 
-use crate::{
-    image::{IMAGE_CACHE, IMAGE_CACHE_URL},
-    ui::UiManager,
-    ygoprodeck, CARD_INFO_LOCAL, OUTPUT_FILE,
-};
+use crate::{image, ui::UiManager, ygoprodeck, OUTPUT_DIRECTORY, URL};
+
+/// Location of the cached card data download.
+pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
 
 #[derive(Debug, Clone, Copy)]
 pub enum CacheResult {
@@ -63,15 +63,17 @@ pub async fn update_card_info_cache(ui: &UiManager) -> Result<CacheResult> {
         return Ok(CacheResult::ProcessingRequired);
     }
 
+    let output_path = &PathBuf::from(OUTPUT_DIRECTORY).join(transfer::DATA_FILENAME);
+
     // If the output file is missing, request processing.
-    if !Path::new(OUTPUT_FILE).try_exists()? {
+    if !output_path.try_exists()? {
         return Ok(CacheResult::ProcessingRequired);
     }
 
     // If this executable is newer than the output file, request processing.
     // This enables code changes to this executable to apply immediately.
     let (output_date, executable_date) = try_join!(
-        get_modification_time(OUTPUT_FILE),
+        get_modification_time(output_path),
         get_modification_time(std::env::current_exe()?)
     )?;
     if executable_date > output_date {
@@ -84,13 +86,16 @@ pub async fn update_card_info_cache(ui: &UiManager) -> Result<CacheResult> {
 
 /// Make sure the image cache exists.
 pub async fn ensure_image_cache(ui: &UiManager) -> Result<CacheResult> {
-    if Path::new(IMAGE_CACHE).try_exists()? {
+    let path = &PathBuf::from(OUTPUT_DIRECTORY).join(image::CACHE_FILENAME);
+    let url = &format!("{URL}/{}", image::CACHE_FILENAME);
+
+    if path.try_exists()? {
         return Ok(CacheResult::StillValid);
     }
 
-    let response = ui.get("Image Cache", IMAGE_CACHE_URL).await?;
+    let response = ui.get("Image Cache", url).await?;
     let mut response = BufReader::new(response);
-    let mut file = BufWriter::new(File::create(IMAGE_CACHE).await?);
+    let mut file = BufWriter::new(File::create(path).await?);
     tokio::io::copy(&mut response, &mut file).await?;
 
     Ok(CacheResult::ProcessingRequired)

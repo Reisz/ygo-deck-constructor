@@ -6,7 +6,7 @@ use common::{
         MonsterStats, MonsterType, Race, SpellType, TrapType,
     },
     card_data::{CardData, Id},
-    IMAGE_DIRECTORY, IMAGE_FILE_ENDING,
+    transfer::{IMAGE_DIRECTORY, IMAGE_FILE_ENDING},
 };
 use itertools::intersperse_with;
 use leptos::{
