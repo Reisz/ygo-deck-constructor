@@ -108,7 +108,7 @@ impl Deck {
         }
     }
 
-    pub fn entries(&self) -> impl Iterator<Item = &DeckEntry> {
-        self.0.iter()
+    pub fn entries(&self) -> impl Iterator<Item = DeckEntry> + '_ {
+        self.0.iter().copied()
     }
 }

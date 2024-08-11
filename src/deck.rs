@@ -151,7 +151,7 @@ impl Deck {
         }
     }
 
-    pub fn entries(&self) -> impl Iterator<Item = &DeckEntry> {
+    pub fn entries(&self) -> impl Iterator<Item = DeckEntry> + '_ {
         self.deck.entries()
     }
 
