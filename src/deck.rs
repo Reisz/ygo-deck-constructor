@@ -1,6 +1,9 @@
 use std::fmt;
 
-use common::card_data::{CardData, Id};
+use common::{
+    card_data::{CardData, Id},
+    deck::{DeckEntry, PartType},
+};
 use leptos::expect_context;
 
 use crate::{
@@ -8,15 +11,6 @@ use crate::{
     text_encoding::TextEncoding,
     undo_redo::{UndoRedo, UndoRedoMessage},
 };
-
-/// The two types of deck part a card can be in
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PartType {
-    /// Main or Extra deck (depends on card)
-    Playing,
-    /// Side deck
-    Side,
-}
 
 impl From<DeckPart> for PartType {
     fn from(value: DeckPart) -> Self {
@@ -27,29 +21,13 @@ impl From<DeckPart> for PartType {
     }
 }
 
-impl PartType {
-    fn idx(self) -> usize {
-        match self {
-            Self::Playing => 0,
-            Self::Side => 1,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DeckEntry {
-    /// The card id of this entry
-    id: Id,
-    /// Counts for the two part types
-    counts: [u8; 2],
-}
-
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
         let cards = expect_context::<&'static CardData>();
 
-        let password = cards[self.id].passwords[0];
-        let [playing, side] = self.counts;
+        let password = cards[self.id()].passwords[0];
+        let playing = self.count(PartType::Playing);
+        let side = self.count(PartType::Side);
         write!(writer, "{password}:{playing}:{side}")
     }
 
@@ -63,26 +41,10 @@ impl TextEncoding for DeckEntry {
         let playing = playing.parse().ok()?;
         let side = side.parse().ok()?;
 
-        Some(Self {
-            id,
-            counts: [playing, side],
-        })
-    }
-}
-
-impl DeckEntry {
-    fn new(id: Id) -> Self {
-        Self { id, counts: [0; 2] }
-    }
-
-    #[must_use]
-    pub fn id(&self) -> Id {
-        self.id
-    }
-
-    #[must_use]
-    pub fn count(&self, part_type: PartType) -> usize {
-        self.counts[part_type.idx()].into()
+        let mut result = Self::new(id);
+        result.set_count(PartType::Playing, playing);
+        result.set_count(PartType::Side, side);
+        Some(result)
     }
 }
 
@@ -150,13 +112,13 @@ impl TextEncoding for DeckMessage {
 
 #[derive(Debug, Default, Clone)]
 pub struct Deck {
-    entries: Vec<DeckEntry>,
+    deck: common::deck::Deck,
     undo_redo: UndoRedo<DeckMessage>,
 }
 
 impl Deck {
     pub fn increment(&mut self, id: Id, part_type: PartType, amount: u8) {
-        let amount = self.increment_internal(id, part_type, amount);
+        let amount = self.deck.increment(id, part_type, amount);
         if amount > 0 {
             self.undo_redo
                 .push_action(DeckMessage::Inc(id, part_type, amount));
@@ -164,7 +126,7 @@ impl Deck {
     }
 
     pub fn decrement(&mut self, id: Id, part_type: PartType, amount: u8) {
-        let amount = self.decrement_internal(id, part_type, amount);
+        let amount = self.deck.decrement(id, part_type, amount);
         if amount > 0 {
             self.undo_redo
                 .push_action(DeckMessage::Dec(id, part_type, amount));
@@ -190,60 +152,16 @@ impl Deck {
     fn apply(&mut self, message: DeckMessage) {
         match message {
             DeckMessage::Inc(id, part_type, amount) => {
-                debug_assert_eq!(amount, self.increment_internal(id, part_type, amount));
+                debug_assert_eq!(amount, self.deck.increment(id, part_type, amount));
             }
             DeckMessage::Dec(id, part_type, amount) => {
-                debug_assert_eq!(amount, self.decrement_internal(id, part_type, amount));
+                debug_assert_eq!(amount, self.deck.decrement(id, part_type, amount));
             }
-        }
-    }
-
-    fn increment_internal(&mut self, id: Id, part_type: PartType, amount: u8) -> u8 {
-        let idx = self
-            .entries
-            .binary_search_by_key(&id, DeckEntry::id)
-            .unwrap_or_else(|idx| {
-                self.entries.insert(idx, DeckEntry::new(id));
-                idx
-            });
-
-        let entry = &mut self.entries[idx].counts[part_type.idx()];
-
-        if let Some(new_val) = entry.checked_add(amount) {
-            *entry = new_val;
-            return amount;
-        }
-
-        let ret = u8::MAX - *entry;
-        *entry = u8::MAX;
-        ret
-    }
-
-    fn decrement_internal(&mut self, id: Id, part_type: PartType, amount: u8) -> u8 {
-        if let Ok(idx) = self.entries.binary_search_by_key(&id, DeckEntry::id) {
-            let entry = &mut self.entries[idx].counts[part_type.idx()];
-
-            let ret = if let Some(new_val) = entry.checked_sub(amount) {
-                *entry = new_val;
-                amount
-            } else {
-                let ret = *entry;
-                *entry = 0;
-                ret
-            };
-
-            if self.entries[idx].counts.iter().all(|count| *count == 0) {
-                self.entries.remove(idx);
-            }
-
-            ret
-        } else {
-            0
         }
     }
 
     pub fn entries(&self) -> impl Iterator<Item = &DeckEntry> {
-        self.entries.iter()
+        self.deck.entries()
     }
 
     pub fn iter_part(
@@ -251,7 +169,8 @@ impl Deck {
         cards: &'static CardData,
         part: DeckPart,
     ) -> impl Iterator<Item = (Id, usize)> + '_ {
-        self.entries()
+        self.deck
+            .entries()
             .map(move |entry| (entry.id(), entry.count(part.into())))
             .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
     }
@@ -259,7 +178,7 @@ impl Deck {
 
 impl TextEncoding for Deck {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
-        let mut entries = self.entries.iter();
+        let mut entries = self.deck.entries();
         if let Some(entry) = entries.next() {
             entry.encode(writer)?;
         }
@@ -275,7 +194,7 @@ impl TextEncoding for Deck {
     fn decode(text: &str) -> Option<Self> {
         let (entries, undo_redo) = text.split_once(' ')?;
 
-        let mut entries = if entries.is_empty() {
+        let entries = if entries.is_empty() {
             Vec::new()
         } else {
             entries
@@ -283,11 +202,11 @@ impl TextEncoding for Deck {
                 .map(DeckEntry::decode)
                 .collect::<Option<_>>()?
         };
-        entries.sort_unstable_by_key(DeckEntry::id);
+        let deck = common::deck::Deck::new(entries);
 
         let undo_redo = TextEncoding::decode(undo_redo)?;
 
-        Some(Self { entries, undo_redo })
+        Some(Self { deck, undo_redo })
     }
 }
 
@@ -547,10 +466,13 @@ mod test {
     #[test]
     fn encoding_empty() {
         let deck = Deck::default();
-        assert!(Deck::decode(&deck.encode_string())
-            .unwrap()
-            .entries
-            .is_empty());
+        assert_eq!(
+            Deck::decode(&deck.encode_string())
+                .unwrap()
+                .entries()
+                .count(),
+            0
+        );
     }
 
     #[test]

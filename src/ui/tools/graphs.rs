@@ -3,6 +3,7 @@ use std::fmt::Write;
 use common::{
     card::{CardType, MonsterStats, MonsterType},
     card_data::CardData,
+    deck::PartType,
 };
 use itertools::intersperse;
 use leptos::{
@@ -10,7 +11,7 @@ use leptos::{
     View,
 };
 
-use crate::deck::{Deck, PartType};
+use crate::deck::Deck;
 
 use super::Tool;
 
