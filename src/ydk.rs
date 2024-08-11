@@ -1,6 +1,10 @@
 use std::io::{self, Write};
 
-use common::{card::CardPassword, card_data::CardData, deck_part::DeckPart};
+use common::{
+    card::CardPassword,
+    card_data::CardData,
+    deck_part::{DeckPart, EntriesForPart},
+};
 use thiserror::Error;
 
 use crate::deck::Deck;
@@ -69,7 +73,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
     for part in DeckPart::iter() {
         writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
 
-        for (id, count) in deck.iter_part(cards, part) {
+        for (id, count) in deck.entries().for_part(part, cards) {
             for _ in 0..count {
                 writeln!(writer, "{}", cards[id].passwords[0])?;
             }

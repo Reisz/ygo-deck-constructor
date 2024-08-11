@@ -3,7 +3,6 @@ use std::fmt;
 use common::{
     card_data::{CardData, Id},
     deck::{DeckEntry, PartType},
-    deck_part::DeckPart,
 };
 use leptos::expect_context;
 
@@ -154,17 +153,6 @@ impl Deck {
     pub fn entries(&self) -> impl Iterator<Item = DeckEntry> + '_ {
         self.deck.entries()
     }
-
-    pub fn iter_part(
-        &self,
-        cards: &'static CardData,
-        part: DeckPart,
-    ) -> impl Iterator<Item = (Id, usize)> + '_ {
-        self.deck
-            .entries()
-            .map(move |entry| (entry.id(), entry.count(part.into())))
-            .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
-    }
 }
 
 impl TextEncoding for Deck {
@@ -205,8 +193,9 @@ impl TextEncoding for Deck {
 mod test {
     use std::mem::{align_of, size_of};
 
-    use common::card::{
-        Card, CardDescription, CardLimit, CardPassword, CardType, MonsterType, TrapType,
+    use common::{
+        card::{Card, CardDescription, CardLimit, CardPassword, CardType, MonsterType, TrapType},
+        deck_part::{DeckPart, EntriesForPart},
     };
     use leptos::provide_context;
 
@@ -441,15 +430,22 @@ mod test {
         deck.increment(EXTRA_ID, PartType::Side, 5);
 
         assert_eq!(
-            deck.iter_part(data, DeckPart::Main).collect::<Vec<_>>(),
+            deck.entries()
+                .for_part(DeckPart::Main, data)
+                .collect::<Vec<_>>(),
             &[(MAIN_ID, 2)]
         );
         assert_eq!(
-            deck.iter_part(data, DeckPart::Extra).collect::<Vec<_>>(),
+            deck.entries()
+                .for_part(DeckPart::Extra, data)
+                .collect::<Vec<_>>(),
             &[(EXTRA_ID, 4)]
         );
 
-        let mut side_cards = deck.iter_part(data, DeckPart::Side).collect::<Vec<_>>();
+        let mut side_cards = deck
+            .entries()
+            .for_part(DeckPart::Side, data)
+            .collect::<Vec<_>>();
         side_cards.sort_by_key(|(id, _)| *id);
         assert_eq!(side_cards, &[(MAIN_ID, 3), (EXTRA_ID, 5)]);
     }

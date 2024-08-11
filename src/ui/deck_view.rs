@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use common::{
     card_data::{CardData, Id},
-    deck_part::DeckPart,
+    deck_part::{DeckPart, EntriesForPart},
 };
 use leptos::{
     component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalGet, SignalUpdate,
@@ -46,7 +46,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
     };
 
     let entries = create_memo(move |_| {
-        let mut result = deck.with(|deck| deck.iter_part(cards, part).collect::<Vec<_>>());
+        let mut result = deck.with(|deck| deck.entries().for_part(part, cards).collect::<Vec<_>>());
         result.sort_unstable_by(move |(lhs, _), (rhs, _)| deck_order(&cards[*lhs], &cards[*rhs]));
         result
     });
@@ -57,7 +57,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             <span class="current">
                 {move || {
                     deck.with(|deck| {
-                        deck.iter_part(cards, part).map(|(_, count)| count).sum::<usize>()
+                        deck.entries().for_part(part, cards).map(|(_, count)| count).sum::<usize>()
                     })
                 }}
 

@@ -1,6 +1,10 @@
 use std::fmt::{self, Display};
 
-use crate::card::Card;
+use crate::{
+    card::Card,
+    card_data::{CardData, Id},
+    deck::DeckEntry,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum DeckPart {
@@ -51,5 +55,16 @@ impl Display for DeckPart {
         };
 
         write!(f, "{name}")
+    }
+}
+
+pub trait EntriesForPart {
+    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, usize)>;
+}
+
+impl<I: Iterator<Item = DeckEntry>> EntriesForPart for I {
+    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, usize)> {
+        self.map(move |entry| (entry.id(), entry.count(part.into())))
+            .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
     }
 }
