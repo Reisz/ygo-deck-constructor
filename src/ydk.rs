@@ -1,9 +1,9 @@
 use std::io::{self, Write};
 
-use common::{card::CardPassword, card_data::CardData};
+use common::{card::CardPassword, card_data::CardData, deck_part::DeckPart};
 use thiserror::Error;
 
-use crate::{deck::Deck, deck_part::DeckPart};
+use crate::deck::Deck;
 
 /// Section name in the YDK format.
 #[must_use]
@@ -80,7 +80,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 }
 
 mod parse {
-    use common::card::CardPassword;
+    use common::{card::CardPassword, deck_part::DeckPart};
     use nom::{
         branch::alt,
         bytes::complete::tag,
@@ -90,8 +90,6 @@ mod parse {
         sequence::{delimited, pair, preceded},
         Finish, Parser,
     };
-
-    use crate::deck_part::DeckPart;
 
     use super::ydk_name;
 

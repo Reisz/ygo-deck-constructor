@@ -1,9 +1,9 @@
-use common::{card::CardLimit, card_data::CardData, deck::PartType};
+use common::{card::CardLimit, card_data::CardData, deck::PartType, deck_part::DeckPart};
 use leptos::{
     expect_context, html, view, For, IntoView, Memo, Show, Signal, SignalGet, SignalWith, View,
 };
 
-use crate::{deck::Deck, deck_part::DeckPart};
+use crate::deck::Deck;
 
 use super::Tool;
 

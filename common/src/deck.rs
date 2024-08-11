@@ -1,4 +1,4 @@
-use crate::card_data::Id;
+use crate::{card_data::Id, deck_part::DeckPart};
 
 /// The two types of deck part a card can be in
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -7,6 +7,15 @@ pub enum PartType {
     Playing,
     /// Side deck
     Side,
+}
+
+impl From<DeckPart> for PartType {
+    fn from(value: DeckPart) -> Self {
+        match value {
+            DeckPart::Main | DeckPart::Extra => Self::Playing,
+            DeckPart::Side => Self::Side,
+        }
+    }
 }
 
 impl PartType {

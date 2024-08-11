@@ -3,23 +3,14 @@ use std::fmt;
 use common::{
     card_data::{CardData, Id},
     deck::{DeckEntry, PartType},
+    deck_part::DeckPart,
 };
 use leptos::expect_context;
 
 use crate::{
-    deck_part::DeckPart,
     text_encoding::TextEncoding,
     undo_redo::{UndoRedo, UndoRedoMessage},
 };
-
-impl From<DeckPart> for PartType {
-    fn from(value: DeckPart) -> Self {
-        match value {
-            DeckPart::Main | DeckPart::Extra => Self::Playing,
-            DeckPart::Side => Self::Side,
-        }
-    }
-}
 
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {

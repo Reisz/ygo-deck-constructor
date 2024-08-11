@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use common::card::Card;
+use crate::card::Card;
 
 #[derive(Debug, Clone, Copy)]
 pub enum DeckPart {

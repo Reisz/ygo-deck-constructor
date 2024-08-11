@@ -1,6 +1,9 @@
 use std::rc::Rc;
 
-use common::card_data::{CardData, Id};
+use common::{
+    card_data::{CardData, Id},
+    deck_part::DeckPart,
+};
 use leptos::{
     component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalGet, SignalUpdate,
     SignalWith,
@@ -9,7 +12,6 @@ use leptos::{
 use crate::{
     deck::Deck,
     deck_order::deck_order,
-    deck_part::DeckPart,
     ui::{
         card_view::CardView,
         drag_drop::{get_drag_info, get_dropped_card, set_drop_effect, DragInfo, DropEffect},
