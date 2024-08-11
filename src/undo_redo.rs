@@ -141,8 +141,8 @@ mod test {
         let mut ur = UR::default();
         ur.push_action(TestMessage::Apply(0));
 
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
-        assert!(ur.redo() == Some(TestMessage::Apply(0)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(0)));
     }
 
     #[test]
@@ -151,10 +151,10 @@ mod test {
         ur.push_action(TestMessage::Apply(0));
         ur.push_action(TestMessage::Apply(1));
 
-        assert!(ur.undo() == Some(TestMessage::Revert(1)));
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
-        assert!(ur.redo() == Some(TestMessage::Apply(0)));
-        assert!(ur.redo() == Some(TestMessage::Apply(1)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(1)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(0)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(1)));
     }
 
     #[test]
@@ -162,9 +162,9 @@ mod test {
         let mut ur = UR::default();
         ur.push_action(TestMessage::Apply(0));
 
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
         assert!(ur.undo().is_none());
-        assert!(ur.redo() == Some(TestMessage::Apply(0)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(0)));
     }
 
     #[test]
@@ -173,7 +173,7 @@ mod test {
         ur.push_action(TestMessage::Apply(0));
 
         assert!(ur.redo().is_none());
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
     }
 
     #[test]
@@ -182,12 +182,12 @@ mod test {
         ur.push_action(TestMessage::Apply(0));
         ur.push_action(TestMessage::Apply(1));
 
-        assert!(ur.undo() == Some(TestMessage::Revert(1)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(1)));
         ur.push_action(TestMessage::Apply(2));
 
         assert!(ur.redo().is_none());
-        assert!(ur.undo() == Some(TestMessage::Revert(2)));
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(2)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
         assert!(ur.undo().is_none());
     }
 
@@ -198,15 +198,15 @@ mod test {
         ur.push_action(TestMessage::Apply(1));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert!(ur.undo() == Some(TestMessage::Revert(1)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(1)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert!(ur.undo() == Some(TestMessage::Revert(0)));
+        assert_eq!(ur.undo(), Some(TestMessage::Revert(0)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert!(ur.redo() == Some(TestMessage::Apply(0)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(0)));
 
         let mut ur = UR::decode(&ur.encode_string()).unwrap();
-        assert!(ur.redo() == Some(TestMessage::Apply(1)));
+        assert_eq!(ur.redo(), Some(TestMessage::Apply(1)));
     }
 }
