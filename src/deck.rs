@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops::Deref};
 
 use common::{
     card_data::{CardData, Id},
@@ -107,6 +107,14 @@ pub struct Deck {
 }
 
 impl Deck {
+    #[must_use]
+    pub fn new(deck: common::deck::Deck) -> Self {
+        Self {
+            deck,
+            undo_redo: UndoRedo::default(),
+        }
+    }
+
     pub fn increment(&mut self, id: Id, part_type: PartType, amount: u8) {
         let amount = self.deck.increment(id, part_type, amount);
         if amount > 0 {
@@ -149,9 +157,13 @@ impl Deck {
             }
         }
     }
+}
 
-    pub fn entries(&self) -> impl Iterator<Item = DeckEntry> + '_ {
-        self.deck.entries()
+impl Deref for Deck {
+    type Target = common::deck::Deck;
+
+    fn deref(&self) -> &Self::Target {
+        &self.deck
     }
 }
 

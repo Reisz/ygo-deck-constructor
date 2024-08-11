@@ -1,6 +1,6 @@
 use std::error::Error;
 
-use common::card_data::CardData;
+use common::{card_data::CardData, ydk};
 use gloo_file::{futures::read_as_text, Blob, File};
 use leptos::{
     component, create_effect, expect_context, html, logging, provide_context, spawn_local, view,
@@ -9,12 +9,13 @@ use leptos::{
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{KeyboardEvent, Url};
 
-use crate::{
-    deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding, ydk,
-};
+use crate::{deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding};
 
 async fn do_import(file: File, cards: &'static CardData) -> Result<Deck, Box<dyn Error>> {
-    Ok(ydk::load(&read_as_text(&file.into()).await?, cards)?)
+    Ok(Deck::new(ydk::load(
+        &read_as_text(&file.into()).await?,
+        cards,
+    )?))
 }
 
 fn do_export(deck: &Deck, cards: &'static CardData) -> Result<(), Box<dyn Error>> {

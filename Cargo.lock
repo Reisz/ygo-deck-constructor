@@ -305,8 +305,11 @@ name = "common"
 version = "0.0.0"
 dependencies = [
  "bincode",
+ "itertools 0.13.0",
+ "nom",
  "rustc-hash 2.0.0",
  "serde",
+ "thiserror",
 ]
 
 [[package]]
@@ -3407,8 +3410,6 @@ dependencies = [
  "leptos",
  "leptos-use",
  "lzma-rs",
- "nom",
- "thiserror",
  "wasm-bindgen",
  "web-sys",
 ]

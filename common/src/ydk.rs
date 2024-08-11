@@ -1,13 +1,13 @@
 use std::io::{self, Write};
 
-use common::{
-    card::CardPassword,
-    card_data::CardData,
-    deck_part::{DeckPart, EntriesForPart},
-};
 use thiserror::Error;
 
-use crate::deck::Deck;
+use crate::{
+    card::CardPassword,
+    card_data::CardData,
+    deck::Deck,
+    deck_part::{DeckPart, EntriesForPart},
+};
 
 /// Section name in the YDK format.
 #[must_use]
@@ -60,7 +60,6 @@ pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
         }
     }
 
-    deck.reset_history();
     Ok(deck)
 }
 
@@ -84,7 +83,6 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 }
 
 mod parse {
-    use common::{card::CardPassword, deck_part::DeckPart};
     use nom::{
         branch::alt,
         bytes::complete::tag,
@@ -94,6 +92,8 @@ mod parse {
         sequence::{delimited, pair, preceded},
         Finish, Parser,
     };
+
+    use crate::{card::CardPassword, deck_part::DeckPart};
 
     use super::ydk_name;
 
@@ -156,14 +156,15 @@ mod parse {
 
 #[cfg(test)]
 mod test {
-    use common::{
+    use itertools::iproduct;
+
+    use crate::{
         card::{
-            Attribute::Dark, Card, CardDescription, CardLimit, CardType, LinkMarkers,
-            MonsterEffect, Race::Machine, SpellType,
+            Attribute, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
+            MonsterStats, Race, SpellType,
         },
         card_data::Id,
     };
-    use itertools::iproduct;
 
     use super::*;
 
@@ -249,9 +250,9 @@ mod test {
                 description: CardDescription::Regular(Vec::new()),
                 search_text: String::new(),
                 card_type: CardType::Monster {
-                    race: Machine,
-                    attribute: Dark,
-                    stats: common::card::MonsterStats::Link {
+                    race: Race::Machine,
+                    attribute: Attribute::Dark,
+                    stats: MonsterStats::Link {
                         atk: 0,
                         link_value: 0,
                         link_markers: LinkMarkers::default(),
@@ -279,13 +280,7 @@ mod test {
     #[test]
     fn ydk_deserialization() {
         for data in YdkData::get() {
-            let mut deck = load(&data.ydk, card_data()).unwrap();
-            itertools::assert_equal(data.deck.entries(), deck.entries());
-
-            // Ensure history is empty
-            deck.undo();
-            itertools::assert_equal(data.deck.entries(), deck.entries());
-            deck.redo();
+            let deck = load(&data.ydk, card_data()).unwrap();
             itertools::assert_equal(data.deck.entries(), deck.entries());
         }
     }
