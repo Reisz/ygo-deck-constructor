@@ -32,6 +32,11 @@ web-sys = { version = "0.3.69", features = [
     "DomRect",
 ] }
 
+[dev-dependencies]
+console = "0.15.8"
+gix = "0.64.0"
+serde.workspace = true
+
 [profile.release]
 opt-level = "z"
 lto = true
@@ -46,3 +51,7 @@ empty_docs = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
+
+[[bench]]
+name = "sizes"
+harness = false
