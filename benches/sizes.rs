@@ -1,5 +1,6 @@
 use std::{
     any::type_name,
+    cmp::Ordering,
     collections::HashMap,
     fs::File,
     io::{BufReader, BufWriter},
@@ -63,13 +64,13 @@ impl SizeDataManager {
 
     fn print_diff(kind: &'static str, map: &Option<SizeMap>, name: &String, size: usize) {
         if let Some(&old) = map.as_ref().and_then(|map| map.get(name)) {
-            let diff = size as isize - old as isize;
+            let diff = isize::try_from(size).unwrap() - isize::try_from(old).unwrap();
 
             let mut style = Style::new().bold();
-            if diff > 0 {
-                style = style.red();
-            } else if diff < 0 {
-                style = style.green();
+            match diff.cmp(&0) {
+                Ordering::Less => style = style.green(),
+                Ordering::Greater => style = style.red(),
+                Ordering::Equal => {}
             }
 
             let diff = style.apply_to(diff);
@@ -131,6 +132,7 @@ impl SizeChecker {
     }
 
     fn relative(&self, size: usize) -> impl std::fmt::Display {
+        #[allow(clippy::cast_precision_loss)]
         let relative = size as f64 / self.size as f64;
         let mut relative_style = Style::new().bold();
 
@@ -159,6 +161,30 @@ impl Drop for SizeChecker {
 
         println!();
     }
+}
+
+// Placeholders for enum variants
+
+struct MonsterData {
+    _race: Race,
+    _attribute: Attribute,
+    _stats: MonsterStats,
+    _effect: MonsterEffect,
+    _is_tuner: bool,
+}
+
+struct NormalStats {
+    _atk: u16,
+    _def: u16,
+    _level: u8,
+    _monster_type: Option<MonsterType>,
+    _pendulum_scale: Option<u8>,
+}
+
+struct LinkStats {
+    _atk: u16,
+    _link_value: u8,
+    _link_markers: LinkMarkers,
 }
 
 fn main() {
@@ -190,14 +216,6 @@ fn main() {
         .variant::<String>("Paragraph")
         .variant::<Vec<String>>("List");
 
-    struct MonsterData {
-        _race: Race,
-        _attribute: Attribute,
-        _stats: MonsterStats,
-        _effect: MonsterEffect,
-        _is_tuner: bool,
-    }
-
     manager
         .check::<CardType>("CardType")
         .variant::<MonsterData>("Monster")
@@ -211,20 +229,6 @@ fn main() {
         .field::<MonsterStats>("stats")
         .field::<MonsterEffect>("effect")
         .field::<bool>("is tuner");
-
-    struct NormalStats {
-        _atk: u16,
-        _def: u16,
-        _level: u8,
-        _monster_type: Option<MonsterType>,
-        _pendulum_scale: Option<u8>,
-    }
-
-    struct LinkStats {
-        _atk: u16,
-        _link_value: u8,
-        _link_markers: LinkMarkers,
-    }
 
     manager
         .check::<MonsterStats>("MonsterStats")
