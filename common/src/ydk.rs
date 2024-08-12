@@ -239,7 +239,6 @@ mod test {
                 search_text: String::new(),
                 card_type: CardType::Spell(SpellType::Normal),
                 limit: CardLimit::Unlimited,
-                archetype: None,
             });
         }
 
@@ -261,7 +260,6 @@ mod test {
                     is_tuner: false,
                 },
                 limit: CardLimit::Unlimited,
-                archetype: None,
             });
         }
 

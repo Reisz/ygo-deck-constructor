@@ -8,7 +8,6 @@ pub struct Card {
     pub search_text: String,
     pub card_type: CardType,
     pub limit: CardLimit,
-    pub archetype: Option<String>,
 }
 
 /// Type used for [Passwords](https://yugipedia.com/wiki/Password).

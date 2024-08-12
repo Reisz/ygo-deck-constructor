@@ -407,7 +407,6 @@ mod test {
                     search_text: String::new(),
                     card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
                     limit: common::card::CardLimit::Unlimited,
-                    archetype: None,
                 },
                 Card {
                     name: String::new(),
@@ -428,7 +427,6 @@ mod test {
                         is_tuner: false,
                     },
                     limit: common::card::CardLimit::Unlimited,
-                    archetype: None,
                 },
             ];
 
@@ -489,7 +487,6 @@ mod test {
                 search_text: String::new(),
                 card_type: CardType::Trap(TrapType::Normal),
                 limit: CardLimit::Unlimited,
-                archetype: None,
             },
             Card {
                 name: String::new(),
@@ -498,7 +495,6 @@ mod test {
                 search_text: String::new(),
                 card_type: CardType::Trap(TrapType::Normal),
                 limit: CardLimit::Unlimited,
-                archetype: None,
             },
         ]);
         let card_data: &'static CardData = Box::leak(Box::new(card_data));

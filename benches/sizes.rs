@@ -203,8 +203,7 @@ fn main() {
         .field::<CardDescription>("description")
         .field::<String>("search_text")
         .field::<CardType>("card_type")
-        .field::<CardLimit>("limit")
-        .field::<Option<String>>("archetype");
+        .field::<CardLimit>("limit");
 
     manager
         .check::<CardDescription>("CardDescription")

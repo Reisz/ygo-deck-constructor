@@ -33,7 +33,6 @@ impl TryFrom<ygoprodeck::Card> for Card {
             search_text: value.desc.to_lowercase(),
             card_type,
             limit,
-            archetype: value.archetype,
         })
     }
 }
