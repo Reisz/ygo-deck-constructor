@@ -177,7 +177,7 @@ pub enum MonsterEffect {
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub struct LinkMarkers([bool; 8]);
+pub struct LinkMarkers(u8);
 
 #[repr(usize)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -210,12 +210,14 @@ impl LinkMarker {
 
 impl LinkMarkers {
     pub fn add(&mut self, marker: LinkMarker) {
-        self.0[marker as usize] = true;
+        let idx = marker as u8;
+        self.0 |= 1 << idx;
     }
 
     #[must_use]
     pub fn has(&self, marker: LinkMarker) -> bool {
-        self.0[marker as usize]
+        let idx = marker as u8;
+        (self.0 & (1 << idx)) >> idx == 1
     }
 }
 
