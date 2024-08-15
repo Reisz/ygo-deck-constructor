@@ -68,3 +68,56 @@ impl<I: Iterator<Item = DeckEntry>> EntriesForPart for I {
             .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        card::{
+            test_util::{make_card, make_extra_deck_card},
+            CardPassword,
+        },
+        deck::{Deck, PartType},
+    };
+
+    use super::*;
+
+    #[test]
+    fn entries_for_part() {
+        const MAIN_PASSWD: CardPassword = 1234;
+        const EXTRA_PASSWD: CardPassword = 2345;
+
+        const MAIN_ID: Id = Id::new(0);
+        const EXTRA_ID: Id = Id::new(1);
+
+        let data = {
+            let cards = vec![make_card(MAIN_PASSWD), make_extra_deck_card(EXTRA_PASSWD)];
+            Box::leak(Box::new(CardData::new(cards)))
+        };
+
+        let mut deck = Deck::default();
+        deck.increment(MAIN_ID, PartType::Playing, 2);
+        deck.increment(MAIN_ID, PartType::Side, 3);
+        deck.increment(EXTRA_ID, PartType::Playing, 4);
+        deck.increment(EXTRA_ID, PartType::Side, 5);
+
+        assert_eq!(
+            deck.entries()
+                .for_part(DeckPart::Main, data)
+                .collect::<Vec<_>>(),
+            &[(MAIN_ID, 2)]
+        );
+        assert_eq!(
+            deck.entries()
+                .for_part(DeckPart::Extra, data)
+                .collect::<Vec<_>>(),
+            &[(EXTRA_ID, 4)]
+        );
+
+        let mut side_cards = deck
+            .entries()
+            .for_part(DeckPart::Side, data)
+            .collect::<Vec<_>>();
+        side_cards.sort_by_key(|(id, _)| *id);
+        assert_eq!(side_cards, &[(MAIN_ID, 3), (EXTRA_ID, 5)]);
+    }
+}
