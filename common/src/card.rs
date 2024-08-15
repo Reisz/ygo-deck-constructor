@@ -256,3 +256,41 @@ impl CardLimit {
         }
     }
 }
+
+pub mod test_util {
+    use super::*;
+
+    pub fn make_card(password: CardPassword) -> Card {
+        Card {
+            name: String::new(),
+            passwords: vec![password],
+            description: CardDescription::Regular(vec![]),
+            search_text: String::new(),
+            card_type: CardType::Spell(SpellType::Normal),
+            limit: CardLimit::Unlimited,
+        }
+    }
+
+    pub fn make_extra_deck_card(password: CardPassword) -> Card {
+        Card {
+            name: String::new(),
+            passwords: vec![password],
+            description: CardDescription::Regular(vec![]),
+            search_text: String::new(),
+            card_type: CardType::Monster {
+                race: Race::Aqua,
+                attribute: Attribute::Dark,
+                stats: MonsterStats::Normal {
+                    atk: 0,
+                    def: 0,
+                    level: 0,
+                    monster_type: Some(MonsterType::Fusion),
+                    pendulum_scale: None,
+                },
+                effect: MonsterEffect::Normal,
+                is_tuner: false,
+            },
+            limit: CardLimit::Unlimited,
+        }
+    }
+}

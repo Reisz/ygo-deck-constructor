@@ -159,10 +159,7 @@ mod test {
     use itertools::iproduct;
 
     use crate::{
-        card::{
-            Attribute, Card, CardDescription, CardLimit, CardType, LinkMarkers, MonsterEffect,
-            MonsterStats, Race, SpellType,
-        },
+        card::test_util::{make_card, make_extra_deck_card},
         card_data::Id,
     };
 
@@ -232,35 +229,11 @@ mod test {
         let mut data = Vec::new();
 
         for password in PASSWDS[0].iter().chain(PASSWDS[2].iter()) {
-            data.push(Card {
-                name: String::new(),
-                passwords: vec![password.1],
-                description: CardDescription::Regular(Vec::new()),
-                search_text: String::new(),
-                card_type: CardType::Spell(SpellType::Normal),
-                limit: CardLimit::Unlimited,
-            });
+            data.push(make_card(password.1));
         }
 
         for password in &PASSWDS[1] {
-            data.push(Card {
-                name: String::new(),
-                passwords: vec![password.1],
-                description: CardDescription::Regular(Vec::new()),
-                search_text: String::new(),
-                card_type: CardType::Monster {
-                    race: Race::Machine,
-                    attribute: Attribute::Dark,
-                    stats: MonsterStats::Link {
-                        atk: 0,
-                        link_value: 0,
-                        link_markers: LinkMarkers::default(),
-                    },
-                    effect: MonsterEffect::Normal,
-                    is_tuner: false,
-                },
-                limit: CardLimit::Unlimited,
-            });
+            data.push(make_extra_deck_card(password.1));
         }
 
         Box::leak(Box::new(CardData::new(data)))

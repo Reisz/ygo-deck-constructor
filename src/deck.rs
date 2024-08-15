@@ -206,7 +206,10 @@ mod test {
     use std::mem::{align_of, size_of};
 
     use common::{
-        card::{Card, CardDescription, CardLimit, CardPassword, CardType, MonsterType, TrapType},
+        card::{
+            test_util::{make_card, make_extra_deck_card},
+            CardPassword,
+        },
         deck_part::{DeckPart, EntriesForPart},
     };
     use leptos::provide_context;
@@ -399,36 +402,7 @@ mod test {
         const EXTRA_ID: Id = Id::new(1);
 
         let data = {
-            let cards = vec![
-                Card {
-                    name: String::new(),
-                    passwords: vec![MAIN_PASSWD],
-                    description: CardDescription::Regular(Vec::new()),
-                    search_text: String::new(),
-                    card_type: common::card::CardType::Spell(common::card::SpellType::Normal),
-                    limit: common::card::CardLimit::Unlimited,
-                },
-                Card {
-                    name: String::new(),
-                    passwords: vec![EXTRA_PASSWD],
-                    description: CardDescription::Regular(Vec::new()),
-                    search_text: String::new(),
-                    card_type: common::card::CardType::Monster {
-                        race: common::card::Race::Aqua,
-                        attribute: common::card::Attribute::Dark,
-                        stats: common::card::MonsterStats::Normal {
-                            atk: 0,
-                            def: 0,
-                            level: 0,
-                            monster_type: Some(MonsterType::Fusion),
-                            pendulum_scale: None,
-                        },
-                        effect: common::card::MonsterEffect::Normal,
-                        is_tuner: false,
-                    },
-                    limit: common::card::CardLimit::Unlimited,
-                },
-            ];
+            let cards = vec![make_card(MAIN_PASSWD), make_extra_deck_card(EXTRA_PASSWD)];
 
             Box::leak(Box::new(CardData::new(cards)))
         };
@@ -479,24 +453,7 @@ mod test {
         const AMOUNT: u8 = 43;
         const OTHER_AMOUNT: u8 = 65;
 
-        let card_data = CardData::new(vec![
-            Card {
-                name: String::new(),
-                passwords: vec![1234],
-                description: CardDescription::Regular(Vec::new()),
-                search_text: String::new(),
-                card_type: CardType::Trap(TrapType::Normal),
-                limit: CardLimit::Unlimited,
-            },
-            Card {
-                name: String::new(),
-                passwords: vec![9876],
-                description: CardDescription::Regular(Vec::new()),
-                search_text: String::new(),
-                card_type: CardType::Trap(TrapType::Normal),
-                limit: CardLimit::Unlimited,
-            },
-        ]);
+        let card_data = CardData::new(vec![make_card(1234), make_card(9876)]);
         let card_data: &'static CardData = Box::leak(Box::new(card_data));
         provide_context(card_data);
 
