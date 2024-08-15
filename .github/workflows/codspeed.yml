@@ -1,0 +1,28 @@
+name: CodSpeed
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+    benchmarks:
+        name: Run Benchmarks
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout sources
+              uses: actions/checkout@v4
+
+            - name: Install rust toolchain
+              uses: actions-rust-lang/setup-rust-toolchain@v1
+
+            - name: Install tools
+              uses: taiki-e/install-action@v2
+              with:
+                  tool: cargo-codspeed
+
+            - name: Build benchmarks
+              run: cargo codspeed build timings
+
+            - name: Run benchmarks
+              uses: CodSpeedHQ/action@v3
+              with:
+                  run: cargo codspeed run
+                  token: ${{ secrets.CODSPEED_TOKEN }}
