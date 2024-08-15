@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::Result;
 use bincode::Options;
-use common::{card::Card, transfer};
+use common::{card::Card, card_data::CardData, transfer};
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL},
     image::ImageLoader,
@@ -65,8 +65,9 @@ async fn main() -> Result<()> {
         .filter_map(|card| {
             future::ready(card.map_err(|err: anyhow::Error| warn!("{:?}", err)).ok())
         })
-        .collect::<Vec<_>>()
+        .collect()
         .await;
+    let data = CardData::new(cards);
 
     info!("Saving images");
     loader.finish().await?;
@@ -75,11 +76,11 @@ async fn main() -> Result<()> {
     let path = &PathBuf::from(OUTPUT_DIRECTORY).join(transfer::DATA_FILENAME);
     let saving_start = Instant::now();
     let file = BufWriter::new(File::create(path)?);
-    transfer::bincode_options().serialize_into(XzEncoder::new(file, 9), &cards)?;
+    transfer::bincode_options().serialize_into(XzEncoder::new(file, 9), &data)?;
 
     info!(
         "Saved {} cards ({} in {}).",
-        HumanCount(cards.len().try_into()?),
+        HumanCount(data.entries().into_iter().count().try_into()?),
         HumanBytes(fs::metadata(path)?.size()),
         HumanDuration(saving_start.elapsed())
     );

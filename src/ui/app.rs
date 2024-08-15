@@ -19,7 +19,7 @@ async fn load_cards() -> &'static CardData {
     let cards = transfer::bincode_options()
         .deserialize(&decompressed)
         .unwrap();
-    Box::leak(Box::new(CardData::new(cards)))
+    Box::leak(Box::new(cards))
 }
 
 #[component]
