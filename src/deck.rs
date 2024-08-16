@@ -13,7 +13,7 @@ use crate::{
 
 impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let password = cards[self.id()].password;
         let playing = self.count(PartType::Playing);
@@ -22,7 +22,7 @@ impl TextEncoding for DeckEntry {
     }
 
     fn decode(text: &str) -> Option<Self> {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let (password, text) = text.split_once(':')?;
         let (playing, side) = text.split_once(':')?;
@@ -55,7 +55,7 @@ impl UndoRedoMessage for DeckMessage {
 
 impl TextEncoding for DeckMessage {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let sign = match self {
             Self::Inc(..) => '+',
@@ -72,7 +72,7 @@ impl TextEncoding for DeckMessage {
     }
 
     fn decode(text: &str) -> Option<Self> {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         text.starts_with(['+', '-']).then_some(())?;
         let (sign, text) = text.split_at(1);
@@ -229,7 +229,6 @@ mod test {
 
         let card_data =
             CardData::from(CardDataStorage::new(vec![make_card(1234), make_card(9876)]));
-        let card_data: &'static CardData = Box::leak(Box::new(card_data));
         provide_context(card_data);
 
         for (current, other) in [

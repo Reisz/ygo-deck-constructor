@@ -46,7 +46,7 @@ pub enum Error {
 /// # Errors
 ///
 /// If the input can not be parsed, an error is returned.
-pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
+pub fn load(data: &str, cards: &CardData) -> Result<Deck, Error> {
     let result = parse::parse(data)?;
 
     let mut deck = Deck::default();
@@ -68,7 +68,7 @@ pub fn load(data: &str, cards: &'static CardData) -> Result<Deck, Error> {
 /// # Errors
 ///
 /// See [`writeln!`].
-pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> io::Result<()> {
+pub fn save(deck: &Deck, cards: &CardData, writer: &mut impl Write) -> io::Result<()> {
     for part in DeckPart::iter() {
         writeln!(writer, "{}{}", ydk_prefix(part), ydk_name(part))?;
 
@@ -225,7 +225,7 @@ mod test {
         }
     }
 
-    fn card_data() -> &'static CardData {
+    fn card_data() -> CardData {
         let mut data = Vec::new();
 
         for password in PASSWDS[0].iter().chain(PASSWDS[2].iter()) {
@@ -236,14 +236,14 @@ mod test {
             data.push(make_extra_deck_card(password.1));
         }
 
-        Box::leak(Box::new(CardData::from(CardDataStorage::new(data))))
+        CardDataStorage::new(data).into()
     }
 
     #[test]
     fn ydk_serialization() {
         for data in YdkData::get() {
             let mut output = Vec::new();
-            save(&data.deck, card_data(), &mut output).unwrap();
+            save(&data.deck, &card_data(), &mut output).unwrap();
             assert_eq!(data.ydk, String::from_utf8(output).unwrap());
         }
     }
@@ -251,7 +251,7 @@ mod test {
     #[test]
     fn ydk_deserialization() {
         for data in YdkData::get() {
-            let deck = load(&data.ydk, card_data()).unwrap();
+            let deck = load(&data.ydk, &card_data()).unwrap();
             itertools::assert_equal(data.deck.entries(), deck.entries());
         }
     }

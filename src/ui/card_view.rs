@@ -290,7 +290,7 @@ pub fn CardView(
     #[prop(default = 1)] count: usize,
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
-    let card = &expect_context::<&'static CardData>()[id];
+    let card = expect_context::<CardData>().get(id);
     let password = card.password;
 
     let on_click: Box<dyn FnMut(MouseEvent)> = if let Some(on_delete) = on_delete {

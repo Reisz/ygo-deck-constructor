@@ -11,14 +11,14 @@ use web_sys::{KeyboardEvent, Url};
 
 use crate::{deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding};
 
-async fn do_import(file: File, cards: &'static CardData) -> Result<Deck, Box<dyn Error>> {
+async fn do_import(file: File, cards: &CardData) -> Result<Deck, Box<dyn Error>> {
     Ok(Deck::new(ydk::load(
         &read_as_text(&file.into()).await?,
         cards,
     )?))
 }
 
-fn do_export(deck: &Deck, cards: &'static CardData) -> Result<(), Box<dyn Error>> {
+fn do_export(deck: &Deck, cards: &CardData) -> Result<(), Box<dyn Error>> {
     let mut buffer = Vec::new();
     ydk::save(deck, cards, &mut buffer)?;
 
@@ -78,7 +78,7 @@ pub fn install_as_context() {
 #[component]
 #[must_use]
 pub fn Menu() -> impl IntoView {
-    let cards = expect_context::<&'static CardData>();
+    let cards = expect_context::<CardData>();
     let deck = expect_context::<RwSignal<Deck>>();
 
     let input_ref = NodeRef::<html::Input>::new();
@@ -88,7 +88,7 @@ pub fn Menu() -> impl IntoView {
         if let Some(file) = files.get(0) {
             spawn_local(async move {
                 let name = file.name();
-                match do_import(file.into(), cards).await {
+                match do_import(file.into(), &cards).await {
                     Ok(new_deck) => deck.set(new_deck),
                     Err(err) => print_error!("Error while importing \"{name}\":\n\n{err}"),
                 }
@@ -96,7 +96,7 @@ pub fn Menu() -> impl IntoView {
         }
     };
 
-    let export = move |_| match deck.with(|deck| do_export(deck, cards)) {
+    let export = move |_| match deck.with(|deck| do_export(deck, &cards)) {
         Ok(()) => {}
         Err(err) => print_error!("Error while exporting:\n\n{err}"),
     };

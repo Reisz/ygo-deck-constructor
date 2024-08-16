@@ -24,7 +24,7 @@ impl Tool for ErrorList {
     }
 
     fn view(&self, deck: Signal<Deck>) -> View {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let errors = Memo::new(move |_| {
             let mut totals = [0; 3];

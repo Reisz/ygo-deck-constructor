@@ -21,7 +21,7 @@ use crate::{
 #[component]
 fn PartView(part: DeckPart) -> impl IntoView {
     let deck = expect_context::<RwSignal<Deck>>();
-    let cards = expect_context::<&'static CardData>();
+    let cards = expect_context::<CardData>();
 
     let delete = move |delete_id| {
         deck.update(|deck| {
@@ -46,7 +46,8 @@ fn PartView(part: DeckPart) -> impl IntoView {
     };
 
     let entries = create_memo(move |_| {
-        let mut result = deck.with(|deck| deck.entries().for_part(part, cards).collect::<Vec<_>>());
+        let mut result =
+            deck.with(|deck| deck.entries().for_part(part, &cards).collect::<Vec<_>>());
         result.sort_unstable_by(move |(lhs, _), (rhs, _)| deck_order(&cards[*lhs], &cards[*rhs]));
         result
     });
@@ -57,7 +58,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             <span class="current">
                 {move || {
                     deck.with(|deck| {
-                        deck.entries().for_part(part, cards).map(|(_, count)| count).sum::<usize>()
+                        deck.entries().for_part(part, &cards).map(|(_, count)| count).sum::<usize>()
                     })
                 }}
 
@@ -70,7 +71,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             on:dragenter=drag_over
             on:dragover=drag_over
             on:drop=move |ev| {
-                let id = get_dropped_card(&ev, cards);
+                let id = get_dropped_card(&ev, &cards);
                 deck.update(|deck| {
                     deck.increment(id, part.into(), 1);
                 });

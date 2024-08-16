@@ -70,6 +70,10 @@ pub struct CardData {
 }
 
 impl CardData {
+    pub fn get(self, id: Id) -> &'static Card {
+        &self.cards[usize::from(id.0)]
+    }
+
     pub fn entries(self) -> impl Iterator<Item = (Id, &'static Card)> {
         self.cards
             .iter()
@@ -108,6 +112,6 @@ impl Index<Id> for CardData {
     type Output = Card;
 
     fn index(&self, index: Id) -> &Self::Output {
-        &self.cards[usize::from(index.0)]
+        self.get(index)
     }
 }

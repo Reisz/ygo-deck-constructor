@@ -27,7 +27,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
         set_drawers.update(|drawers| drawers.retain(|drawer| drawer.id != data.id));
     };
 
-    let cards = expect_context::<&'static CardData>();
+    let cards = expect_context::<CardData>();
     let push = move |id| {
         data.content.update(|content| {
             if let Err(pos) =
@@ -61,7 +61,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
                 on:dragenter=drag_over
                 on:dragover=drag_over
                 on:drop=move |ev| {
-                    let id = get_dropped_card(&ev, cards);
+                    let id = get_dropped_card(&ev, &cards);
                     if !data.content.with(|content| content.contains(&id)) {
                         push(id);
                     }

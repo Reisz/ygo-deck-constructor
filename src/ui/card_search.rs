@@ -77,7 +77,7 @@ pub fn FilterInput(
 pub fn CardSearch() -> impl IntoView {
     const PAGE_SIZE: usize = 50;
 
-    let cards = expect_context::<&'static CardData>();
+    let cards = expect_context::<CardData>();
     let filter = CardFilter::default();
     let filtered_cards = create_memo(move |_| {
         cards

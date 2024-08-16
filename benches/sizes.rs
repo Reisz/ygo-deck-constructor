@@ -12,6 +12,7 @@ use common::{
         Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType,
         LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
     },
+    card_data::{CardData, Id},
     deck::DeckEntry,
 };
 use console::{style, Style};
@@ -192,16 +193,21 @@ fn main() {
 
     manager
         .check::<DeckEntry>("DeckEntry")
-        .field::<u16>("id")
+        .field::<Id>("id")
         .field::<u8>("playing count")
         .field::<u8>("side count");
 
     manager
+        .check::<CardData>("CardData")
+        .field::<&[Card]>("cards")
+        .field::<&HashMap<CardPassword, Id>>("passwords");
+
+    manager
         .check::<Card>("Card")
-        .field::<&'static str>("name")
+        .field::<&str>("name")
         .field::<CardPassword>("password")
         .field::<CardDescription>("description")
-        .field::<&'static str>("search_text")
+        .field::<&str>("search_text")
         .field::<CardType>("card_type")
         .field::<CardLimit>("limit");
 

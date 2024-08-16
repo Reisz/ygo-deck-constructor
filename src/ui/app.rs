@@ -12,7 +12,7 @@ use crate::ui::{
     drawers::Drawers, tools::Tools,
 };
 
-async fn load_cards() -> &'static CardData {
+async fn load_cards() -> CardData {
     let request = Request::get(transfer::DATA_FILENAME);
     let response = request.send().await.unwrap();
     let bytes = response.binary().await.unwrap();
@@ -22,7 +22,7 @@ async fn load_cards() -> &'static CardData {
     let cards: CardDataStorage = transfer::bincode_options()
         .deserialize(&decompressed)
         .unwrap();
-    Box::leak(Box::new(CardData::from(cards)))
+    cards.into()
 }
 
 #[component]
@@ -33,7 +33,7 @@ pub fn App() -> impl IntoView {
     let fallback = move || "Loading...";
     let app = move || {
         cards.map(|cards| {
-            provide_context::<&'static CardData>(*cards);
+            provide_context::<CardData>(*cards);
             crate::ui::deck::install_as_context();
 
             view! {

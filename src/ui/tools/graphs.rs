@@ -121,7 +121,7 @@ impl Tool for TypeGraph {
     }
 
     fn view(&self, deck: Signal<Deck>) -> View {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
             let mut counts = TypeCounts::default();
@@ -182,7 +182,7 @@ impl Tool for ExtraTypeGraph {
     }
 
     fn view(&self, deck: Signal<Deck>) -> View {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
             let mut counts = ExtraTypeCounts::default();
@@ -254,7 +254,7 @@ impl Tool for LevelGraph {
     }
 
     fn view(&self, deck: Signal<Deck>) -> View {
-        let cards = expect_context::<&'static CardData>();
+        let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
             let mut counts = LevelCounts::default();
