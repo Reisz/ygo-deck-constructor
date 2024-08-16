@@ -59,30 +59,6 @@ pub enum CardType {
 
 impl CardType {
     #[must_use]
-    pub fn is_monster(&self) -> bool {
-        matches!(self, Self::Monster { .. })
-    }
-
-    #[must_use]
-    pub fn is_spell(&self) -> bool {
-        matches!(self, Self::Spell { .. })
-    }
-
-    #[must_use]
-    pub fn is_trap(&self) -> bool {
-        matches!(self, Self::Trap { .. })
-    }
-
-    #[must_use]
-    pub fn is_pendulum_monster(&self) -> bool {
-        if let Self::Monster { stats, .. } = self {
-            stats.is_pendulum()
-        } else {
-            false
-        }
-    }
-
-    #[must_use]
     pub fn is_extra_deck_monster(&self) -> bool {
         matches!(
             self,
@@ -154,19 +130,6 @@ pub enum MonsterStats {
         link_value: u8,
         link_markers: LinkMarkers,
     },
-}
-
-impl MonsterStats {
-    #[must_use]
-    pub fn is_pendulum(&self) -> bool {
-        matches!(
-            self,
-            Self::Normal {
-                pendulum_scale: Some(_),
-                ..
-            }
-        )
-    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
