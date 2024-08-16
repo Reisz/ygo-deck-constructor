@@ -246,7 +246,13 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        let atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
+        // TODO add support for ? for atk and def
+
+        let mut atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
+        if atk == -1 {
+            atk = 0;
+        }
+        let atk = atk.try_into().unwrap();
 
         if matches!(value.card_type, ygoprodeck::CardType::LinkMonster) {
             Ok(MonsterStats::Link {
@@ -255,9 +261,15 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
                 link_markers: LinkMarkers::try_from(value)?,
             })
         } else {
+            let mut def = value.def.try_unwrap_field(value.id, "def stat")?;
+            if def == -1 {
+                def = 0;
+            }
+            let def = def.try_into().unwrap();
+
             Ok(MonsterStats::Normal {
                 atk,
-                def: value.def.try_unwrap_field(value.id, "def stat")?,
+                def,
                 level: value.level.try_unwrap_field(value.id, "level")?,
                 monster_type: Option::<MonsterType>::from(value),
                 pendulum_scale: is_pendulum(value)
@@ -400,7 +412,7 @@ impl From<&ygoprodeck::Card> for CardLimit {
             None => CardLimit::Unlimited,
             Some(BanStatus::Limited) => CardLimit::Limited,
             Some(BanStatus::SemiLimited) => CardLimit::SemiLimited,
-            Some(BanStatus::Banned) => CardLimit::Banned,
+            Some(BanStatus::Forbidden) => CardLimit::Forbidden,
         }
     }
 }

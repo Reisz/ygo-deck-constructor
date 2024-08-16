@@ -9,7 +9,7 @@ use super::Tool;
 
 fn limit_name(limit: CardLimit) -> &'static str {
     match limit {
-        CardLimit::Banned => "banned",
+        CardLimit::Forbidden => "forbidden",
         CardLimit::Limited => "limited",
         CardLimit::SemiLimited => "semi-limited",
         CardLimit::Unlimited => "unlimited",

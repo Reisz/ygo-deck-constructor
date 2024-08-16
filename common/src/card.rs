@@ -218,7 +218,7 @@ pub enum CardLimit {
     Unlimited,
     SemiLimited,
     Limited,
-    Banned,
+    Forbidden,
 }
 
 impl CardLimit {
@@ -228,7 +228,7 @@ impl CardLimit {
             Self::Unlimited => 3,
             Self::SemiLimited => 2,
             Self::Limited => 1,
-            Self::Banned => 0,
+            Self::Forbidden => 0,
         }
     }
 }

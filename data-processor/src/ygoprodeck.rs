@@ -22,8 +22,8 @@ pub struct Card {
     pub desc: String,
 
     // Monster Cards
-    pub atk: Option<u16>,
-    pub def: Option<u16>,
+    pub atk: Option<i16>,
+    pub def: Option<i16>,
     pub level: Option<u8>,
     pub race: Option<Race>,
     pub attribute: Option<Attribute>,
@@ -203,7 +203,7 @@ pub enum BanStatus {
     Limited,
     #[serde(rename = "Semi-Limited")]
     SemiLimited,
-    Banned,
+    Forbidden,
 }
 
 #[derive(Debug, Deserialize)]
