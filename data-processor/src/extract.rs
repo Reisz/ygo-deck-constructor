@@ -1,6 +1,7 @@
 use common::card::{
-    Attribute, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType, FullCard,
-    LinkMarker, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+    Attribute, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType, CombatStat,
+    FullCard, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType,
+    TrapType,
 };
 
 use crate::{
@@ -246,13 +247,8 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        // TODO add support for ? for atk and def
-
-        let mut atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
-        if atk == -1 {
-            atk = 0;
-        }
-        let atk = atk.try_into().unwrap();
+        let atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
+        let atk = to_combat_stat(atk, value.id, "atk stat")?;
 
         if matches!(value.card_type, ygoprodeck::CardType::LinkMonster) {
             Ok(MonsterStats::Link {
@@ -261,11 +257,8 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
                 link_markers: LinkMarkers::try_from(value)?,
             })
         } else {
-            let mut def = value.def.try_unwrap_field(value.id, "def stat")?;
-            if def == -1 {
-                def = 0;
-            }
-            let def = def.try_into().unwrap();
+            let def = value.def.try_unwrap_field(value.id, "def stat")?;
+            let def = to_combat_stat(def, value.id, "def stat")?;
 
             Ok(MonsterStats::Normal {
                 atk,
@@ -278,6 +271,23 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
             })
         }
     }
+}
+
+fn to_combat_stat(
+    value: i16,
+    password: CardPassword,
+    field: &'static str,
+) -> Result<CombatStat, ProcessingError> {
+    if value == -1 {
+        return Ok(CombatStat::questionmark());
+    }
+
+    if !(0..=5000).contains(&value) {
+        return Err(ProcessingError::new_unexpected(password, field, &value));
+    }
+
+    let value = u16::try_from(value).unwrap();
+    Ok(CombatStat::new(value))
 }
 
 impl TryFrom<&ygoprodeck::Card> for LinkMarkers {

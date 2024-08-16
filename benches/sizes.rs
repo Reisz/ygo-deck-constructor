@@ -10,7 +10,8 @@ use std::{
 use common::{
     card::{
         Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType,
-        LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
+        CombatStat, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType,
+        TrapType,
     },
     card_data::{CardData, Id},
     deck::DeckEntry,
@@ -276,15 +277,15 @@ fn main() {
 
     manager
         .check::<NormalStats>("NormalStats")
-        .field_bits::<u16>("atk", 7) // 6 bits for 100s value, 1 50 bit, use special value for ?
-        .field_bits::<u16>("def", 7) // See above
+        .field_bits::<CombatStat>("atk", 9) // 9 bits for 10s value, use special value for ?
+        .field_bits::<CombatStat>("def", 9) // See above
         .field_bits::<u8>("level", 4) // 0..12
         .field_bits::<Option<MonsterType>>("type", 3) // 4 elements + None
         .field_bits::<Option<u8>>("scale", 4); // 0..12 + None
 
     manager
         .check::<LinkStats>("LinkStats")
-        .field_bits::<u16>("atk", 7) // See above
+        .field_bits::<CombatStat>("atk", 9) // See above
         .field_bits::<u8>("link", 3) // 1..8
         .field_bits::<LinkMarkers>("markers", 8);
 }

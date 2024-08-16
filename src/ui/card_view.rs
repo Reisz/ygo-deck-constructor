@@ -178,13 +178,13 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
 
         let atk = view! {
             <span class="label">"ATK"</span>
-            <span class="data">{*atk}</span>
+            <span class="data">{atk.to_string()}</span>
         };
 
         let def = def.map(|def| {
             view! {
                 <span class="label">"DEF"</span>
-                <span class="data">{*def}</span>
+                <span class="data">{def.to_string()}</span>
             }
         });
 

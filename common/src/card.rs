@@ -1,3 +1,5 @@
+use std::fmt::{Display, Write};
+
 use serde::{Deserialize, Serialize};
 
 /// Full card data after extraction.
@@ -119,17 +121,49 @@ pub enum Attribute {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub enum MonsterStats {
     Normal {
-        atk: u16,
-        def: u16,
+        atk: CombatStat,
+        def: CombatStat,
         level: u8,
         monster_type: Option<MonsterType>,
         pendulum_scale: Option<u8>,
     },
     Link {
-        atk: u16,
+        atk: CombatStat,
         link_value: u8,
         link_markers: LinkMarkers,
     },
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+pub struct CombatStat(u16);
+
+impl CombatStat {
+    /// Reserve highest value for questionmark.
+    pub const MAX: u16 = u16::MAX - 1;
+
+    pub fn new(value: u16) -> Self {
+        assert!(
+            value <= Self::MAX,
+            "can not fit values greater than {}",
+            Self::MAX
+        );
+
+        Self(value)
+    }
+
+    pub fn questionmark() -> Self {
+        Self(u16::MAX)
+    }
+}
+
+impl Display for CombatStat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 == u16::MAX {
+            return f.write_char('?');
+        }
+
+        write!(f, "{}", self.0)
+    }
 }
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
@@ -259,8 +293,8 @@ pub mod test_util {
                 race: Race::Aqua,
                 attribute: Attribute::Dark,
                 stats: MonsterStats::Normal {
-                    atk: 0,
-                    def: 0,
+                    atk: CombatStat::new(0),
+                    def: CombatStat::new(0),
                     level: 0,
                     monster_type: Some(MonsterType::Fusion),
                     pendulum_scale: None,
