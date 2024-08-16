@@ -12,8 +12,8 @@ use itertools::intersperse_with;
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
-    provide_context, svg, use_context, view, CollectView, IntoView, NodeRef, Show, SignalGet,
-    SignalSet, View, WriteSignal,
+    provide_context, svg, view, CollectView, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
+    WriteSignal,
 };
 use web_sys::MouseEvent;
 
@@ -290,7 +290,7 @@ pub fn CardView(
     #[prop(default = 1)] count: usize,
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
-    let card = &use_context::<&'static CardData>().unwrap()[id];
+    let card = &expect_context::<&'static CardData>()[id];
     let password = card.password;
 
     let on_click: Box<dyn FnMut(MouseEvent)> = if let Some(on_delete) = on_delete {
