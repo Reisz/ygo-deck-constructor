@@ -21,11 +21,7 @@ fn set_data(transfer: &DataTransfer, format: &str, data: &str) {
 pub fn start_drag(ev: &DragEvent, card: &Card) {
     let transfer = data_transfer(ev);
 
-    set_data(
-        &transfer,
-        CARD_PASSWORD_TYPE,
-        &card.passwords[0].to_string(),
-    );
+    set_data(&transfer, CARD_PASSWORD_TYPE, &card.password.to_string());
     if card.card_type.is_extra_deck_monster() {
         // Marker for dragover, so content does not matter
         set_data(&transfer, CARD_IS_EXTRA, "");
@@ -34,9 +30,9 @@ pub fn start_drag(ev: &DragEvent, card: &Card) {
     set_data(
         &transfer,
         "text/uri-list",
-        &format!("https://yugipedia.com/wiki/{}", &card.name),
+        &format!("https://yugipedia.com/wiki/{}", card.name),
     );
-    set_data(&transfer, "text/plain", &card.name);
+    set_data(&transfer, "text/plain", card.name);
 }
 
 pub enum DragInfo {

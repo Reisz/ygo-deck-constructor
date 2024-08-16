@@ -271,7 +271,7 @@ pub fn CardTooltip() -> impl IntoView {
                     style=("--left", format!("{left}px"))
                     style:top=format!("{top}px")
                 >
-                    <h1>{&data.card.name}</h1>
+                    <h1>{data.card.name}</h1>
                     <ul class="tags">{get_tags(&data.card.card_type)}</ul>
                     <Stats card_type=&data.card.card_type />
                     <Description description=&data.card.description />
@@ -291,7 +291,7 @@ pub fn CardView(
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
     let card = &use_context::<&'static CardData>().unwrap()[id];
-    let password = card.passwords[0];
+    let password = card.password;
 
     let on_click: Box<dyn FnMut(MouseEvent)> = if let Some(on_delete) = on_delete {
         Box::new(move |ev: MouseEvent| {

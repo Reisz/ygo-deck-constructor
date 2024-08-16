@@ -1,11 +1,24 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub struct Card {
+/// Full card data after extraction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FullCard {
     pub name: String,
-    pub passwords: Vec<CardPassword>,
+    pub main_password: CardPassword,
+    pub all_passwords: Vec<CardPassword>,
     pub description: CardDescription,
     pub search_text: String,
+    pub card_type: CardType,
+    pub limit: CardLimit,
+}
+
+/// Card data used in the app.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Card {
+    pub name: &'static str,
+    pub password: CardPassword,
+    pub description: CardDescription,
+    pub search_text: &'static str,
     pub card_type: CardType,
     pub limit: CardLimit,
 }
@@ -260,10 +273,11 @@ impl CardLimit {
 pub mod test_util {
     use super::*;
 
-    pub fn make_card(password: CardPassword) -> Card {
-        Card {
+    pub fn make_card(password: CardPassword) -> FullCard {
+        FullCard {
             name: String::new(),
-            passwords: vec![password],
+            main_password: password,
+            all_passwords: vec![password],
             description: CardDescription::Regular(vec![]),
             search_text: String::new(),
             card_type: CardType::Spell(SpellType::Normal),
@@ -271,10 +285,11 @@ pub mod test_util {
         }
     }
 
-    pub fn make_extra_deck_card(password: CardPassword) -> Card {
-        Card {
+    pub fn make_extra_deck_card(password: CardPassword) -> FullCard {
+        FullCard {
             name: String::new(),
-            passwords: vec![password],
+            main_password: password,
+            all_passwords: vec![password],
             description: CardDescription::Regular(vec![]),
             search_text: String::new(),
             card_type: CardType::Monster {

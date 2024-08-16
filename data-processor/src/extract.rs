@@ -1,5 +1,5 @@
 use common::card::{
-    Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType,
+    Attribute, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType, FullCard,
     LinkMarker, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType, TrapType,
 };
 
@@ -8,29 +8,29 @@ use crate::{
     ygoprodeck::{self, BanStatus},
 };
 
-impl TryFrom<ygoprodeck::Card> for Card {
+impl TryFrom<ygoprodeck::Card> for FullCard {
     type Error = ProcessingError;
 
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
+        let description = CardDescription::try_from(&value)?;
         let card_type = CardType::try_from(&value)?;
         let limit = CardLimit::from(&value);
-        let description = CardDescription::try_from(&value)?;
 
-        let mut passwords = value
+        let name = value.name;
+        let main_password = value.id;
+        let all_passwords = value
             .card_images
             .into_iter()
             .map(|info| info.id)
             .collect::<Vec<CardPassword>>();
-        if !passwords.contains(&value.id) {
-            passwords.push(value.id);
-        }
-        passwords.sort_unstable();
+        let search_text = value.desc.to_lowercase();
 
         Ok(Self {
-            name: value.name,
-            passwords,
+            name,
+            main_password,
+            all_passwords,
             description,
-            search_text: value.desc.to_lowercase(),
+            search_text,
             card_type,
             limit,
         })

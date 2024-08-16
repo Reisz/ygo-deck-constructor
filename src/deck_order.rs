@@ -102,5 +102,5 @@ pub fn deck_order(lhs: &Card, rhs: &Card) -> Ordering {
                 .cmp(&type_indices(&rhs.card_type))
                 .reverse(),
         )
-        .then(lhs.name.cmp(&rhs.name))
+        .then(lhs.name.cmp(rhs.name))
 }

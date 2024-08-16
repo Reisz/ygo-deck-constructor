@@ -198,10 +198,10 @@ fn main() {
 
     manager
         .check::<Card>("Card")
-        .field::<String>("name")
-        .field::<Vec<CardPassword>>("passwords")
+        .field::<&'static str>("name")
+        .field::<CardPassword>("password")
         .field::<CardDescription>("description")
-        .field::<String>("search_text")
+        .field::<&'static str>("search_text")
         .field::<CardType>("card_type")
         .field::<CardLimit>("limit");
 

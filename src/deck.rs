@@ -15,7 +15,7 @@ impl TextEncoding for DeckEntry {
     fn encode(&self, writer: &mut impl fmt::Write) -> fmt::Result {
         let cards = expect_context::<&'static CardData>();
 
-        let password = cards[self.id()].passwords[0];
+        let password = cards[self.id()].password;
         let playing = self.count(PartType::Playing);
         let side = self.count(PartType::Side);
         write!(writer, "{password}:{playing}:{side}")
@@ -68,7 +68,7 @@ impl TextEncoding for DeckMessage {
             PartType::Side => 's',
         };
 
-        write!(writer, "{sign}{part}{}:{count}", cards[*id].passwords[0])
+        write!(writer, "{sign}{part}{}:{count}", cards[*id].password)
     }
 
     fn decode(text: &str) -> Option<Self> {
@@ -203,7 +203,7 @@ impl TextEncoding for Deck {
 
 #[cfg(test)]
 mod test {
-    use common::{assert_part_eq, card::test_util::make_card};
+    use common::{assert_part_eq, card::test_util::make_card, card_data::CardDataStorage};
     use leptos::provide_context;
 
     use super::*;
@@ -227,7 +227,8 @@ mod test {
         const AMOUNT: u8 = 43;
         const OTHER_AMOUNT: u8 = 65;
 
-        let card_data = CardData::new(vec![make_card(1234), make_card(9876)]);
+        let card_data =
+            CardData::from(CardDataStorage::new(vec![make_card(1234), make_card(9876)]));
         let card_data: &'static CardData = Box::leak(Box::new(card_data));
         provide_context(card_data);
 

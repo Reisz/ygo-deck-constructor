@@ -74,7 +74,7 @@ pub fn save(deck: &Deck, cards: &'static CardData, writer: &mut impl Write) -> i
 
         for (id, count) in deck.entries().for_part(part, cards) {
             for _ in 0..count {
-                writeln!(writer, "{}", cards[id].passwords[0])?;
+                writeln!(writer, "{}", cards[id].password)?;
             }
         }
     }
@@ -160,7 +160,7 @@ mod test {
 
     use crate::{
         card::test_util::{make_card, make_extra_deck_card},
-        card_data::Id,
+        card_data::{CardDataStorage, Id},
     };
 
     use super::*;
@@ -236,7 +236,7 @@ mod test {
             data.push(make_extra_deck_card(password.1));
         }
 
-        Box::leak(Box::new(CardData::new(data)))
+        Box::leak(Box::new(CardData::from(CardDataStorage::new(data))))
     }
 
     #[test]

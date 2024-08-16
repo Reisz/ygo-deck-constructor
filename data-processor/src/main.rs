@@ -9,7 +9,7 @@ use std::{
 
 use anyhow::Result;
 use bincode::Options;
-use common::{card::Card, card_data::CardData, transfer};
+use common::{card::FullCard, card_data::CardDataStorage, transfer};
 use data_processor::{
     cache::{ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL},
     image::ImageLoader,
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
         .map(|card| async {
             let password = card.id;
             let (card, ()) = try_join!(
-                spawn_blocking(|| Card::try_from(card)).map_err(anyhow::Error::from),
+                spawn_blocking(|| FullCard::try_from(card)).map_err(anyhow::Error::from),
                 loader.ensure_image(password)
             )?;
 
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
         .collect::<Vec<_>>()
         .await;
     let count = cards.len();
-    let data = CardData::new(cards);
+    let data = CardDataStorage::new(cards);
 
     info!("Saving images");
     loader.finish().await?;
@@ -86,7 +86,7 @@ async fn main() -> Result<()> {
     info!(
         "Saved {} cards ({} in {}).",
         HumanCount(count.try_into().unwrap()),
-        HumanBytes(size),
+        HumanBytes(fs::metadata(path)?.size()),
         HumanDuration(elapsed)
     );
 
