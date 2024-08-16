@@ -53,7 +53,7 @@ impl SizeDataManager {
         let name = name.into();
         let size = size_of::<T>();
 
-        print!("{name:20} {:>3}", style(size).bold());
+        print!("{name:20} {:>3}{}", style(size).bold(), style("B").dim());
         Self::print_diff("prev", &self.prev, &name, size);
         Self::print_diff("base", &self.base, &name, size);
         println!();
@@ -67,15 +67,15 @@ impl SizeDataManager {
         if let Some(&old) = map.as_ref().and_then(|map| map.get(name)) {
             let diff = isize::try_from(size).unwrap() - isize::try_from(old).unwrap();
 
-            let mut style = Style::new().bold();
+            let mut diff_style = Style::new().bold();
             match diff.cmp(&0) {
-                Ordering::Less => style = style.green(),
-                Ordering::Greater => style = style.red(),
-                Ordering::Equal => {}
+                Ordering::Less => diff_style = diff_style.green(),
+                Ordering::Greater => diff_style = diff_style.red(),
+                Ordering::Equal => return,
             }
 
-            let diff = style.apply_to(diff);
-            print!("; {kind}: {diff:+}");
+            let diff = diff_style.apply_to(diff);
+            print!(" [{kind} {diff:+}{}]", style("B").dim());
         }
     }
 }
@@ -96,6 +96,7 @@ impl Drop for SizeDataManager {
 struct SizeChecker {
     size: usize,
     content: Option<usize>,
+    content_bits: Option<usize>,
 }
 
 impl SizeChecker {
@@ -103,14 +104,16 @@ impl SizeChecker {
         Self {
             size,
             content: None,
+            content_bits: None,
         }
     }
 
     fn field<T>(mut self, name: &'static str) -> Self {
         let size = size_of::<T>();
         println!(
-            "  {name:18} {:3} {}",
+            "  {name:18} {:3}{} {}",
             style(size).bold(),
+            style("B").dim(),
             style(type_name::<T>()).dim()
         );
 
@@ -118,23 +121,40 @@ impl SizeChecker {
         self
     }
 
+    fn field_bits<T>(mut self, name: &'static str, bits: usize) -> Self {
+        let size = size_of::<T>();
+        println!(
+            "  {name:18} {:3}{} {:3}{} {}",
+            style(size).bold(),
+            style("B").dim(),
+            style(bits).bold(),
+            style("b").dim(),
+            style(type_name::<T>()).dim()
+        );
+
+        *self.content.get_or_insert(0) += size;
+        *self.content_bits.get_or_insert(0) += bits;
+        self
+    }
+
     fn variant<T>(self, name: &'static str) -> Self {
         let size = size_of::<T>();
 
         println!(
-            "  {:18} {:3} ({:5.3}) {}",
+            "  {:18} {:3}{}      [{:5.3}] {}",
             name,
             style(size).bold(),
-            self.relative(size),
+            style("B").dim(),
+            Self::relative(self.size, size),
             style(type_name::<T>()).dim()
         );
 
         self
     }
 
-    fn relative(&self, size: usize) -> impl std::fmt::Display {
+    fn relative(base: usize, current: usize) -> impl std::fmt::Display {
         #[allow(clippy::cast_precision_loss)]
-        let relative = size as f64 / self.size as f64;
+        let relative = current as f64 / base as f64;
         let mut relative_style = Style::new().bold();
 
         if relative >= 0.99 {
@@ -151,12 +171,26 @@ impl SizeChecker {
 
 impl Drop for SizeChecker {
     fn drop(&mut self) {
+        if let Some(bits) = self.content_bits {
+            let bit_bytes = (bits + 7) / 8;
+            println!(
+                "  {:18} {:3}{} {:3}{} [{:5.3}]",
+                "Total Bits",
+                style(bit_bytes).bold(),
+                style("B").dim(),
+                style(bits).bold(),
+                style("b").dim(),
+                Self::relative(self.size, bit_bytes)
+            );
+        }
+
         if let Some(size) = self.content {
             println!(
-                "  {:18} {:3} ({:5.3})",
-                "Total",
+                "  {:18} {:3}{}      [{:5.3}]",
+                "Total Bytes",
                 style(size).bold(),
-                self.relative(size)
+                style("B").dim(),
+                Self::relative(self.size, size)
             );
         }
 
@@ -229,11 +263,11 @@ fn main() {
 
     manager
         .check::<MonsterData>("MonsterData")
-        .field::<Race>("race")
-        .field::<Attribute>("attribute")
-        .field::<MonsterStats>("stats")
-        .field::<MonsterEffect>("effect")
-        .field::<bool>("is tuner");
+        .field_bits::<Race>("race", 5) // 26 elements
+        .field_bits::<Attribute>("attribute", 3) // 7 elements
+        .field_bits::<MonsterStats>("stats", 26) // 25 for Normal stats + 1 bit tag
+        .field_bits::<MonsterEffect>("effect", 3) // 7 elements
+        .field_bits::<bool>("is tuner", 1);
 
     manager
         .check::<MonsterStats>("MonsterStats")
@@ -242,15 +276,15 @@ fn main() {
 
     manager
         .check::<NormalStats>("NormalStats")
-        .field::<u16>("atk")
-        .field::<u16>("def")
-        .field::<u8>("level")
-        .field::<Option<MonsterType>>("type")
-        .field::<Option<u8>>("scale");
+        .field_bits::<u16>("atk", 7) // 6 bits for 100s value, 1 50 bit, use special value for ?
+        .field_bits::<u16>("def", 7) // See above
+        .field_bits::<u8>("level", 4) // 0..12
+        .field_bits::<Option<MonsterType>>("type", 3) // 4 elements + None
+        .field_bits::<Option<u8>>("scale", 4); // 0..12 + None
 
     manager
         .check::<LinkStats>("LinkStats")
-        .field::<u16>("atk")
-        .field::<u8>("link")
-        .field::<LinkMarkers>("markers");
+        .field_bits::<u16>("atk", 7) // See above
+        .field_bits::<u8>("link", 3) // 1..8
+        .field_bits::<LinkMarkers>("markers", 8);
 }
