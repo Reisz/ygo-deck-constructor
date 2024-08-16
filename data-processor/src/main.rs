@@ -65,8 +65,9 @@ async fn main() -> Result<()> {
         .filter_map(|card| {
             future::ready(card.map_err(|err: anyhow::Error| warn!("{:?}", err)).ok())
         })
-        .collect()
+        .collect::<Vec<_>>()
         .await;
+    let count = cards.len();
     let data = CardData::new(cards);
 
     info!("Saving images");
@@ -74,16 +75,30 @@ async fn main() -> Result<()> {
 
     info!("Saving cards");
     let path = &PathBuf::from(OUTPUT_DIRECTORY).join(transfer::DATA_FILENAME);
+    let prev_size = fs::metadata(path).ok().map(|meta| meta.size());
+
     let saving_start = Instant::now();
     let file = BufWriter::new(File::create(path)?);
     transfer::bincode_options().serialize_into(XzEncoder::new(file, 9), &data)?;
+    let elapsed = saving_start.elapsed();
+    let size = fs::metadata(path)?.size();
 
     info!(
         "Saved {} cards ({} in {}).",
-        HumanCount(data.entries().into_iter().count().try_into()?),
-        HumanBytes(fs::metadata(path)?.size()),
-        HumanDuration(saving_start.elapsed())
+        HumanCount(count.try_into().unwrap()),
+        HumanBytes(size),
+        HumanDuration(elapsed)
     );
+
+    if let Some(prev_size) = prev_size {
+        let change = (size as f64 - prev_size as f64) * 100.0 / prev_size as f64;
+        if change.abs() > 0.5 {
+            info!(
+                "Previous size: {} (Change: {change:+.2}%)",
+                HumanBytes(prev_size)
+            );
+        }
+    }
 
     Ok(())
 }
