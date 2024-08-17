@@ -5,6 +5,7 @@ use std::{
     fs::File,
     io::{BufReader, BufWriter},
     path::Path,
+    process::{Command, ExitStatus},
 };
 
 use common::{
@@ -86,8 +87,13 @@ impl Drop for SizeDataManager {
         let file = BufWriter::new(File::create(PREV_DATA_PATH).unwrap());
         bincode::serialize_into(file, &self.current).unwrap();
 
-        let repo = gix::open(".").unwrap();
-        if !repo.is_dirty().unwrap() {
+        let clean = Command::new("git")
+            .args(["diff-index", "--quiet", "HEAD", "--"])
+            .status()
+            .as_ref()
+            .map(ExitStatus::success)
+            .unwrap_or(false);
+        if clean {
             let file = BufWriter::new(File::create(BASE_DATA_PATH).unwrap());
             bincode::serialize_into(file, &self.current).unwrap();
         }

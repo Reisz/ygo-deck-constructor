@@ -37,7 +37,6 @@ codspeed-criterion-compat = "2.6.0"
 console = "0.15.8"
 criterion = "0.5.1"
 fastrand = "2.1.0"
-gix = "0.64.0"
 serde.workspace = true
 
 [profile.release]
