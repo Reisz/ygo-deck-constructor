@@ -6,7 +6,7 @@ use common::card::{
 
 use crate::{
     error::{ProcessingError, TryUnwrapField},
-    ygoprodeck::{self, BanStatus},
+    ygoprodeck,
 };
 
 impl TryFrom<ygoprodeck::Card> for FullCard {
@@ -15,7 +15,7 @@ impl TryFrom<ygoprodeck::Card> for FullCard {
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
         let description = CardDescription::try_from(&value)?;
         let card_type = CardType::try_from(&value)?;
-        let limit = CardLimit::from(&value);
+        let limit = CardLimit::try_from(&value)?;
 
         let name = value.name;
         let main_password = value.id;
@@ -110,47 +110,46 @@ impl TryFrom<&ygoprodeck::Card> for CardType {
             };
         }
 
-        type Src = ygoprodeck::CardType;
-        match value.card_type {
-            Src::EffectMonster
-            | Src::PendulumEffectMonster
-            | Src::PendulumEffectRitualMonster
-            | Src::RitualEffectMonster
-            | Src::FusionMonster
-            | Src::LinkMonster
-            | Src::PendulumEffectFusionMonster
-            | Src::SynchroMonster
-            | Src::SynchroPendulumEffectMonster
-            | Src::XYZMonster
-            | Src::XYZPendulumEffectMonster => {
+        match value.card_type.as_str() {
+            "Effect Monster"
+            | "Pendulum Effect Monster"
+            | "Pendulum Effect Ritual Monster"
+            | "Ritual Effect Monster"
+            | "Fusion Monster"
+            | "Link Monster"
+            | "Pendulum Effect Fusion Monster"
+            | "Synchro Monster"
+            | "Synchro Pendulum Effect Monster"
+            | "XYZ Monster"
+            | "XYZ Pendulum Effect Monster" => {
                 monster! {MonsterEffect::Effect}
             }
-            Src::FlipEffectMonster | Src::PendulumFlipEffectMonster => {
+            "Flip Effect Monster" | "Pendulum Flip Effect Monster" => {
                 monster! {MonsterEffect::Flip}
             }
-            Src::FlipTunerEffectMonster => {
+            "Flip Tuner Effect Monster" => {
                 monster! {MonsterEffect::Flip, is_tuner: true}
             }
-            Src::GeminiMonster => monster! {MonsterEffect::Gemini},
-            Src::NormalMonster | Src::PendulumNormalMonster | Src::RitualMonster => {
+            "Gemini Monster" => monster! {MonsterEffect::Gemini},
+            "Normal Monster" | "Pendulum Normal Monster" | "Ritual Monster" => {
                 monster! {MonsterEffect::Normal}
             }
-            Src::NormalTunerMonster => {
+            "Normal Tuner Monster" => {
                 monster! {MonsterEffect::Normal, is_tuner: true}
             }
-            Src::PendulumTunerEffectMonster => monster! {MonsterEffect::Effect, is_tuner: true},
-            Src::SpellCard => Ok(CardType::Spell(SpellType::try_from(value)?)),
-            Src::SpiritMonster => monster! { MonsterEffect::Spirit},
-            Src::ToonMonster => monster! { MonsterEffect::Toon},
-            Src::TrapCard => Ok(CardType::Trap(TrapType::try_from(value)?)),
-            Src::TunerMonster | Src::SynchroTunerMonster => {
+            "Pendulum Tuner Effect Monster" => monster! {MonsterEffect::Effect, is_tuner: true},
+            "Spell Card" => Ok(CardType::Spell(SpellType::try_from(value)?)),
+            "Spirit Monster" => monster! { MonsterEffect::Spirit},
+            "Toon Monster" => monster! { MonsterEffect::Toon},
+            "Trap Card" => Ok(CardType::Trap(TrapType::try_from(value)?)),
+            "Tuner Monster" | "Synchro Tuner Monster" => {
                 monster! { MonsterEffect::Effect, is_tuner: true}
             }
-            Src::UnionEffectMonster => monster! { MonsterEffect::Union},
-            Src::SkillCard | Src::Token => Err(ProcessingError::new_unexpected(
+            "Union Effect Monster" => monster! { MonsterEffect::Union},
+            name => Err(ProcessingError::new_unexpected(
                 value.id,
                 "card_type",
-                &value.card_type,
+                &name,
             )),
         }
     }
@@ -160,53 +159,38 @@ impl TryFrom<&ygoprodeck::Card> for Race {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        type Src = ygoprodeck::Race;
-
         let result = match value
             .race
-            .as_ref()
+            .as_deref()
             .try_unwrap_field(value.id, "race (monster)")?
         {
-            Src::Aqua => Race::Aqua,
-            Src::Beast => Race::Beast,
-            Src::BeastWarrior => Race::BeastWarrior,
-            Src::CreatorGod => Race::CreatorGod,
-            Src::Cyberse => Race::Cyberse,
-            Src::Dinosaur => Race::Dinosaur,
-            Src::DivineBeast => Race::DivineBeast,
-            Src::Dragon => Race::Dragon,
-            Src::Fairy => Race::Fairy,
-            Src::Fiend => Race::Fiend,
-            Src::Fish => Race::Fish,
-            Src::Illusion => Race::Illusion,
-            Src::Insect => Race::Insect,
-            Src::Machine => Race::Machine,
-            Src::Plant => Race::Plant,
-            Src::Psychic => Race::Psychic,
-            Src::Pyro => Race::Pyro,
-            Src::Reptile => Race::Reptile,
-            Src::Rock => Race::Rock,
-            Src::SeaSerpent => Race::SeaSerpent,
-            Src::Spellcaster => Race::Spellcaster,
-            Src::Thunder => Race::Thunder,
-            Src::Warrior => Race::Warrior,
-            Src::WingedBeast => Race::WingedBeast,
-            Src::Wyrm => Race::Wyrm,
-            Src::Zombie => Race::Zombie,
-            race @ (Src::Normal
-            | Src::Field
-            | Src::Equip
-            | Src::Continuous
-            | Src::QuickPlay
-            | Src::Ritual
-            | Src::Counter) => {
-                return Err(ProcessingError::new_unexpected(
-                    value.id,
-                    "race (monster)",
-                    &race,
-                ))
-            }
-            Src::Other(name) => {
+            "Aqua" => Race::Aqua,
+            "Beast" => Race::Beast,
+            "Beast-Warrior" => Race::BeastWarrior,
+            "Creator-God" | "Creator God" => Race::CreatorGod,
+            "Cyberse" => Race::Cyberse,
+            "Dinosaur" => Race::Dinosaur,
+            "Divine-Beast" => Race::DivineBeast,
+            "Dragon" => Race::Dragon,
+            "Fairy" => Race::Fairy,
+            "Fiend" => Race::Fiend,
+            "Fish" => Race::Fish,
+            "Illusion" => Race::Illusion,
+            "Insect" => Race::Insect,
+            "Machine" => Race::Machine,
+            "Plant" => Race::Plant,
+            "Psychic" => Race::Psychic,
+            "Pyro" => Race::Pyro,
+            "Reptile" => Race::Reptile,
+            "Rock" => Race::Rock,
+            "Sea Serpent" => Race::SeaSerpent,
+            "Spellcaster" => Race::Spellcaster,
+            "Thunder" => Race::Thunder,
+            "Warrior" => Race::Warrior,
+            "Winged Beast" => Race::WingedBeast,
+            "Wyrm" => Race::Wyrm,
+            "Zombie" => Race::Zombie,
+            name => {
                 return Err(ProcessingError::new_unknown(
                     value.id,
                     "race (monster)",
@@ -223,20 +207,19 @@ impl TryFrom<&ygoprodeck::Card> for Attribute {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        type Src = ygoprodeck::Attribute;
-
         let result = match value
             .attribute
-            .as_ref()
+            .as_deref()
             .try_unwrap_field(value.id, "attribute")?
         {
-            Src::Dark => Attribute::Dark,
-            Src::Earth => Attribute::Earth,
-            Src::Fire => Attribute::Fire,
-            Src::Light => Attribute::Light,
-            Src::Water => Attribute::Water,
-            Src::Wind => Attribute::Wind,
-            Src::Divine => Attribute::Divine,
+            "DARK" => Attribute::Dark,
+            "EARTH" => Attribute::Earth,
+            "FIRE" => Attribute::Fire,
+            "LIGHT" => Attribute::Light,
+            "WATER" => Attribute::Water,
+            "WIND" => Attribute::Wind,
+            "DIVINE" => Attribute::Divine,
+            name => return Err(ProcessingError::new_unknown(value.id, "attribute", &name)),
         };
 
         Ok(result)
@@ -250,7 +233,7 @@ impl TryFrom<&ygoprodeck::Card> for MonsterStats {
         let atk = value.atk.try_unwrap_field(value.id, "atk stat")?;
         let atk = to_combat_stat(atk, value.id, "atk stat")?;
 
-        if matches!(value.card_type, ygoprodeck::CardType::LinkMonster) {
+        if value.card_type == "Link Monster" {
             Ok(MonsterStats::Link {
                 atk,
                 link_value: value.linkval.try_unwrap_field(value.id, "link value")?,
@@ -301,78 +284,68 @@ impl TryFrom<&ygoprodeck::Card> for LinkMarkers {
             .as_ref()
             .try_unwrap_field(value.id, "link markers")?
         {
-            result.add(LinkMarker::from(marker));
+            result.add(to_link_marker(marker, value.id)?);
         }
 
         Ok(result)
     }
 }
 
-impl From<&ygoprodeck::LinkMarker> for LinkMarker {
-    fn from(value: &ygoprodeck::LinkMarker) -> Self {
-        type Src = ygoprodeck::LinkMarker;
-        match value {
-            Src::Top => LinkMarker::Top,
-            Src::Bottom => LinkMarker::Bottom,
-            Src::Left => LinkMarker::Left,
-            Src::Right => LinkMarker::Right,
-            Src::BottomLeft => LinkMarker::BottomLeft,
-            Src::BottomRight => LinkMarker::BottomRight,
-            Src::TopLeft => LinkMarker::TopLeft,
-            Src::TopRight => LinkMarker::TopRight,
+fn to_link_marker(value: &str, password: CardPassword) -> Result<LinkMarker, ProcessingError> {
+    Ok(match value {
+        "Top" => LinkMarker::Top,
+        "Bottom" => LinkMarker::Bottom,
+        "Left" => LinkMarker::Left,
+        "Right" => LinkMarker::Right,
+        "Bottom-Left" => LinkMarker::BottomLeft,
+        "Bottom-Right" => LinkMarker::BottomRight,
+        "Top-Left" => LinkMarker::TopLeft,
+        "Top-Right" => LinkMarker::TopRight,
+        name => {
+            return Err(ProcessingError::new_unexpected(
+                password,
+                "link marker",
+                &name,
+            ))
         }
-    }
+    })
 }
 
 impl From<&ygoprodeck::Card> for Option<MonsterType> {
     fn from(value: &ygoprodeck::Card) -> Self {
-        type Src = ygoprodeck::CardType;
-
-        match value.card_type {
-            Src::RitualMonster | Src::RitualEffectMonster | Src::PendulumEffectRitualMonster => {
-                Some(MonsterType::Ritual)
-            }
-            Src::FusionMonster | Src::PendulumEffectFusionMonster => Some(MonsterType::Fusion),
-            Src::SynchroMonster | Src::SynchroPendulumEffectMonster | Src::SynchroTunerMonster => {
-                Some(MonsterType::Synchro)
-            }
-            Src::XYZMonster | Src::XYZPendulumEffectMonster => Some(MonsterType::Xyz),
-            _ => None,
+        if value.card_type.contains("Ritual") {
+            Some(MonsterType::Ritual)
+        } else if value.card_type.contains("Fusion") {
+            Some(MonsterType::Fusion)
+        } else if value.card_type.contains("Synchro") {
+            Some(MonsterType::Synchro)
+        } else if value.card_type.contains("XYZ") {
+            Some(MonsterType::Xyz)
+        } else {
+            None
         }
     }
 }
 
 fn is_pendulum(card: &ygoprodeck::Card) -> bool {
-    type Src = ygoprodeck::CardType;
-    matches!(
-        card.card_type,
-        Src::PendulumEffectMonster
-            | Src::PendulumEffectRitualMonster
-            | Src::PendulumFlipEffectMonster
-            | Src::PendulumNormalMonster
-            | Src::PendulumTunerEffectMonster
-            | Src::PendulumEffectFusionMonster
-            | Src::SynchroPendulumEffectMonster
-            | Src::XYZPendulumEffectMonster
-    )
+    card.card_type.contains("Pendulum")
 }
 
 impl TryFrom<&ygoprodeck::Card> for SpellType {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        type Src = ygoprodeck::Race;
         let result = match value
             .race
-            .as_ref()
+            .as_deref()
             .try_unwrap_field(value.id, "race (spell)")?
         {
-            Src::Normal => SpellType::Normal,
-            Src::Field => SpellType::Field,
-            Src::Equip => SpellType::Equip,
-            Src::Continuous => SpellType::Continuous,
-            Src::QuickPlay => SpellType::QuickPlay,
-            Src::Ritual => SpellType::Ritual,
+            "Normal" => SpellType::Normal,
+            "Field" => SpellType::Field,
+            "Equip" => SpellType::Equip,
+            "Continuous" => SpellType::Continuous,
+            "Quick-Play" => SpellType::QuickPlay,
+            "Ritual" => SpellType::Ritual,
             race => {
                 return Err(ProcessingError::new_unexpected(
                     value.id,
@@ -390,15 +363,14 @@ impl TryFrom<&ygoprodeck::Card> for TrapType {
     type Error = ProcessingError;
 
     fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        type Src = ygoprodeck::Race;
         let result = match value
             .race
-            .as_ref()
+            .as_deref()
             .try_unwrap_field(value.id, "race (trap)")?
         {
-            Src::Normal => TrapType::Normal,
-            Src::Continuous => TrapType::Continuous,
-            Src::Counter => TrapType::Counter,
+            "Normal" => TrapType::Normal,
+            "Continuous" => TrapType::Continuous,
+            "Counter" => TrapType::Counter,
             race => {
                 return Err(ProcessingError::new_unexpected(
                     value.id,
@@ -412,17 +384,28 @@ impl TryFrom<&ygoprodeck::Card> for TrapType {
     }
 }
 
-impl From<&ygoprodeck::Card> for CardLimit {
-    fn from(value: &ygoprodeck::Card) -> Self {
-        match value
-            .banlist_info
-            .as_ref()
-            .and_then(|info| info.ban_tcg.as_ref())
-        {
-            None => CardLimit::Unlimited,
-            Some(BanStatus::Limited) => CardLimit::Limited,
-            Some(BanStatus::SemiLimited) => CardLimit::SemiLimited,
-            Some(BanStatus::Forbidden) => CardLimit::Forbidden,
-        }
+impl TryFrom<&ygoprodeck::Card> for CardLimit {
+    type Error = ProcessingError;
+
+    fn try_from(value: &ygoprodeck::Card) -> Result<Self, Self::Error> {
+        Ok(
+            match value
+                .banlist_info
+                .as_ref()
+                .and_then(|info| info.ban_tcg.as_deref())
+            {
+                None => CardLimit::Unlimited,
+                Some("Limited") => CardLimit::Limited,
+                Some("Semi-Limited") => CardLimit::SemiLimited,
+                Some("Forbidden") => CardLimit::Forbidden,
+                Some(name) => {
+                    return Err(ProcessingError::new_unexpected(
+                        value.id,
+                        "ban status",
+                        name,
+                    ))
+                }
+            },
+        )
     }
 }

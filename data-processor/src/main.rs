@@ -44,12 +44,7 @@ async fn main() -> Result<()> {
     info!("Processing cards");
     let stream: FuturesUnordered<_> = cards
         .into_iter()
-        .filter(|card| {
-            !matches!(
-                card.card_type,
-                ygoprodeck::CardType::Token | ygoprodeck::CardType::SkillCard
-            )
-        })
+        .filter(|card| card.card_type != "Token" && card.card_type != "SkillCard")
         .map(|card| async {
             let password = card.id;
             let (card, ()) = try_join!(
