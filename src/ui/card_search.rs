@@ -1,10 +1,11 @@
 use common::{card::Card, card_data::CardData};
 use leptos::{
     component, create_memo, create_node_ref, create_signal, expect_context, html, provide_context,
-    view, For, IntoView, NodeRef, RwSignal, SignalGet, SignalGetUntracked, SignalSet, SignalWith,
-    SignalWithUntracked, WriteSignal,
+    view, Callable, Callback, For, IntoView, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
+    SignalWith, SignalWithUntracked,
 };
-use leptos_use::use_intersection_observer;
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::js_sys;
 
 use crate::ui::card_view::CardView;
 
@@ -36,16 +37,7 @@ impl CardFilter {
 
 #[derive(Clone, Copy)]
 struct ScrollReset {
-    set_pages: WriteSignal<usize>,
-    scroll_area: NodeRef<html::Div>,
-}
-
-impl ScrollReset {
-    fn reset(&self) {
-        let area = self.scroll_area.get().unwrap();
-        area.set_scroll_top(0);
-        self.set_pages.set(1);
-    }
+    pub callback: Callback<(), ()>,
 }
 
 #[component]
@@ -65,8 +57,8 @@ pub fn FilterInput(
             ref=node_ref
             on:input=move |_| {
                 let input = node_ref.get().unwrap();
-                reset.reset();
                 filter.set(map(input.value()));
+                reset.callback.call(());
             }
         />
     }
@@ -98,20 +90,43 @@ pub fn CardSearch() -> impl IntoView {
         })
     };
 
-    // Automatic pagination
-    let scroll_end_ref = create_node_ref::<html::Div>();
-    use_intersection_observer(scroll_end_ref, move |entries, _| {
-        let filtered_count = filtered_cards.with_untracked(Vec::len);
-        let current_capacity = pages.get_untracked() * PAGE_SIZE;
-        if entries[0].is_intersecting() && filtered_count > current_capacity {
-            set_pages.set(pages.get_untracked() + 1);
+    let scroll_area_ref = create_node_ref::<html::Div>();
+
+    // Increase page count until the scroll buffer is sufficiently filled
+    let adjust_pages = move || {
+        let scroll_area = scroll_area_ref.get_untracked().unwrap();
+        let card_count = filtered_cards.with_untracked(Vec::len);
+        let mut pages = pages.get_untracked();
+
+        let area_height = scroll_area.client_height();
+        let offset = scroll_area.scroll_top() + area_height;
+
+        while scroll_area.scroll_height() - offset <= area_height / 2
+            && pages * PAGE_SIZE < card_count
+        {
+            pages += 1;
+            set_pages.set(pages);
         }
+    };
+
+    // Provide a callback to reset scrolling when the search text changes
+    provide_context(ScrollReset {
+        callback: Callback::new(move |()| {
+            let scroll_area = scroll_area_ref.get_untracked().unwrap();
+            scroll_area.set_scroll_top(0);
+
+            set_pages.set(0);
+            adjust_pages();
+        }),
     });
 
-    let scroll_area_ref = create_node_ref();
-    provide_context(ScrollReset {
-        set_pages,
-        scroll_area: scroll_area_ref,
+    // Adjust page count on resize
+    scroll_area_ref.on_load(move |scroll_area| {
+        let callback = move |_, _| adjust_pages();
+        let callback = Closure::<dyn Fn(js_sys::Array, web_sys::ResizeObserver)>::new(callback)
+            .into_js_value();
+        let observer = web_sys::ResizeObserver::new(callback.as_ref().unchecked_ref()).unwrap();
+        observer.observe(&scroll_area);
     });
 
     view! {
@@ -125,7 +140,7 @@ pub fn CardSearch() -> impl IntoView {
                 />
             </div>
 
-            <div class="card-list" ref=scroll_area_ref>
+            <div class="card-list" ref=scroll_area_ref on:scroll=move |_| adjust_pages()>
                 <For
                     each=paginated_cards
                     key=|id| *id
@@ -133,8 +148,6 @@ pub fn CardSearch() -> impl IntoView {
                         view! { <CardView id=id /> }
                     }
                 />
-
-                <div style="position:relative; top: -20rem;" ref=scroll_end_ref></div>
             </div>
         </div>
     }

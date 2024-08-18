@@ -215,6 +215,9 @@ h6 {
     align-self: center;
     border: 1px solid black;
     border-radius: 0.5rem;
+
+    /* Define the size for unloaded images. Important for infinite scroll. */
+    aspect-ratio: 1;
 }
 
 .card .usage {
