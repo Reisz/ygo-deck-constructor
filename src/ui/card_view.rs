@@ -55,10 +55,10 @@ fn map_race(race: Race) -> &'static str {
     }
 }
 
-fn get_tags(card_type: &CardType) -> Vec<View> {
+fn get_tags(card: &Card) -> Vec<View> {
     let mut tags = Vec::new();
 
-    match card_type {
+    match &card.card_type {
         CardType::Monster {
             race,
             attribute,
@@ -143,6 +143,14 @@ fn get_tags(card_type: &CardType) -> Vec<View> {
             tags.push(html::li().child(tag));
         }
     }
+
+    let limit = match card.limit {
+        common::card::CardLimit::Unlimited => "Unlimited",
+        common::card::CardLimit::SemiLimited => "Semi-Limited",
+        common::card::CardLimit::Limited => "Limited",
+        common::card::CardLimit::Forbidden => "Forbidden",
+    };
+    tags.push(html::li().child(limit));
 
     intersperse_with(tags.into_iter().map(IntoView::into_view), || {
         html::li().child("•").into_view()
@@ -271,7 +279,7 @@ pub fn CardTooltip() -> impl IntoView {
                     style:top=format!("{top}px")
                 >
                     <h1>{data.card.name}</h1>
-                    <ul class="tags">{get_tags(&data.card.card_type)}</ul>
+                    <ul class="tags">{get_tags(data.card)}</ul>
                     <Stats card_type=&data.card.card_type />
                     <DescriptionParts parts=data.card.description />
                 </div>
