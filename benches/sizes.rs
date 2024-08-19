@@ -10,8 +10,8 @@ use std::{
 
 use common::{
     card::{
-        Attribute, Card, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType,
-        CombatStat, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType,
+        Attribute, Card, CardLimit, CardPassword, CardType, CombatStat, Header, LinkMarkers,
+        MonsterEffect, MonsterStats, MonsterType, Race, SpanKind, SpellType, TextBlock, TextPart,
         TrapType,
     },
     card_data::{CardData, Id},
@@ -247,20 +247,24 @@ fn main() {
         .check::<Card>("Card")
         .field::<&str>("name")
         .field::<CardPassword>("password")
-        .field::<CardDescription>("description")
+        .field::<&[TextPart<&str>]>("description")
         .field::<&str>("search_text")
         .field::<CardType>("card_type")
         .field::<CardLimit>("limit");
 
     manager
-        .check::<CardDescription>("CardDescription")
-        .variant::<Vec<CardDescriptionPart>>("Regular")
-        .variant::<[Vec<CardDescriptionPart>; 2]>("Pendulum");
+        .check::<TextPart<String>>("TextPart<String>")
+        .variant::<(SpanKind, String)>("Span")
+        .variant::<TextBlock>("Block")
+        .variant::<TextBlock>("EndBlock")
+        .variant::<Header>("Header");
 
     manager
-        .check::<CardDescriptionPart>("CardDescriptionPart")
-        .variant::<String>("Paragraph")
-        .variant::<Vec<String>>("List");
+        .check::<TextPart<&str>>("TextPart<&str>")
+        .variant::<(SpanKind, &str)>("Span")
+        .variant::<TextBlock>("Block")
+        .variant::<TextBlock>("EndBlock")
+        .variant::<Header>("Header");
 
     manager
         .check::<CardType>("CardType")

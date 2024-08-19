@@ -8,7 +8,7 @@ pub struct FullCard {
     pub name: String,
     pub main_password: CardPassword,
     pub all_passwords: Vec<CardPassword>,
-    pub description: CardDescription,
+    pub description: Vec<TextPart<String>>,
     pub search_text: String,
     pub card_type: CardType,
     pub limit: CardLimit,
@@ -19,7 +19,7 @@ pub struct FullCard {
 pub struct Card {
     pub name: &'static str,
     pub password: CardPassword,
-    pub description: CardDescription,
+    pub description: &'static [TextPart<&'static str>],
     pub search_text: &'static str,
     pub card_type: CardType,
     pub limit: CardLimit,
@@ -31,18 +31,40 @@ pub struct Card {
 pub type CardPassword = u32;
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub enum CardDescription {
-    Regular(Vec<CardDescriptionPart>),
-    Pendulum {
-        spell_effect: Vec<CardDescriptionPart>,
-        monster_effect: Vec<CardDescriptionPart>,
-    },
+pub enum TextPart<T> {
+    Span(SpanKind, T),
+    Block(TextBlock),
+    EndBlock(TextBlock),
+    Header(Header),
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
-pub enum CardDescriptionPart {
-    Paragraph(String),
-    List(Vec<String>),
+impl<T> TextPart<T> {
+    pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> TextPart<U> {
+        match self {
+            Self::Span(kind, text) => TextPart::Span(kind, f(text)),
+            Self::Block(block) => TextPart::Block(block),
+            Self::EndBlock(block) => TextPart::EndBlock(block),
+            Self::Header(header) => TextPart::Header(header),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+pub enum SpanKind {
+    Normal,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+pub enum TextBlock {
+    Paragraph,
+    List,
+    ListEntry,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+pub enum Header {
+    PendulumEffect,
+    MonsterEffect,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
@@ -275,7 +297,7 @@ pub mod test_util {
             name: String::new(),
             main_password: password,
             all_passwords: vec![password],
-            description: CardDescription::Regular(vec![]),
+            description: vec![],
             search_text: String::new(),
             card_type: CardType::Spell(SpellType::Normal),
             limit: CardLimit::Unlimited,
@@ -287,7 +309,7 @@ pub mod test_util {
             name: String::new(),
             main_password: password,
             all_passwords: vec![password],
-            description: CardDescription::Regular(vec![]),
+            description: vec![],
             search_text: String::new(),
             card_type: CardType::Monster {
                 race: Race::Aqua,

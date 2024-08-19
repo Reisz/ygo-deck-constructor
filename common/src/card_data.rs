@@ -3,7 +3,7 @@ use std::ops::Index;
 use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
 
-use crate::card::{Card, CardDescription, CardLimit, CardPassword, CardType, FullCard};
+use crate::card::{Card, CardLimit, CardPassword, CardType, FullCard, TextPart};
 
 /// Internal id for cards.
 ///
@@ -24,7 +24,7 @@ impl Id {
 pub struct CardStorage {
     pub name: String,
     pub password: CardPassword,
-    pub description: CardDescription,
+    pub description: Vec<TextPart<String>>,
     pub search_text: String,
     pub card_type: CardType,
     pub limit: CardLimit,
@@ -92,13 +92,21 @@ impl From<CardDataStorage> for CardData {
         let cards = value
             .cards
             .into_iter()
-            .map(|card| Card {
-                name: Box::leak(card.name.into_boxed_str()),
-                password: card.password,
-                description: card.description,
-                search_text: Box::leak(card.search_text.into_boxed_str()),
-                card_type: card.card_type,
-                limit: card.limit,
+            .map(|card| {
+                let description = card
+                    .description
+                    .into_iter()
+                    .map(|part| part.map(|text| &*Box::leak(text.into_boxed_str())))
+                    .collect();
+
+                Card {
+                    name: Box::leak(card.name.into_boxed_str()),
+                    password: card.password,
+                    description: Box::leak(description),
+                    search_text: Box::leak(card.search_text.into_boxed_str()),
+                    card_type: card.card_type,
+                    limit: card.limit,
+                }
             })
             .collect();
         Self {

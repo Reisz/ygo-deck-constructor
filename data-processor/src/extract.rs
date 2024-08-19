@@ -1,8 +1,9 @@
 use common::card::{
-    Attribute, CardDescription, CardDescriptionPart, CardLimit, CardPassword, CardType, CombatStat,
-    FullCard, LinkMarker, LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpellType,
-    TrapType,
+    Attribute, CardLimit, CardPassword, CardType, CombatStat, FullCard, Header, LinkMarker,
+    LinkMarkers, MonsterEffect, MonsterStats, MonsterType, Race, SpanKind, SpellType, TextBlock,
+    TextPart, TrapType,
 };
+use log::warn;
 
 use crate::{
     error::{ProcessingError, TryUnwrapField},
@@ -13,9 +14,9 @@ impl TryFrom<ygoprodeck::Card> for FullCard {
     type Error = ProcessingError;
 
     fn try_from(value: ygoprodeck::Card) -> Result<Self, Self::Error> {
-        let description = CardDescription::try_from(&value)?;
-        let card_type = CardType::try_from(&value)?;
-        let limit = CardLimit::try_from(&value)?;
+        let description = (&value).into();
+        let card_type = (&value).try_into()?;
+        let limit = (&value).try_into()?;
 
         let name = value.name;
         let main_password = value.id;
@@ -38,56 +39,65 @@ impl TryFrom<ygoprodeck::Card> for FullCard {
     }
 }
 
-impl TryFrom<&ygoprodeck::Card> for CardDescription {
-    type Error = ProcessingError;
+impl From<&ygoprodeck::Card> for Vec<TextPart<String>> {
+    fn from(card: &ygoprodeck::Card) -> Self {
+        let mut in_list = false;
+        card.desc
+            .lines()
+            .flat_map(|paragraph| {
+                let mut result = vec![];
 
-    fn try_from(card: &ygoprodeck::Card) -> Result<Self, Self::Error> {
-        let mut spell_effect = None;
-        let mut monster_effect = Vec::new();
-        let mut current_list = None;
-
-        for paragraph in card.desc.lines() {
-            if let Some(paragraph) = paragraph.strip_prefix('●') {
-                current_list
-                    .get_or_insert(Vec::default())
-                    .push(paragraph.to_owned());
-                continue;
-            }
-
-            if let Some(list) = current_list.take() {
-                monster_effect.push(CardDescriptionPart::List(list));
-            }
-
-            match paragraph.trim() {
-                "[ Pendulum Effect ]" => {
-                    if !is_pendulum(card) {
-                        return Err(ProcessingError::new_unexpected(
-                            card.id,
-                            "description",
-                            "pendulum header on non-pendulum card",
-                        ));
+                // Lists
+                if let Some(paragraph) = paragraph.strip_prefix('●') {
+                    if !in_list {
+                        result.push(TextPart::Block(TextBlock::List));
+                        in_list = true;
                     }
 
-                    continue;
-                }
-                "[ Monster Effect ]" => {
-                    spell_effect = Some(monster_effect.split_off(0));
-                    continue;
-                }
-                _ => {}
-            }
+                    result.push(TextPart::Block(TextBlock::ListEntry));
+                    result.push(TextPart::Span(SpanKind::Normal, paragraph.to_owned()));
+                    result.push(TextPart::EndBlock(TextBlock::ListEntry));
 
-            monster_effect.push(CardDescriptionPart::Paragraph(paragraph.to_owned()));
-        }
+                    return result;
+                }
+                if in_list {
+                    result.push(TextPart::EndBlock(TextBlock::List));
+                    in_list = false;
+                }
 
-        Ok(if let Some(spell_effect) = spell_effect {
-            CardDescription::Pendulum {
-                spell_effect,
-                monster_effect,
-            }
-        } else {
-            CardDescription::Regular(monster_effect)
-        })
+                // Headers
+                match paragraph.trim() {
+                    "[ Pendulum Effect ]" => {
+                        if !is_pendulum(card) {
+                            warn!(
+                                "{}",
+                                ProcessingError::new_unexpected(
+                                    card.id,
+                                    "description",
+                                    "pendulum header on non-pendulum card",
+                                )
+                            );
+                        }
+
+                        result.push(TextPart::Header(Header::PendulumEffect));
+                        return result;
+                    }
+                    "[ Monster Effect ]" => {
+                        result.push(TextPart::Header(Header::MonsterEffect));
+                        return result;
+                    }
+                    _ => {}
+                }
+
+                result.extend_from_slice(&[
+                    TextPart::Block(TextBlock::Paragraph),
+                    TextPart::Span(SpanKind::Normal, paragraph.to_owned()),
+                    TextPart::EndBlock(TextBlock::Paragraph),
+                ]);
+
+                result
+            })
+            .collect()
     }
 }
 

@@ -2,8 +2,8 @@ use std::rc::Rc;
 
 use common::{
     card::{
-        Attribute, Card, CardDescription, CardDescriptionPart, CardType, LinkMarker, MonsterEffect,
-        MonsterStats, MonsterType, Race, SpellType, TrapType,
+        Attribute, Card, CardType, LinkMarker, MonsterEffect, MonsterStats, MonsterType, Race,
+        SpanKind, SpellType, TextBlock, TextPart, TrapType,
     },
     card_data::{CardData, Id},
     transfer::{IMAGE_DIRECTORY, IMAGE_FILE_ENDING},
@@ -12,8 +12,7 @@ use itertools::intersperse_with;
 use leptos::{
     component, create_node_ref, create_signal, expect_context,
     html::{self, Div},
-    provide_context, svg, view, CollectView, IntoView, NodeRef, Show, SignalGet, SignalSet, View,
-    WriteSignal,
+    provide_context, svg, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal,
 };
 use web_sys::MouseEvent;
 
@@ -217,41 +216,41 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
 
 #[component]
 #[must_use]
-fn DescriptionParts(parts: &'static [CardDescriptionPart]) -> impl IntoView {
-    parts
-        .iter()
-        .map(|part| match part {
-            CardDescriptionPart::Paragraph(paragraph) => html::p().child(paragraph).into_view(),
-            CardDescriptionPart::List(elements) => html::ul()
-                .child(
-                    elements
-                        .iter()
-                        .map(|element| html::li().child(element))
-                        .collect_view(),
-                )
-                .into_view(),
-        })
-        .collect::<Vec<_>>()
-}
+fn DescriptionParts(parts: &'static [TextPart<&'static str>]) -> impl IntoView {
+    let mut div = html::div();
+    let mut current_list = None;
+    let mut current_block = None;
 
-#[component]
-#[must_use]
-fn Description(description: &'static CardDescription) -> impl IntoView {
-    match description {
-        CardDescription::Regular(elements) => {
-            view! { <DescriptionParts parts=elements.as_slice() /> }.into_view()
-        }
-        CardDescription::Pendulum {
-            spell_effect,
-            monster_effect,
-        } => view! {
-            <h2>"Spell Effect"</h2>
-            <DescriptionParts parts=spell_effect.as_slice() />
-            <h2>"Monster Effect"</h2>
-            <DescriptionParts parts=monster_effect />
-        }
-        .into_view(),
+    for part in parts {
+        match part {
+            TextPart::Block(block) => match block {
+                TextBlock::Paragraph => current_block = Some(html::p().into_any()),
+                TextBlock::List => current_list = Some(html::ul()),
+                TextBlock::ListEntry => current_block = Some(html::li().into_any()),
+            },
+            TextPart::EndBlock(block) => match block {
+                TextBlock::Paragraph => div = div.child(current_block.take().unwrap()),
+                TextBlock::List => div = div.child(current_list.take().unwrap()),
+                TextBlock::ListEntry => {
+                    current_list = Some(current_list.unwrap().child(current_block.take().unwrap()));
+                }
+            },
+            TextPart::Header(header) => {
+                let text = match header {
+                    common::card::Header::PendulumEffect => "Pendulum Effect",
+                    common::card::Header::MonsterEffect => "Monster Effect",
+                };
+                div = div.child(html::h2().child(text));
+            }
+            TextPart::Span(kind, text) => match kind {
+                SpanKind::Normal => {
+                    current_block = Some(current_block.unwrap().child(*text));
+                }
+            },
+        };
     }
+
+    div
 }
 
 #[component]
@@ -274,7 +273,7 @@ pub fn CardTooltip() -> impl IntoView {
                     <h1>{data.card.name}</h1>
                     <ul class="tags">{get_tags(&data.card.card_type)}</ul>
                     <Stats card_type=&data.card.card_type />
-                    <Description description=&data.card.description />
+                    <DescriptionParts parts=data.card.description />
                 </div>
             }
         })
