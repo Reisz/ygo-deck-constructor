@@ -140,7 +140,7 @@ impl Tool for TypeGraph {
                         CardType::Spell(_) => &mut counts.spell,
                         CardType::Trap(_) => &mut counts.trap,
                     };
-                    *counter += entry.count(PartType::Playing);
+                    *counter += usize::from(entry.count(PartType::Playing));
                 }
             });
 
@@ -208,7 +208,7 @@ impl Tool for ExtraTypeGraph {
                             MonsterStats::Link { .. } => &mut counts.link,
                         };
 
-                        *counter += entry.count(PartType::Playing);
+                        *counter += usize::from(entry.count(PartType::Playing));
                     }
                 }
             });
@@ -281,7 +281,7 @@ impl Tool for LevelGraph {
                             5..=6 => &mut counts.one_tribute,
                             7.. => &mut counts.two_tributes,
                         };
-                        *counter += entry.count(PartType::Playing);
+                        *counter += usize::from(entry.count(PartType::Playing));
                     }
                 }
             });

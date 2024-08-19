@@ -243,7 +243,7 @@ mod test {
             deck.redo();
 
             let mut deck = Deck::decode(&deck.encode_string()).unwrap();
-            assert_part_eq!(&deck, current, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT)]);
             assert_part_eq!(&deck, other, []);
 
             deck.undo();
@@ -252,11 +252,7 @@ mod test {
 
             deck.redo();
             deck.redo();
-            assert_part_eq!(
-                &deck,
-                current,
-                &[(ID, AMOUNT as usize), (OTHER_ID, OTHER_AMOUNT as usize)]
-            );
+            assert_part_eq!(&deck, current, &[(ID, AMOUNT), (OTHER_ID, OTHER_AMOUNT)]);
             assert_part_eq!(&deck, other, []);
         }
     }

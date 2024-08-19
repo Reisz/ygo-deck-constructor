@@ -46,8 +46,8 @@ impl DeckEntry {
     }
 
     #[must_use]
-    pub fn count(&self, part_type: PartType) -> usize {
-        self.counts[part_type.idx()].into()
+    pub fn count(&self, part_type: PartType) -> u8 {
+        self.counts[part_type.idx()]
     }
 
     pub fn set_count(&mut self, part_type: PartType, count: u8) {
@@ -171,7 +171,7 @@ mod test {
             let mut deck = Deck::default();
 
             deck.increment(ID, part, AMOUNT);
-            assert_part_eq!(&deck, part, &[(ID, AMOUNT as usize)]);
+            assert_part_eq!(&deck, part, &[(ID, AMOUNT)]);
             assert_part_eq!(&deck, other(part), &[]);
 
             deck.decrement(ID, part, AMOUNT);
@@ -219,7 +219,7 @@ mod test {
             deck.increment(ID, part, u8::MAX - 1);
             deck.increment(ID, part, AMOUNT);
 
-            assert_part_eq!(&deck, part, &[(ID, u8::MAX as usize)]);
+            assert_part_eq!(&deck, part, &[(ID, u8::MAX)]);
             assert_part_eq!(&deck, other(part), &[]);
         }
     }

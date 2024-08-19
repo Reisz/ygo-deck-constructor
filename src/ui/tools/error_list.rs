@@ -48,7 +48,7 @@ impl Tool for ErrorList {
                     let count = playing + side;
                     let limit = card.limit.count();
 
-                    if count > limit.into() {
+                    if count > limit {
                         errors.push(format!(
                             "Card \"{name}\" appears {count} times, but is {term} ({limit})",
                             name = card.name,
@@ -61,12 +61,12 @@ impl Tool for ErrorList {
             for part in DeckPart::iter() {
                 let len = totals[part as usize];
 
-                if len < part.min().into() {
+                if len < part.min() {
                     errors.push(format!(
                         "{part} deck contains less than {} cards ({len})",
                         part.min(),
                     ));
-                } else if len > part.max().into() {
+                } else if len > part.max() {
                     errors.push(format!(
                         "{part} deck contains more than {} cards ({len})",
                         part.max(),

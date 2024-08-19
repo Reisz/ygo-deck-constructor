@@ -294,7 +294,7 @@ pub fn CardTooltip() -> impl IntoView {
 #[must_use]
 pub fn CardView(
     id: Id,
-    #[prop(default = 1)] count: usize,
+    #[prop(default = 1)] count: u8,
     #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
 ) -> impl IntoView {
     let card = expect_context::<CardData>().get(id);

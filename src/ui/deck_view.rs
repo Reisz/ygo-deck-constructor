@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use common::{
-    card_data::{CardData, Id},
+    card_data::CardData,
     deck_part::{DeckPart, EntriesForPart},
 };
 use leptos::{
@@ -58,7 +58,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             <span class="current">
                 {move || {
                     deck.with(|deck| {
-                        deck.entries().for_part(part, &cards).map(|(_, count)| count).sum::<usize>()
+                        deck.entries().for_part(part, &cards).map(|(_, count)| count).sum::<u8>()
                     })
                 }}
 
@@ -80,7 +80,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
 
             <For
                 each=move || entries.get()
-                key=|el: &(Id, usize)| *el
+                key=|el| *el
                 children=move |(id, count)| {
                     let delete = delete.clone();
                     view! { <CardView id=id count=count on_delete=delete /> }

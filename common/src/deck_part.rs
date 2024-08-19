@@ -59,11 +59,11 @@ impl Display for DeckPart {
 }
 
 pub trait EntriesForPart {
-    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, usize)>;
+    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, u8)>;
 }
 
 impl<I: Iterator<Item = DeckEntry>> EntriesForPart for I {
-    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, usize)> {
+    fn for_part(self, part: DeckPart, cards: &CardData) -> impl Iterator<Item = (Id, u8)> {
         self.map(move |entry| (entry.id(), entry.count(part.into())))
             .filter(move |(id, count)| *count > 0 && part.can_contain(&cards[*id]))
     }
