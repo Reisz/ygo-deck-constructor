@@ -327,6 +327,8 @@ pub fn CardView(
             <img src=format!("{IMAGE_DIRECTORY}/{password}.{IMAGE_FILE_ENDING}") />
             {(count > 1)
                 .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
+            {(count > card.limit.count())
+                .then(|| html::div().class("error", true).class("backdrop", true).child("!"))}
         </div>
     }
 }

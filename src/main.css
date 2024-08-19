@@ -234,6 +234,16 @@ h6 {
     font-weight: bold;
 }
 
+.card .error {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+
+    font-family: sans-serif;
+    font-weight: bold;
+    color: red;
+}
+
 /* Card Tooltip */
 .card-tooltip {
     position: absolute;

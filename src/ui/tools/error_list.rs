@@ -1,4 +1,4 @@
-use common::{card::CardLimit, card_data::CardData, deck::PartType, deck_part::DeckPart};
+use common::{card_data::CardData, deck::PartType, deck_part::DeckPart};
 use leptos::{
     expect_context, html, view, For, IntoView, Memo, Show, Signal, SignalGet, SignalWith, View,
 };
@@ -6,15 +6,6 @@ use leptos::{
 use crate::deck::Deck;
 
 use super::Tool;
-
-fn limit_name(limit: CardLimit) -> &'static str {
-    match limit {
-        CardLimit::Forbidden => "forbidden",
-        CardLimit::Limited => "limited",
-        CardLimit::SemiLimited => "semi-limited",
-        CardLimit::Unlimited => "unlimited",
-    }
-}
 
 pub struct ErrorList;
 
@@ -28,7 +19,7 @@ impl Tool for ErrorList {
 
         let errors = Memo::new(move |_| {
             let mut totals = [0; 3];
-            let mut errors = Vec::<String>::new();
+            let mut limit_exceeded = 0;
 
             deck.with(|deck| {
                 for entry in deck.entries() {
@@ -45,30 +36,32 @@ impl Tool for ErrorList {
                     totals[playing_part as usize] += playing;
                     totals[DeckPart::Side as usize] += side;
 
-                    let count = playing + side;
-                    let limit = card.limit.count();
-
-                    if count > limit {
-                        errors.push(format!(
-                            "Card \"{name}\" appears {count} times, but is {term} ({limit})",
-                            name = card.name,
-                            term = limit_name(card.limit)
-                        ));
+                    if playing + side > card.limit.count() {
+                        limit_exceeded += 1;
                     }
                 }
             });
+
+            let mut errors = vec![];
+
+            if limit_exceeded > 0 {
+                errors.push(format!(
+                    "Too many copies of {limit_exceeded} card{}",
+                    if limit_exceeded > 1 { "s" } else { "" }
+                ));
+            }
 
             for part in DeckPart::iter() {
                 let len = totals[part as usize];
 
                 if len < part.min() {
                     errors.push(format!(
-                        "{part} deck contains less than {} cards ({len})",
+                        "{part} deck contains less than {} cards",
                         part.min(),
                     ));
                 } else if len > part.max() {
                     errors.push(format!(
-                        "{part} deck contains more than {} cards ({len})",
+                        "{part} deck contains more than {} cards",
                         part.max(),
                     ));
                 }
