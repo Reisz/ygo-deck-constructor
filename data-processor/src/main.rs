@@ -1,7 +1,7 @@
 use std::{
     fs::{self, File},
     future,
-    io::{BufRead, BufReader, BufWriter},
+    io::{BufReader, BufWriter},
     os::unix::prelude::MetadataExt,
     path::PathBuf,
     time::Instant,
@@ -34,8 +34,7 @@ async fn main() -> Result<()> {
     }
 
     info!("Loading cards");
-    let mut reader = BufReader::new(File::open(CARD_INFO_LOCAL)?);
-    reader.read_line(&mut String::new())?;
+    let reader = BufReader::new(File::open(CARD_INFO_LOCAL)?);
     let cards = ygoprodeck::parse(reader)?;
 
     info!("Checking images");

@@ -9,13 +9,14 @@ use log::info;
 use serde::Deserialize;
 use tokio::{
     fs::{self, File},
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
+    io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter},
     try_join,
 };
 
 use crate::{image, ui::UiManager, ygoprodeck, OUTPUT_DIRECTORY, URL};
 
 /// Location of the cached card data download.
+pub const CARD_INFO_VERSION: &str = "target/card_info_version.txt";
 pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
 
 #[derive(Debug, Clone, Copy)]
@@ -44,22 +45,22 @@ async fn get_modification_time(path: impl AsRef<Path>) -> Result<SystemTime> {
 pub async fn update_card_info_cache(ui: &UiManager) -> Result<CacheResult> {
     // Download a new version if required. Request processing in that case.
     if let Some(version) = should_download_card_info().await? {
-        let database_download = async {
-            Ok(BufReader::new(
-                ui.get("Card Database", ygoprodeck::URL).await?,
-            ))
-        };
-
-        let database_cache_writer = async {
-            let mut file = BufWriter::new(File::create(CARD_INFO_LOCAL).await?);
+        let write_version = async {
+            let mut file = BufWriter::new(File::create(CARD_INFO_VERSION).await?);
             file.write_all(version.as_bytes()).await?;
-            file.write_all("\n".as_bytes()).await?;
-            Ok::<_, anyhow::Error>(file)
+            file.flush().await?;
+            Ok::<_, anyhow::Error>(())
         };
 
-        let (mut response, mut file) = try_join!(database_download, database_cache_writer)?;
-        tokio::io::copy(&mut response, &mut file).await?;
+        let database_download = async {
+            let mut download = BufReader::new(ui.get("Card Database", ygoprodeck::URL).await?);
+            let mut file = BufWriter::new(File::create(CARD_INFO_LOCAL).await?);
+            tokio::io::copy(&mut download, &mut file).await?;
+            file.flush().await?;
+            Ok(())
+        };
 
+        try_join!(write_version, database_download)?;
         return Ok(CacheResult::ProcessingRequired);
     }
 
@@ -108,19 +109,19 @@ async fn should_download_card_info() -> Result<Option<String>> {
     const VERSION_CHECK_INTERVAL: Duration = Duration::from_secs(60 * 60 * 24); // 1 day
 
     // If there is no cache, just get the online version and return.
-    if !Path::new(CARD_INFO_LOCAL).try_exists()? {
+    if !Path::new(CARD_INFO_LOCAL).try_exists()? || !Path::new(CARD_INFO_VERSION).try_exists()? {
         return Ok(Some(get_online_version().await?));
     }
 
     // The cache file exists. Check duration since the last update (via modification date).
-    if get_modification_time(CARD_INFO_LOCAL).await?.elapsed()? > VERSION_CHECK_INTERVAL {
+    if get_modification_time(CARD_INFO_VERSION).await?.elapsed()? > VERSION_CHECK_INTERVAL {
         let (online_version, local_version) = try_join!(get_online_version(), get_local_version())?;
         if local_version != online_version {
             return Ok(Some(online_version));
         }
 
         // The check succeeded. Update modification time so we do not keep bugging the database.
-        std::fs::File::open(CARD_INFO_LOCAL)?.set_modified(SystemTime::now())?;
+        std::fs::File::open(CARD_INFO_VERSION)?.set_modified(SystemTime::now())?;
     }
 
     // The cache does not need to be updated.
@@ -146,9 +147,8 @@ async fn get_online_version() -> Result<String> {
 
 async fn get_local_version() -> Result<String> {
     let mut tmp = String::new();
-    BufReader::new(File::open(CARD_INFO_LOCAL).await?)
-        .read_line(&mut tmp)
+    BufReader::new(File::open(CARD_INFO_VERSION).await?)
+        .read_to_string(&mut tmp)
         .await?;
-    tmp.truncate(tmp.len() - 1); // Remove trailing newline
     Ok(tmp)
 }
