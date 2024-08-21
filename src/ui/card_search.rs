@@ -16,6 +16,10 @@ struct CardFilter {
 }
 
 impl CardFilter {
+    fn is_empty(&self) -> bool {
+        self.name.with(String::is_empty) && self.text.with(String::is_empty)
+    }
+
     fn matches(&self, card: &Card) -> bool {
         if self
             .name
@@ -72,11 +76,15 @@ pub fn CardSearch() -> impl IntoView {
     let cards = expect_context::<CardData>();
     let filter = CardFilter::default();
     let filtered_cards = create_memo(move |_| {
-        cards
-            .entries()
-            .filter(move |(_, card)| filter.matches(card))
-            .map(|(id, _)| id)
-            .collect::<Vec<_>>()
+        if filter.is_empty() {
+            cards.staples().collect::<Vec<_>>()
+        } else {
+            cards
+                .entries()
+                .filter(move |(_, card)| filter.matches(card))
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>()
+        }
     });
 
     let (pages, set_pages) = create_signal(1);

@@ -227,8 +227,8 @@ mod test {
         const AMOUNT: u8 = 43;
         const OTHER_AMOUNT: u8 = 65;
 
-        let card_data =
-            CardData::from(CardDataStorage::new(vec![make_card(1234), make_card(9876)]));
+        let cards = vec![make_card(1234), make_card(9876)];
+        let card_data = CardData::from(CardDataStorage::new(cards, vec![]));
         provide_context(card_data);
 
         for (current, other) in [

@@ -236,7 +236,7 @@ mod test {
             data.push(make_extra_deck_card(password.1));
         }
 
-        CardDataStorage::new(data).into()
+        CardDataStorage::new(data, vec![]).into()
     }
 
     #[test]

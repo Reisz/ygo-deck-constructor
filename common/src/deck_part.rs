@@ -92,7 +92,8 @@ mod test {
 
         let data = {
             let cards = vec![make_card(MAIN_PASSWD), make_extra_deck_card(EXTRA_PASSWD)];
-            Box::leak(Box::new(CardData::from(CardDataStorage::new(cards))))
+            let data = CardData::from(CardDataStorage::new(cards, vec![]));
+            Box::leak(Box::new(data))
         };
 
         let mut deck = Deck::default();

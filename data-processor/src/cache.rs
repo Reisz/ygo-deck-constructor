@@ -18,6 +18,7 @@ use crate::{image, ui::UiManager, ygoprodeck, OUTPUT_DIRECTORY, URL};
 /// Location of the cached card data download.
 pub const CARD_INFO_VERSION: &str = "target/card_info_version.txt";
 pub const CARD_INFO_LOCAL: &str = "target/card_info.json";
+pub const CARD_STAPLES: &str = "target/card_staples.json";
 
 #[derive(Debug, Clone, Copy)]
 pub enum CacheResult {
@@ -60,7 +61,16 @@ pub async fn update_card_info_cache(ui: &UiManager) -> Result<CacheResult> {
             Ok(())
         };
 
-        try_join!(write_version, database_download)?;
+        let staple_download = async {
+            let url = format!("{}?staple=yes", ygoprodeck::URL);
+            let mut download = BufReader::new(ui.get("Staple Card List", url).await?);
+            let mut file = BufWriter::new(File::create(CARD_STAPLES).await?);
+            tokio::io::copy(&mut download, &mut file).await?;
+            file.flush().await?;
+            Ok(())
+        };
+
+        try_join!(write_version, database_download, staple_download)?;
         return Ok(CacheResult::ProcessingRequired);
     }
 

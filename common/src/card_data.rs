@@ -33,11 +33,12 @@ pub struct CardStorage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CardDataStorage {
     cards: Vec<CardStorage>,
+    staples: Vec<Id>,
     passwords: FxHashMap<CardPassword, Id>,
 }
 
 impl CardDataStorage {
-    pub fn new(cards: Vec<FullCard>) -> Self {
+    pub fn new(cards: Vec<FullCard>, staples: Vec<CardPassword>) -> Self {
         let passwords = cards
             .iter()
             .enumerate()
@@ -47,7 +48,8 @@ impl CardDataStorage {
                     .iter()
                     .map(move |password| (*password, id))
             })
-            .collect();
+            .collect::<FxHashMap<_, _>>();
+
         let cards = cards
             .into_iter()
             .map(|card| CardStorage {
@@ -59,13 +61,25 @@ impl CardDataStorage {
                 limit: card.limit,
             })
             .collect();
-        Self { cards, passwords }
+
+        let staples = staples
+            .into_iter()
+            .map(|password| passwords.get(&password).unwrap())
+            .copied()
+            .collect();
+
+        Self {
+            cards,
+            staples,
+            passwords,
+        }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct CardData {
     cards: &'static [Card],
+    staples: &'static [Id],
     passwords: &'static FxHashMap<CardPassword, Id>,
 }
 
@@ -79,6 +93,10 @@ impl CardData {
             .iter()
             .enumerate()
             .map(|(id, card)| (Id::new(id.try_into().unwrap()), card))
+    }
+
+    pub fn staples(self) -> impl Iterator<Item = Id> {
+        self.staples.iter().copied()
     }
 
     #[must_use]
@@ -111,6 +129,7 @@ impl From<CardDataStorage> for CardData {
             .collect();
         Self {
             cards: Box::leak(cards),
+            staples: Box::leak(value.staples.into_boxed_slice()),
             passwords: Box::leak(Box::new(value.passwords)),
         }
     }

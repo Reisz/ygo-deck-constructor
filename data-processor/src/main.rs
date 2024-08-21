@@ -11,7 +11,9 @@ use anyhow::Result;
 use bincode::Options;
 use common::{card::FullCard, card_data::CardDataStorage, transfer};
 use data_processor::{
-    cache::{ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL},
+    cache::{
+        ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL, CARD_STAPLES,
+    },
     image::ImageLoader,
     ui::UiManager,
     ygoprodeck, OUTPUT_DIRECTORY,
@@ -34,8 +36,8 @@ async fn main() -> Result<()> {
     }
 
     info!("Loading cards");
-    let reader = BufReader::new(File::open(CARD_INFO_LOCAL)?);
-    let cards = ygoprodeck::parse(reader)?;
+    let cards = ygoprodeck::parse(BufReader::new(File::open(CARD_INFO_LOCAL)?))?;
+    let staples = ygoprodeck::parse(BufReader::new(File::open(CARD_STAPLES)?))?;
 
     info!("Checking images");
     let loader = ImageLoader::new()?;
@@ -62,7 +64,9 @@ async fn main() -> Result<()> {
         .collect::<Vec<_>>()
         .await;
     let count = cards.len();
-    let data = CardDataStorage::new(cards);
+
+    let staples = staples.into_iter().map(|card| card.id).collect();
+    let data = CardDataStorage::new(cards, staples);
 
     info!("Saving images");
     loader.finish().await?;
