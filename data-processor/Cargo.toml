@@ -3,25 +3,24 @@ name = "data-processor"
 edition.workspace = true
 
 [dependencies]
-anyhow = "1.0.86"
+anyhow = "1.0.96"
 bincode.workspace = true
 common.path = "../common"
-console = "0.15.8"
-futures = "0.3.30"
-governor = "0.6.3"
-indicatif = { version = "0.17.8", features = ["tokio", "futures"] }
-log = "0.4.21"
+console = "0.15.10"
+futures = "0.3.31"
+governor = "0.8.1"
+indicatif = { version = "0.17.11", features = ["tokio", "futures"] }
+log = "0.4.26"
 nonzero_ext = "0.3.0"
-reqwest = { version = "0.12.5", features = ["json", "stream"] }
+reqwest = { version = "0.12.12", features = ["json", "stream"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = "1.0.117"
-tokio = { version = "1.38.0", features = ["full"] }
-tokio-util = { version = "0.7.11", features = ["compat"] }
+serde_json = "1.0.139"
+tokio = { version = "1.43.0", features = ["full"] }
+tokio-util = { version = "0.7.13", features = ["compat"] }
 xz2 = "0.1.7"
-zip = { version = "2.1.3", default-features = false }
+zip = { version = "2.2.3", default-features = false }
 
 [dependencies.image]
-# TODO https://github.com/etemesi254/zune-image/issues/184
-version = "0.24.7"
+version = "0.25.5"
 features = ["jpeg", "avif"]
 default-features = false

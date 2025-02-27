@@ -101,15 +101,18 @@ mod parse {
     pub type Result<T> = std::result::Result<T, nom::error::Error<String>>;
     type IResult<'a, T> = nom::IResult<&'a str, T>;
 
-    trait IParser<'a, T>: Parser<&'a str, T, nom::error::Error<&'a str>> {}
-    impl<'a, T, U: Parser<&'a str, T, nom::error::Error<&'a str>>> IParser<'a, T> for U {}
+    trait IParser<'a, T>: Parser<&'a str, Output = T, Error = nom::error::Error<&'a str>> {}
+    impl<'a, T, U: Parser<&'a str, Output = T, Error = nom::error::Error<&'a str>>> IParser<'a, T>
+        for U
+    {
+    }
 
     fn id(input: &str) -> IResult<CardPassword> {
         character::u32.parse(input)
     }
 
     fn ids(input: &str) -> IResult<Vec<CardPassword>> {
-        separated_list1(multispace1, id)(input)
+        separated_list1(multispace1, id).parse(input)
     }
 
     fn header_impl<'a>(part: DeckPart) -> impl IParser<'a, DeckPart> {
@@ -121,7 +124,8 @@ mod parse {
             header_impl(DeckPart::Main),
             header_impl(DeckPart::Extra),
             header_impl(DeckPart::Side),
-        ))(input)
+        ))
+        .parse(input)
     }
 
     fn section(input: &str) -> IResult<(DeckPart, Vec<CardPassword>)> {
