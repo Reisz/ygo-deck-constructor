@@ -4,7 +4,7 @@ use common::{
     transfer,
 };
 use gloo_net::http::Request;
-use leptos::{IntoView, Suspense, component, create_local_resource, provide_context, view};
+use leptos::prelude::*;
 use lzma_rs::xz_decompress;
 
 use crate::ui::{
@@ -28,12 +28,12 @@ async fn load_cards() -> CardData {
 #[component]
 #[must_use]
 pub fn App() -> impl IntoView {
-    let cards = create_local_resource(|| (), |()| load_cards());
+    let cards = AsyncDerived::new_unsync(load_cards);
 
-    let fallback = move || "Loading...";
+    let fallback = || "Loading...";
     let app = move || {
-        cards.map(|cards| {
-            provide_context::<CardData>(*cards);
+        Suspend::new(async move {
+            provide_context::<CardData>(cards.await);
             crate::ui::deck::install_as_context();
 
             view! {

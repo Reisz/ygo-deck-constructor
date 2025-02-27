@@ -6,10 +6,7 @@ use common::{
     deck::PartType,
 };
 use itertools::intersperse;
-use leptos::{
-    CollectView, IntoSignal, IntoView, Memo, Signal, SignalWith, View, component, expect_context,
-    view,
-};
+use leptos::prelude::*;
 
 use crate::deck::Deck;
 
@@ -23,21 +20,17 @@ struct GraphBar {
 }
 
 impl GraphBar {
-    fn new(width: impl IntoSignal<Value = usize>, class: &'static str) -> Self {
+    fn new(width: Signal<usize>, class: &'static str) -> Self {
         Self {
-            width: width.into_signal(),
+            width,
             class,
             label: None,
         }
     }
 
-    fn with_label(
-        width: impl IntoSignal<Value = usize>,
-        class: &'static str,
-        label: &'static str,
-    ) -> Self {
+    fn with_label(width: Signal<usize>, class: &'static str, label: &'static str) -> Self {
         Self {
-            width: width.into_signal(),
+            width,
             class,
             label: Some(label),
         }
@@ -47,10 +40,10 @@ impl GraphBar {
 #[must_use]
 #[component]
 #[allow(clippy::needless_lifetimes)] // false positive
-fn Graph<'a, const N: usize>(
+fn Graph<const N: usize>(
     extent: usize,
     #[prop(optional)] spacing: Option<usize>,
-    bars: &'a [GraphBar; N],
+    bars: [GraphBar; N],
 ) -> impl IntoView {
     let height = N * 10;
     let n: f64 = u32::try_from(N).unwrap().into();
@@ -74,14 +67,14 @@ fn Graph<'a, const N: usize>(
         let y = format!("{pos}%");
 
         let value = view! {
-            <text y=&y font-size="0.9rem" class="label value backdrop">
+            <text y=y.clone() font-size="0.9rem" class="label value backdrop">
                 {bar.width}
             </text>
         };
 
-        let label = bar.label.map(|label| {
+        let label = bar.label.map(move |label| {
             view! {
-                <text text-anchor="end" x="100%" y=&y font-size="0.9rem" class="label">
+                <text text-anchor="end" x="100%" y=y font-size="0.9rem" class="label">
                     {label}
                 </text>
             }
@@ -120,7 +113,7 @@ impl Tool for TypeGraph {
         Self
     }
 
-    fn view(&self, deck: Signal<Deck>) -> View {
+    fn view(&self, deck: Signal<Deck>) -> AnyView {
         let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
@@ -149,20 +142,26 @@ impl Tool for TypeGraph {
 
         let bars = [
             GraphBar::new(
-                move || counts.with(|counts| counts.monster),
+                Signal::derive(move || counts.with(|counts| counts.monster)),
                 "monster effect",
             ),
-            GraphBar::new(move || counts.with(|counts| counts.spell), "spell"),
-            GraphBar::new(move || counts.with(|counts| counts.trap), "trap"),
+            GraphBar::new(
+                Signal::derive(move || counts.with(|counts| counts.spell)),
+                "spell",
+            ),
+            GraphBar::new(
+                Signal::derive(move || counts.with(|counts| counts.trap)),
+                "trap",
+            ),
         ];
 
         view! {
             <div>
                 <h3>"Card Types"</h3>
-                <Graph extent=40 bars=&bars />
+                <Graph extent=40 bars=bars />
             </div>
         }
-        .into_view()
+        .into_any()
     }
 }
 
@@ -181,7 +180,7 @@ impl Tool for ExtraTypeGraph {
         Self
     }
 
-    fn view(&self, deck: Signal<Deck>) -> View {
+    fn view(&self, deck: Signal<Deck>) -> AnyView {
         let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
@@ -218,24 +217,30 @@ impl Tool for ExtraTypeGraph {
 
         let bars = [
             GraphBar::new(
-                move || counts.with(|counts| counts.fusion),
+                Signal::derive(move || counts.with(|counts| counts.fusion)),
                 "monster fusion",
             ),
             GraphBar::new(
-                move || counts.with(|counts| counts.synchro),
+                Signal::derive(move || counts.with(|counts| counts.synchro)),
                 "monster synchro",
             ),
-            GraphBar::new(move || counts.with(|counts| counts.xyz), "monster xyz"),
-            GraphBar::new(move || counts.with(|counts| counts.link), "monster link"),
+            GraphBar::new(
+                Signal::derive(move || counts.with(|counts| counts.xyz)),
+                "monster xyz",
+            ),
+            GraphBar::new(
+                Signal::derive(move || counts.with(|counts| counts.link)),
+                "monster link",
+            ),
         ];
 
         view! {
             <div>
                 <h3>"Extra Deck Card Types"</h3>
-                <Graph extent=15 spacing=5 bars=&bars />
+                <Graph extent=15 spacing=5 bars=bars />
             </div>
         }
-        .into_view()
+        .into_any()
     }
 }
 
@@ -253,7 +258,7 @@ impl Tool for LevelGraph {
         Self
     }
 
-    fn view(&self, deck: Signal<Deck>) -> View {
+    fn view(&self, deck: Signal<Deck>) -> AnyView {
         let cards = expect_context::<CardData>();
 
         let counts = Memo::new(move |_| {
@@ -290,17 +295,17 @@ impl Tool for LevelGraph {
         });
         let bars = [
             GraphBar::with_label(
-                move || counts.with(|counts| counts.no_tribute),
+                Signal::derive(move || counts.with(|counts| counts.no_tribute)),
                 "monster",
                 "0 - 4",
             ),
             GraphBar::with_label(
-                move || counts.with(|counts| counts.one_tribute),
+                Signal::derive(move || counts.with(|counts| counts.one_tribute)),
                 "monster",
                 "5 - 6",
             ),
             GraphBar::with_label(
-                move || counts.with(|counts| counts.two_tributes),
+                Signal::derive(move || counts.with(|counts| counts.two_tributes)),
                 "monster",
                 "7+",
             ),
@@ -309,9 +314,9 @@ impl Tool for LevelGraph {
         view! {
             <div>
                 <h3>"Monster Levels"</h3>
-                <Graph extent=30 bars=&bars />
+                <Graph extent=30 bars=bars />
             </div>
         }
-        .into_view()
+        .into_any()
     }
 }

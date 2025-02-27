@@ -1,7 +1,5 @@
 use common::{card_data::CardData, deck::PartType, deck_part::DeckPart};
-use leptos::{
-    For, IntoView, Memo, Show, Signal, SignalGet, SignalWith, View, expect_context, html, view,
-};
+use leptos::{html, prelude::*};
 
 use crate::deck::Deck;
 
@@ -14,7 +12,7 @@ impl Tool for ErrorList {
         Self
     }
 
-    fn view(&self, deck: Signal<Deck>) -> View {
+    fn view(&self, deck: Signal<Deck>) -> AnyView {
         let cards = expect_context::<CardData>();
 
         let errors = Memo::new(move |_| {
@@ -84,6 +82,6 @@ impl Tool for ErrorList {
                 </div>
             </Show>
         }
-        .into_view()
+        .into_any()
     }
 }

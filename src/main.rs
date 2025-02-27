@@ -1,4 +1,4 @@
-use leptos::mount_to_body;
+use leptos::mount::mount_to_body;
 use ygo_deck_constructor::ui::app::App;
 
 fn main() {

@@ -1,13 +1,10 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use common::{
     card_data::CardData,
     deck_part::{DeckPart, EntriesForPart},
 };
-use leptos::{
-    For, IntoView, RwSignal, SignalGet, SignalUpdate, SignalWith, component, create_memo,
-    expect_context, view,
-};
+use leptos::prelude::*;
 
 use crate::{
     deck::Deck,
@@ -28,7 +25,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
             deck.decrement(delete_id, part.into(), 1);
         });
     };
-    let delete = Rc::new(delete);
+    let delete = Arc::new(delete);
 
     let drag_over = move |ev| {
         let drag_info = get_drag_info(&ev);
@@ -45,7 +42,7 @@ fn PartView(part: DeckPart) -> impl IntoView {
         }
     };
 
-    let entries = create_memo(move |_| {
+    let entries = Memo::new(move |_| {
         let mut result =
             deck.with(|deck| deck.entries().for_part(part, &cards).collect::<Vec<_>>());
         result.sort_unstable_by(move |(lhs, _), (rhs, _)| deck_order(&cards[*lhs], &cards[*rhs]));

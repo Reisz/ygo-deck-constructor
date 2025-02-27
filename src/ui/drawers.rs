@@ -1,10 +1,7 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use common::card_data::{CardData, Id};
-use leptos::{
-    For, IntoView, RwSignal, SignalGet, SignalUpdate, SignalWith, WriteSignal, component,
-    create_rw_signal, create_signal, expect_context, view,
-};
+use leptos::prelude::*;
 
 use crate::{
     deck_order::deck_order,
@@ -42,7 +39,7 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
         data.content
             .update(|content| content.retain(|id| *id != delete_id));
     };
-    let delete: Rc<dyn Fn(Id)> = Rc::new(delete);
+    let delete: Arc<dyn Fn(Id) + Sync + Send> = Arc::new(delete);
 
     let drag_over = move |ev| {
         if !matches!(get_drag_info(&ev), DragInfo::NotCard) {
@@ -85,15 +82,15 @@ fn Drawer(data: DrawerData, set_drawers: WriteSignal<Vec<DrawerData>>) -> impl I
 #[component]
 #[must_use]
 pub fn Drawers() -> impl IntoView {
-    let (next_drawer_id, set_next_drawer_id) = create_signal(0);
-    let (drawers, set_drawers) = create_signal(Vec::new());
+    let (next_drawer_id, set_next_drawer_id) = signal(0);
+    let (drawers, set_drawers) = signal(Vec::new());
 
     let new_drawer = move || {
         set_drawers.update(|drawers| {
             drawers.push(DrawerData {
                 id: next_drawer_id.get(),
-                name: create_rw_signal("New Drawer".to_owned()),
-                content: create_rw_signal(Vec::new()),
+                name: RwSignal::new("New Drawer".to_owned()),
+                content: RwSignal::new(Vec::new()),
             });
         });
         set_next_drawer_id.update(|id| *id += 1);

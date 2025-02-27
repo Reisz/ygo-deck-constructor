@@ -1,9 +1,5 @@
 use common::{card::Card, card_data::CardData};
-use leptos::{
-    Callable, Callback, For, IntoView, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
-    SignalWith, SignalWithUntracked, component, create_memo, create_node_ref, create_signal,
-    expect_context, html, provide_context, view,
-};
+use leptos::{html, prelude::*};
 use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::js_sys;
 
@@ -51,18 +47,18 @@ pub fn FilterInput(
     map: fn(String) -> String,
     filter: RwSignal<String>,
 ) -> impl IntoView {
-    let node_ref = create_node_ref();
+    let node_ref = NodeRef::new();
     let reset = expect_context::<ScrollReset>();
 
     view! {
         <input
             type="text"
             placeholder=placeholder
-            ref=node_ref
+            node_ref=node_ref
             on:input=move |_| {
                 let input = node_ref.get().unwrap();
                 filter.set(map(input.value()));
-                reset.callback.call(());
+                reset.callback.run(());
             }
         />
     }
@@ -75,7 +71,7 @@ pub fn CardSearch() -> impl IntoView {
 
     let cards = expect_context::<CardData>();
     let filter = CardFilter::default();
-    let filtered_cards = create_memo(move |_| {
+    let filtered_cards = Memo::new(move |_| {
         if filter.is_empty() {
             cards.staples().collect::<Vec<_>>()
         } else {
@@ -87,7 +83,7 @@ pub fn CardSearch() -> impl IntoView {
         }
     });
 
-    let (pages, set_pages) = create_signal(1);
+    let (pages, set_pages) = signal(1);
     let paginated_cards = move || {
         filtered_cards.with(|cards| {
             cards
@@ -98,7 +94,7 @@ pub fn CardSearch() -> impl IntoView {
         })
     };
 
-    let scroll_area_ref = create_node_ref::<html::Div>();
+    let scroll_area_ref = NodeRef::<html::Div>::new();
 
     // Increase page count until the scroll buffer is sufficiently filled
     let adjust_pages = move || {
@@ -148,7 +144,7 @@ pub fn CardSearch() -> impl IntoView {
                 />
             </div>
 
-            <div class="card-list" ref=scroll_area_ref on:scroll=move |_| adjust_pages()>
+            <div class="card-list" node_ref=scroll_area_ref on:scroll=move |_| adjust_pages()>
                 <For
                     each=paginated_cards
                     key=|id| *id

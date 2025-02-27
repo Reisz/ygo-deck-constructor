@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use common::{
     card::{
@@ -10,10 +10,9 @@ use common::{
 };
 use itertools::intersperse_with;
 use leptos::{
-    IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal, component, create_node_ref,
-    create_signal, expect_context,
-    html::{self, Div},
-    provide_context, svg, view,
+    html::{self, ElementChild},
+    prelude::*,
+    svg,
 };
 use web_sys::MouseEvent;
 
@@ -22,7 +21,7 @@ use crate::ui::drag_drop::start_drag;
 #[derive(Clone, Copy)]
 struct TooltipData {
     card: &'static Card,
-    node: NodeRef<Div>,
+    node: NodeRef<html::Div>,
 }
 
 fn map_race(race: Race) -> &'static str {
@@ -56,7 +55,7 @@ fn map_race(race: Race) -> &'static str {
     }
 }
 
-fn get_tags(card: &Card) -> Vec<View> {
+fn get_tags(card: &Card) -> Vec<AnyView> {
     let mut tags = Vec::new();
 
     match &card.card_type {
@@ -84,14 +83,16 @@ fn get_tags(card: &Card) -> Vec<View> {
                 }
                 MonsterStats::Link { link_value, .. } => ("Link Monster", link_value),
             };
-            tags.push(view! { <li>{monster} <span class="level">{*level}</span></li> });
+            tags.push(view! { <li>{monster} <span class="level">{*level}</span></li> }.into_any());
 
             if let MonsterStats::Normal {
                 pendulum_scale: Some(scale),
                 ..
             } = stats
             {
-                tags.push(view! { <li>"Pendulum" <span class="level">{*scale}</span></li> });
+                tags.push(
+                    view! { <li>"Pendulum" <span class="level">{*scale}</span></li> }.into_any(),
+                );
             }
 
             let effect = match effect {
@@ -104,11 +105,11 @@ fn get_tags(card: &Card) -> Vec<View> {
                 MonsterEffect::Flip => Some("Flip Effect"),
             };
             if let Some(effect) = effect {
-                tags.push(html::li().child(effect));
+                tags.push(html::li().child(effect).into_any());
             }
 
             if *is_tuner {
-                tags.push(html::li().child("Tuner"));
+                tags.push(html::li().child("Tuner").into_any());
             }
 
             let attribute = match attribute {
@@ -120,9 +121,9 @@ fn get_tags(card: &Card) -> Vec<View> {
                 Attribute::Wind => "Wind",
                 Attribute::Divine => "Divine",
             };
-            tags.push(html::li().child(attribute));
+            tags.push(html::li().child(attribute).into_any());
 
-            tags.push(html::li().child(map_race(*race)));
+            tags.push(html::li().child(map_race(*race)).into_any());
         }
         CardType::Trap(trap_type) => {
             let tag = match trap_type {
@@ -130,7 +131,7 @@ fn get_tags(card: &Card) -> Vec<View> {
                 TrapType::Counter => "Counter Trap",
                 TrapType::Continuous => "Continuous Trap",
             };
-            tags.push(html::li().child(tag));
+            tags.push(html::li().child(tag).into_any());
         }
         CardType::Spell(spell_type) => {
             let tag = match spell_type {
@@ -141,7 +142,7 @@ fn get_tags(card: &Card) -> Vec<View> {
                 SpellType::QuickPlay => "Quick-Play Spell",
                 SpellType::Ritual => "Ritual Spell",
             };
-            tags.push(html::li().child(tag));
+            tags.push(html::li().child(tag).into_any());
         }
     }
 
@@ -151,12 +152,9 @@ fn get_tags(card: &Card) -> Vec<View> {
         common::card::CardLimit::Limited => "Limited",
         common::card::CardLimit::Forbidden => "Forbidden",
     };
-    tags.push(html::li().child(limit));
+    tags.push(html::li().child(limit).into_any());
 
-    intersperse_with(tags.into_iter().map(IntoView::into_view), || {
-        html::li().child("•").into_view()
-    })
-    .collect()
+    intersperse_with(tags, || html::li().child("•").into_any()).collect()
 }
 
 fn link_marker_path(link_marker: LinkMarker) -> &'static str {
@@ -214,7 +212,7 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
 
         Some(
             html::div()
-                .class("stats", true)
+                .class("stats")
                 .child((atk, def, link))
                 .into_view(),
         )
@@ -226,22 +224,28 @@ fn Stats(card_type: &'static CardType) -> impl IntoView {
 #[component]
 #[must_use]
 fn DescriptionParts(parts: &'static [TextPart<&'static str>]) -> impl IntoView {
-    let mut div = html::div();
+    let mut div = Vec::new();
     let mut current_list = None;
     let mut current_block = None;
 
     for part in parts {
         match part {
             TextPart::Block(block) => match block {
-                TextBlock::Paragraph => current_block = Some(html::p().into_any()),
-                TextBlock::List => current_list = Some(html::ul()),
-                TextBlock::ListEntry => current_block = Some(html::li().into_any()),
+                TextBlock::List => current_list = Some(Vec::new()),
+                TextBlock::ListEntry | TextBlock::Paragraph => current_block = Some(Vec::new()),
             },
             TextPart::EndBlock(block) => match block {
-                TextBlock::Paragraph => div = div.child(current_block.take().unwrap()),
-                TextBlock::List => div = div.child(current_list.take().unwrap()),
+                TextBlock::Paragraph => {
+                    div.push(html::p().child(current_block.take().unwrap()).into_any());
+                }
+                TextBlock::List => {
+                    div.push(html::ul().child(current_list.take().unwrap()).into_any());
+                }
                 TextBlock::ListEntry => {
-                    current_list = Some(current_list.unwrap().child(current_block.take().unwrap()));
+                    current_list
+                        .as_mut()
+                        .unwrap()
+                        .push(html::li().child(current_block.take().unwrap()).into_any());
                 }
             },
             TextPart::Header(header) => {
@@ -249,23 +253,23 @@ fn DescriptionParts(parts: &'static [TextPart<&'static str>]) -> impl IntoView {
                     common::card::Header::PendulumEffect => "Pendulum Effect",
                     common::card::Header::MonsterEffect => "Monster Effect",
                 };
-                div = div.child(html::h2().child(text));
+                div.push(html::h2().child(text).into_any());
             }
             TextPart::Span(kind, text) => match kind {
                 SpanKind::Normal => {
-                    current_block = Some(current_block.unwrap().child(*text));
+                    current_block.as_mut().unwrap().push(text.into_any());
                 }
             },
         };
     }
 
-    div
+    html::div().child(div)
 }
 
 #[component]
 #[must_use]
 pub fn CardTooltip() -> impl IntoView {
-    let (tooltip_data, set_tooltip_data) = create_signal(None);
+    let (tooltip_data, set_tooltip_data) = signal(None);
     provide_context(set_tooltip_data);
 
     let popup = move || {
@@ -292,11 +296,10 @@ pub fn CardTooltip() -> impl IntoView {
 }
 
 #[component]
-#[must_use]
-pub fn CardView(
+pub(crate) fn CardView(
     id: Id,
     #[prop(default = 1)] count: u8,
-    #[prop(optional)] on_delete: Option<Rc<dyn Fn(Id)>>,
+    #[prop(optional)] on_delete: Option<Arc<dyn Fn(Id)>>,
 ) -> impl IntoView {
     let card = expect_context::<CardData>().get(id);
     let password = card.password;
@@ -313,11 +316,11 @@ pub fn CardView(
     };
 
     let set_tooltip_data = expect_context::<WriteSignal<Option<TooltipData>>>();
-    let node = create_node_ref();
+    let node = NodeRef::new();
     view! {
         <div
             class=get_class(&card.card_type)
-            ref=node
+            node_ref=node
             draggable="true"
             on:dragstart=move |ev| start_drag(&ev, card)
             on:mouseover=move |_| set_tooltip_data.set(Some(TooltipData { card, node }))
@@ -326,10 +329,8 @@ pub fn CardView(
             on:contextmenu=|ev| ev.prevent_default()
         >
             <img src=format!("{IMAGE_DIRECTORY}/{password}.{IMAGE_FILE_ENDING}") />
-            {(count > 1)
-                .then(|| html::div().class("count", true).class("backdrop", true).child(count))}
-            {(count > card.limit.count())
-                .then(|| html::div().class("error", true).class("backdrop", true).child("!"))}
+            {(count > 1).then(|| html::div().class("count backdrop").child(count))}
+            {(count > card.limit.count()).then(|| html::div().class("error backdrop").child("!"))}
         </div>
     }
 }

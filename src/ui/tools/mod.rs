@@ -1,7 +1,7 @@
 mod error_list;
 mod graphs;
 
-use leptos::{IntoView, RwSignal, Signal, View, component, expect_context, view};
+use leptos::prelude::*;
 
 use crate::deck::Deck;
 
@@ -10,7 +10,7 @@ trait Tool {
     where
         Self: Sized;
 
-    fn view(&self, deck: Signal<Deck>) -> View;
+    fn view(&self, deck: Signal<Deck>) -> AnyView;
 }
 
 struct ToolManager(Vec<Box<dyn Tool>>);
@@ -24,7 +24,7 @@ impl ToolManager {
         self.0.push(Box::new(T::init()));
     }
 
-    fn view(&self) -> impl IntoView {
+    fn view(&self) -> impl IntoView + use<> {
         let deck = expect_context::<RwSignal<Deck>>();
         self.0
             .iter()

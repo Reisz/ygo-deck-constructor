@@ -2,12 +2,9 @@ use std::error::Error;
 
 use common::{card_data::CardData, ydk};
 use gloo_file::{Blob, File, futures::read_as_text};
-use leptos::{
-    IntoView, NodeRef, RwSignal, SignalSet, SignalUpdate, SignalWith, component, create_effect,
-    expect_context, html, logging, provide_context, spawn_local, view,
-};
+use leptos::{html, prelude::*, tachys::dom::document, task::spawn_local};
 use wasm_bindgen::{JsCast, closure::Closure};
-use web_sys::{KeyboardEvent, Url};
+use web_sys::{HtmlAnchorElement, KeyboardEvent, Url};
 
 use crate::{deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding};
 
@@ -25,7 +22,14 @@ fn do_export(deck: &Deck, cards: &CardData) -> Result<(), Box<dyn Error>> {
     let blob = Blob::new_with_options(buffer.as_slice(), Some("text/ydk"));
     let url = Url::create_object_url_with_blob(blob.as_ref()).map_err(JsException::from)?;
 
-    view! { <a href=&url download="deck.ydk"></a> }.click();
+    let a = document()
+        .create_element("a")
+        .map_err(JsException::from)?
+        .unchecked_into::<HtmlAnchorElement>();
+    a.set_href(&url);
+    a.set_download("deck.ydk");
+    a.click();
+
     Url::revoke_object_url(&url).map_err(JsException::from)?;
 
     Ok(())
@@ -47,13 +51,13 @@ fn install_undo_redo_shortcuts(deck: RwSignal<Deck>) {
             }
         }
     });
-    leptos::document().set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
+    document().set_onkeyup(Some(keyup.as_ref().unchecked_ref()));
     keyup.forget();
 }
 /// Install the main deck instance as leptos context
 pub fn install_as_context() {
     const KEY: &str = "deck";
-    let storage = leptos::window().local_storage().ok().flatten();
+    let storage = window().local_storage().ok().flatten();
     let deck = storage
         .as_ref()
         .and_then(|storage| storage.get_item(KEY).ok().flatten())
@@ -63,10 +67,10 @@ pub fn install_as_context() {
     let deck = RwSignal::new(deck);
 
     if let Some(storage) = storage {
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let text = deck.with(TextEncoding::encode_string);
             if storage.set_item(KEY, &text).is_err() {
-                logging::error!("Saving deck failed");
+                leptos::logging::error!("Saving deck failed");
             }
         });
     }
@@ -104,11 +108,17 @@ pub fn Menu() -> impl IntoView {
     view! {
         <div class="menu">
             <button on:click=move |_| deck.set(Deck::default())>"New"</button>
-            <button on:click:undelegated=move |_| {
+            <button on:click=move |_| {
                 input_ref.get().unwrap().click();
             }>"Import..."</button>
             <button on:click=export>"Export..."</button>
-            <input type="file" accept=".ydk" ref=input_ref on:change=import style="display: none" />
+            <input
+                type="file"
+                accept=".ydk"
+                node_ref=input_ref
+                on:change=import
+                style="display: none"
+            />
         </div>
     }
 }

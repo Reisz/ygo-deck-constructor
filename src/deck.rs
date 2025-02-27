@@ -4,7 +4,7 @@ use common::{
     card_data::{CardData, Id},
     deck::{DeckEntry, PartType},
 };
-use leptos::expect_context;
+use leptos::prelude::expect_context;
 
 use crate::{
     text_encoding::TextEncoding,
@@ -204,7 +204,7 @@ impl TextEncoding for Deck {
 #[cfg(test)]
 mod test {
     use common::{assert_part_eq, card::test_util::make_card, card_data::CardDataStorage};
-    use leptos::provide_context;
+    use leptos::prelude::*;
 
     use super::*;
 
@@ -226,6 +226,9 @@ mod test {
         const OTHER_ID: Id = Id::new(1);
         const AMOUNT: u8 = 43;
         const OTHER_AMOUNT: u8 = 65;
+
+        let o = Owner::new();
+        o.set();
 
         let cards = vec![make_card(1234), make_card(9876)];
         let card_data = CardData::from(CardDataStorage::new(cards, vec![]));

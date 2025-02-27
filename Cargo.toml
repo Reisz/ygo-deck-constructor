@@ -22,7 +22,7 @@ gloo-dialogs = "0.2.0"
 gloo-file = { version = "0.3.0", features = ["futures"] }
 gloo-net = "0.6.0"
 itertools.workspace = true
-leptos = { version = "0.6.12", features = ["csr"] }
+leptos = { version = "0.7.3", features = ["csr"] }
 lzma-rs = "0.3.0"
 wasm-bindgen = "0.2.92"
 web-sys = { version = "0.3.69", features = [
@@ -55,6 +55,7 @@ empty_docs = "allow"
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
+must_use_candidate = "allow"
 
 [[bench]]
 name = "sizes"
