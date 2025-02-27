@@ -56,8 +56,8 @@ impl SizeDataManager {
         let size = size_of::<T>();
 
         print!("{name:20} {:>3}{}", style(size).bold(), style("B").dim());
-        Self::print_diff("prev", &self.prev, &name, size);
-        Self::print_diff("base", &self.base, &name, size);
+        Self::print_diff("prev", self.prev.as_ref(), &name, size);
+        Self::print_diff("base", self.base.as_ref(), &name, size);
         println!();
 
         self.current.insert(name, size);
@@ -65,7 +65,7 @@ impl SizeDataManager {
         SizeChecker::new(size)
     }
 
-    fn print_diff(kind: &'static str, map: &Option<SizeMap>, name: &String, size: usize) {
+    fn print_diff(kind: &'static str, map: Option<&SizeMap>, name: &String, size: usize) {
         if let Some(&old) = map.as_ref().and_then(|map| map.get(name)) {
             let diff = isize::try_from(size).unwrap() - isize::try_from(old).unwrap();
 
