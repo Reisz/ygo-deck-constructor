@@ -6,19 +6,19 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{Context, Result, anyhow};
 use common::{
     card::CardPassword,
     transfer::{self, IMAGE_DIRECTORY, IMAGE_FILE_ENDING},
 };
 use governor::{DefaultDirectRateLimiter, Jitter, Quota, RateLimiter};
-use image::{codecs::avif::AvifEncoder, imageops::FilterType, DynamicImage};
+use image::{DynamicImage, codecs::avif::AvifEncoder, imageops::FilterType};
 use log::info;
 use nonzero_ext::nonzero;
 use tokio::{sync::Mutex, task::spawn_blocking};
-use zip::{write::SimpleFileOptions, CompressionMethod, ZipArchive, ZipWriter};
+use zip::{CompressionMethod, ZipArchive, ZipWriter, write::SimpleFileOptions};
 
-use crate::{ygoprodeck::ARTWORK_URL, OUTPUT_DIRECTORY};
+use crate::{OUTPUT_DIRECTORY, ygoprodeck::ARTWORK_URL};
 
 /// Name of the image cache file.
 ///

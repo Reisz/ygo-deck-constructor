@@ -1,12 +1,12 @@
 use std::error::Error;
 
 use common::{card_data::CardData, ydk};
-use gloo_file::{futures::read_as_text, Blob, File};
+use gloo_file::{Blob, File, futures::read_as_text};
 use leptos::{
-    component, create_effect, expect_context, html, logging, provide_context, spawn_local, view,
-    IntoView, NodeRef, RwSignal, SignalSet, SignalUpdate, SignalWith,
+    IntoView, NodeRef, RwSignal, SignalSet, SignalUpdate, SignalWith, component, create_effect,
+    expect_context, html, logging, provide_context, spawn_local, view,
 };
-use wasm_bindgen::{closure::Closure, JsCast};
+use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::{KeyboardEvent, Url};
 
 use crate::{deck::Deck, error_handling::JsException, print_error, text_encoding::TextEncoding};

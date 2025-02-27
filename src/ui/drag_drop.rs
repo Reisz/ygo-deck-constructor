@@ -3,7 +3,7 @@ use common::{
     card_data::{CardData, Id},
 };
 use wasm_bindgen::intern;
-use web_sys::{js_sys::JsString, DataTransfer, DragEvent};
+use web_sys::{DataTransfer, DragEvent, js_sys::JsString};
 
 const CARD_PASSWORD_TYPE: &str = "card_password";
 const CARD_IS_EXTRA: &str = "card_is_extra";

@@ -73,8 +73,8 @@ impl<I: Iterator<Item = DeckEntry>> EntriesForPart for I {
 mod test {
     use crate::{
         card::{
-            test_util::{make_card, make_extra_deck_card},
             CardPassword,
+            test_util::{make_card, make_extra_deck_card},
         },
         card_data::CardDataStorage,
         deck::{Deck, PartType},

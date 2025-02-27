@@ -1,10 +1,10 @@
 use std::{fmt::Display, pin::Pin, time::Instant};
 
-use futures::{stream::FuturesUnordered, Future, Stream, TryStreamExt};
+use futures::{Future, Stream, TryStreamExt, stream::FuturesUnordered};
 use indicatif::{
     HumanBytes, HumanDuration, MultiProgress, ProgressBar, ProgressBarIter, ProgressStyle,
 };
-use log::{info, Level, LevelFilter, Log};
+use log::{Level, LevelFilter, Log, info};
 use reqwest::{Client, IntoUrl};
 use tokio::io::{AsyncRead, ReadBuf};
 use tokio_util::compat::FuturesAsyncReadCompatExt;

@@ -1,10 +1,10 @@
 use common::{card::Card, card_data::CardData};
 use leptos::{
-    component, create_memo, create_node_ref, create_signal, expect_context, html, provide_context,
-    view, Callable, Callback, For, IntoView, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
-    SignalWith, SignalWithUntracked,
+    Callable, Callback, For, IntoView, RwSignal, SignalGet, SignalGetUntracked, SignalSet,
+    SignalWith, SignalWithUntracked, component, create_memo, create_node_ref, create_signal,
+    expect_context, html, provide_context, view,
 };
-use wasm_bindgen::{closure::Closure, JsCast};
+use wasm_bindgen::{JsCast, closure::Closure};
 use web_sys::js_sys;
 
 use crate::ui::card_view::CardView;

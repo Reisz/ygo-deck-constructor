@@ -10,9 +10,10 @@ use common::{
 };
 use itertools::intersperse_with;
 use leptos::{
-    component, create_node_ref, create_signal, expect_context,
+    IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal, component, create_node_ref,
+    create_signal, expect_context,
     html::{self, Div},
-    provide_context, svg, view, IntoView, NodeRef, Show, SignalGet, SignalSet, View, WriteSignal,
+    provide_context, svg, view,
 };
 use web_sys::MouseEvent;
 

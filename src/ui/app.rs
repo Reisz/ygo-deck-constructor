@@ -4,7 +4,7 @@ use common::{
     transfer,
 };
 use gloo_net::http::Request;
-use leptos::{component, create_local_resource, provide_context, view, IntoView, Suspense};
+use leptos::{IntoView, Suspense, component, create_local_resource, provide_context, view};
 use lzma_rs::xz_decompress;
 
 use crate::ui::{

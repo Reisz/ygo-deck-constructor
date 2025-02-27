@@ -5,8 +5,8 @@ use common::{
     deck_part::{DeckPart, EntriesForPart},
 };
 use leptos::{
-    component, create_memo, expect_context, view, For, IntoView, RwSignal, SignalGet, SignalUpdate,
-    SignalWith,
+    For, IntoView, RwSignal, SignalGet, SignalUpdate, SignalWith, component, create_memo,
+    expect_context, view,
 };
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
     deck_order::deck_order,
     ui::{
         card_view::CardView,
-        drag_drop::{get_drag_info, get_dropped_card, set_drop_effect, DragInfo, DropEffect},
+        drag_drop::{DragInfo, DropEffect, get_drag_info, get_dropped_card, set_drop_effect},
     },
 };
 

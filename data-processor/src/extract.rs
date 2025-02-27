@@ -205,7 +205,7 @@ impl TryFrom<&ygoprodeck::Card> for Race {
                     value.id,
                     "race (monster)",
                     &name,
-                ))
+                ));
             }
         };
 
@@ -316,7 +316,7 @@ fn to_link_marker(value: &str, password: CardPassword) -> Result<LinkMarker, Pro
                 password,
                 "link marker",
                 &name,
-            ))
+            ));
         }
     })
 }
@@ -361,7 +361,7 @@ impl TryFrom<&ygoprodeck::Card> for SpellType {
                     value.id,
                     "race (spell)",
                     &race,
-                ))
+                ));
             }
         };
 
@@ -386,7 +386,7 @@ impl TryFrom<&ygoprodeck::Card> for TrapType {
                     value.id,
                     "race (trap)",
                     &race,
-                ))
+                ));
             }
         };
 
@@ -413,7 +413,7 @@ impl TryFrom<&ygoprodeck::Card> for CardLimit {
                         value.id,
                         "ban status",
                         name,
-                    ))
+                    ));
                 }
             },
         )

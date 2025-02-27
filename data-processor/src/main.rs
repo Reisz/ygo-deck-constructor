@@ -11,14 +11,15 @@ use anyhow::Result;
 use bincode::Options;
 use common::{card::FullCard, card_data::CardDataStorage, transfer};
 use data_processor::{
+    OUTPUT_DIRECTORY,
     cache::{
-        ensure_image_cache, update_card_info_cache, CacheResult, CARD_INFO_LOCAL, CARD_STAPLES,
+        CARD_INFO_LOCAL, CARD_STAPLES, CacheResult, ensure_image_cache, update_card_info_cache,
     },
     image::ImageLoader,
     ui::UiManager,
-    ygoprodeck, OUTPUT_DIRECTORY,
+    ygoprodeck,
 };
-use futures::{stream::FuturesUnordered, StreamExt, TryFutureExt};
+use futures::{StreamExt, TryFutureExt, stream::FuturesUnordered};
 use indicatif::{HumanBytes, HumanCount, HumanDuration};
 use log::{info, warn};
 use tokio::{task::spawn_blocking, try_join};

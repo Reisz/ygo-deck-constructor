@@ -13,7 +13,7 @@ use tokio::{
     try_join,
 };
 
-use crate::{image, ui::UiManager, ygoprodeck, OUTPUT_DIRECTORY, URL};
+use crate::{OUTPUT_DIRECTORY, URL, image, ui::UiManager, ygoprodeck};
 
 /// Location of the cached card data download.
 pub const CARD_INFO_VERSION: &str = "target/card_info_version.txt";

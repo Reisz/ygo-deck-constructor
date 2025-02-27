@@ -1,7 +1,7 @@
 mod error_list;
 mod graphs;
 
-use leptos::{component, expect_context, view, IntoView, RwSignal, Signal, View};
+use leptos::{IntoView, RwSignal, Signal, View, component, expect_context, view};
 
 use crate::deck::Deck;
 

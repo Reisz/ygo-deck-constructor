@@ -2,15 +2,15 @@ use std::rc::Rc;
 
 use common::card_data::{CardData, Id};
 use leptos::{
-    component, create_rw_signal, create_signal, expect_context, view, For, IntoView, RwSignal,
-    SignalGet, SignalUpdate, SignalWith, WriteSignal,
+    For, IntoView, RwSignal, SignalGet, SignalUpdate, SignalWith, WriteSignal, component,
+    create_rw_signal, create_signal, expect_context, view,
 };
 
 use crate::{
     deck_order::deck_order,
     ui::{
         card_view::CardView,
-        drag_drop::{get_drag_info, get_dropped_card, set_drop_effect, DragInfo, DropEffect},
+        drag_drop::{DragInfo, DropEffect, get_drag_info, get_dropped_card, set_drop_effect},
     },
 };
 

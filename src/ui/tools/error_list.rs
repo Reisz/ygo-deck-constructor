@@ -1,6 +1,6 @@
 use common::{card_data::CardData, deck::PartType, deck_part::DeckPart};
 use leptos::{
-    expect_context, html, view, For, IntoView, Memo, Show, Signal, SignalGet, SignalWith, View,
+    For, IntoView, Memo, Show, Signal, SignalGet, SignalWith, View, expect_context, html, view,
 };
 
 use crate::deck::Deck;

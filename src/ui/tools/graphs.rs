@@ -7,8 +7,8 @@ use common::{
 };
 use itertools::intersperse;
 use leptos::{
-    component, expect_context, view, CollectView, IntoSignal, IntoView, Memo, Signal, SignalWith,
-    View,
+    CollectView, IntoSignal, IntoView, Memo, Signal, SignalWith, View, component, expect_context,
+    view,
 };
 
 use crate::deck::Deck;

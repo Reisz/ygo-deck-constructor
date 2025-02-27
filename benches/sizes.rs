@@ -17,7 +17,7 @@ use common::{
     card_data::{CardData, Id},
     deck::DeckEntry,
 };
-use console::{style, Style};
+use console::{Style, style};
 
 const PREV_DATA_PATH: &str = "target/sizes_prev.bin";
 const BASE_DATA_PATH: &str = "target/sizes_base.bin";

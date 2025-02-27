@@ -84,13 +84,13 @@ pub fn save(deck: &Deck, cards: &CardData, writer: &mut impl Write) -> io::Resul
 
 mod parse {
     use nom::{
+        Finish, Parser,
         branch::alt,
         bytes::complete::tag,
         character::complete::{self as character, multispace0, multispace1, one_of},
         combinator::opt,
         multi::separated_list1,
         sequence::{delimited, pair, preceded},
-        Finish, Parser,
     };
 
     use crate::{card::CardPassword, deck_part::DeckPart};
